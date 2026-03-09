@@ -15,8 +15,7 @@ export default function Authentication() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSubmit() {
     setIsLoading(true);
 
     // simulate auth
@@ -119,6 +118,7 @@ export default function Authentication() {
               id="remember"
               checked={rememberMe}
               onCheckedChange={(v) => setRememberMe(!!v)}
+              className="data-checked:bg-[#2B3A9F]"
             />
 
             <Label
@@ -133,9 +133,9 @@ export default function Authentication() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="group h-11 w-full bg-gradient-to-r from-blue-600 to-blue-700 font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800"
+            className="group h-11 w-full bg-[#2B3A9F] font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800"
             onClick={() => {
-              handleSubmit;
+              handleSubmit();
             }}
           >
             {isLoading ? (
