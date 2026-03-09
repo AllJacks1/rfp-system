@@ -32,11 +32,12 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
 const navItems = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: Home, label: "Dashboard", href: "/home" },
   { icon: BarChart3, label: "Analytics", href: "/analytics" },
   { icon: FileText, label: "Reports", href: "/reports" },
   { icon: Users, label: "Team", href: "/team" },
@@ -45,6 +46,7 @@ const navItems = [
 ];
 
 export default function TopNavigation() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications] = useState([
     { id: 1, title: "New report available", time: "2 min ago", unread: true },
@@ -101,18 +103,38 @@ export default function TopNavigation() {
               </SheetHeader>
 
               <nav className="flex flex-col gap-1 p-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="group flex items-center gap-3 rounded-lg px-3 py-3 text-slate-600 transition-all hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
-                  >
-                    <item.icon className="h-5 w-5 transition-colors group-hover:text-[#2B3A9F]" />
-                    <span className="font-medium">{item.label}</span>
-                    <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+                        isActive
+                          ? "bg-[#2B3A9F] text-white shadow-md"
+                          : "text-slate-600 hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
+                      }`}
+                    >
+                      <item.icon
+                        className={`h-5 w-5 transition-colors ${
+                          isActive ? "text-white" : "group-hover:text-[#2B3A9F]"
+                        }`}
+                      />
+                      <span className="font-medium">{item.label}</span>
+                      <ChevronRight
+                        className={`ml-auto h-4 w-4 transition-all ${
+                          isActive
+                            ? "opacity-100 translate-x-0 text-white"
+                            : "opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
+                        }`}
+                      />
+                    </Link>
+                  );
+                })}
               </nav>
 
               <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
@@ -137,7 +159,7 @@ export default function TopNavigation() {
           </Sheet>
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href="/home" className="flex items-center gap-3 group">
             <Image
               src="/astra_logo_small.png"
               alt="Astra Business Solutions Logo"
