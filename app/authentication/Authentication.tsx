@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -14,14 +15,13 @@ export default function Authentication() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit() {
     setIsLoading(true);
-
-    // simulate auth
     await new Promise((resolve) => setTimeout(resolve, 2000));
-
     setIsLoading(false);
+    router.push("/home");
   }
 
   return (
