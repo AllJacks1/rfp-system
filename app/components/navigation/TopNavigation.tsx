@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,35 +20,97 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Menu,
-  Bell,
   Settings,
   LogOut,
   User,
   Home,
-  BarChart3,
+  Briefcase,
+  Calendar,
   FileText,
   Users,
   HelpCircle,
   ChevronRight,
+  ChevronDown,
+  HandCoins,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { TopNavigationProps } from "@/lib/interfaces";
+import { NavItem, TopNavigationProps } from "@/lib/interfaces";
 import Notifications from "./Notifications";
 
-const navItems = [
+// Extended interface to support subsections
+interface SubNavItem {
+  label: string;
+  href: string;
+  badge?: string;
+}
+
+interface NavItemWithSubsections {
+  icon: React.ElementType;
+  label: string;
+  href?: string;
+  subsections?: SubNavItem[];
+}
+
+const navItems: NavItemWithSubsections[] = [
   { icon: Home, label: "Dashboard", href: "/home" },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: FileText, label: "Reports", href: "/reports" },
-  { icon: Users, label: "Team", href: "/team" },
-  { icon: Settings, label: "Settings", href: "/settings" },
-  { icon: HelpCircle, label: "Help & Support", href: "/help" },
+  {
+    icon: HandCoins,
+    label: "Finance",
+    subsections: [
+      { label: "Service Request", href: "/projects" },
+      { label: "Purchase Request", href: "/projects/active", badge: "12" },
+      { label: "Service Order", href: "/projects/completed" },
+      { label: "Purchase Order", href: "/projects/archived" },
+      { label: "Request for Payment", href: "/projects/rfp" },
+      { label: "Liquidation", href: "/projects/liquidation" },
+      { label: "Settings", href: "/projects/settings" },
+    ],
+  },
 ];
 
-export default function TopNavigation({ notifications = [] }: TopNavigationProps) {
+export default function TopNavigation({
+  notifications = [],
+}: TopNavigationProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  // Auto-expand when route matches subsection
+  useEffect(() => {
+    const activeParent = navItems.find((item) =>
+      item.subsections?.some((sub) => pathname.startsWith(sub.href)),
+    );
+
+    if (activeParent && !expandedItems.includes(activeParent.label)) {
+      setExpandedItems((prev) => [...prev, activeParent.label]);
+    }
+  }, [pathname]);
+
+  const toggleExpand = (label: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(label)
+        ? prev.filter((item) => item !== label)
+        : [...prev, label],
+    );
+  };
+
+  const isItemActive = (item: NavItemWithSubsections): boolean => {
+    if (item.href) {
+      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+    }
+    // Check if any subsection is active
+    return (
+      item.subsections?.some(
+        (sub) => pathname === sub.href || pathname.startsWith(`${sub.href}/`),
+      ) ?? false
+    );
+  };
+
+  const isSubItemActive = (href: string): boolean => {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <div className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
@@ -89,35 +152,111 @@ export default function TopNavigation({ notifications = [] }: TopNavigationProps
 
               <nav className="flex flex-col gap-1 p-4">
                 {navItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
+                  const hasSubsections =
+                    item.subsections && item.subsections.length > 0;
+                  const isActive = isItemActive(item);
+                  const isExpanded = expandedItems.includes(item.label);
 
                   return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
-                        isActive
-                          ? "bg-[#2B3A9F] text-white shadow-md"
-                          : "text-slate-600 hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
-                      }`}
-                    >
-                      <item.icon
-                        className={`h-5 w-5 transition-colors ${
-                          isActive ? "text-white" : "group-hover:text-[#2B3A9F]"
-                        }`}
-                      />
-                      <span className="font-medium">{item.label}</span>
-                      <ChevronRight
-                        className={`ml-auto h-4 w-4 transition-all ${
-                          isActive
-                            ? "opacity-100 translate-x-0 text-white"
-                            : "opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
-                        }`}
-                      />
-                    </Link>
+                    <div key={item.label} className="flex flex-col">
+                      {/* Parent Item */}
+                      {hasSubsections ? (
+                        // Expandable item with subsections
+                        <button
+                          onClick={() => toggleExpand(item.label)}
+                          className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-all text-left ${
+                            isActive
+                              ? "bg-[#2B3A9F]/10 text-[#2B3A9F]"
+                              : "text-slate-600 hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
+                          }`}
+                        >
+                          <item.icon
+                            className={`h-5 w-5 transition-colors ${
+                              isActive
+                                ? "text-[#2B3A9F]"
+                                : "group-hover:text-[#2B3A9F]"
+                            }`}
+                          />
+                          <span className="font-medium flex-1">
+                            {item.label}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          )}
+                        </button>
+                      ) : (
+                        // Simple link without subsections
+                        <Link
+                          href={item.href!}
+                          onClick={() => setIsOpen(false)}
+                          className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+                            isActive
+                              ? "bg-[#2B3A9F] text-white shadow-md"
+                              : "text-slate-600 hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
+                          }`}
+                        >
+                          <item.icon
+                            className={`h-5 w-5 transition-colors ${
+                              isActive
+                                ? "text-white"
+                                : "group-hover:text-[#2B3A9F]"
+                            }`}
+                          />
+                          <span className="font-medium">{item.label}</span>
+                          <ChevronRight
+                            className={`ml-auto h-4 w-4 transition-all ${
+                              isActive
+                                ? "opacity-100 translate-x-0 text-white"
+                                : "opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
+                            }`}
+                          />
+                        </Link>
+                      )}
+
+                      {/* Subsections */}
+                      {hasSubsections && isExpanded && (
+                        <div className="ml-4 mt-1 flex flex-col gap-1 border-l-2 border-slate-200 pl-4">
+                          {item.subsections!.map((sub) => {
+                            const isSubActive = isSubItemActive(sub.href);
+
+                            return (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                onClick={() => setIsOpen(false)}
+                                className={`group flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all ${
+                                  isSubActive
+                                    ? "bg-[#2B3A9F] text-white shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                                }`}
+                              >
+                                <span
+                                  className={isSubActive ? "font-medium" : ""}
+                                >
+                                  {sub.label}
+                                </span>
+                                {sub.badge && (
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-full ${
+                                      isSubActive
+                                        ? "bg-white/20 text-white"
+                                        : "bg-slate-200 text-slate-600"
+                                    }`}
+                                  >
+                                    {sub.badge}
+                                  </span>
+                                )}
+                                {isSubActive && (
+                                  <ChevronRight className="h-3 w-3 ml-2" />
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </nav>
@@ -166,7 +305,7 @@ export default function TopNavigation({ notifications = [] }: TopNavigationProps
         {/* Right Section: Notifications + Avatar */}
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Notifications Dropdown */}
-          <Notifications initialNotifications={notifications}/>
+          <Notifications initialNotifications={notifications} />
 
           {/* User Avatar Dropdown */}
           <DropdownMenu>
