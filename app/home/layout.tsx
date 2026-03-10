@@ -1,4 +1,4 @@
-import TopNavigation from "./TopNavigation";
+import TopNavigationWrapper from "../components/navigation/TopNavigationWrapper";
 
 export default function HomeLayout({
   children,
@@ -6,11 +6,9 @@ export default function HomeLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
-        <TopNavigation />
-      <main className="p-6">{children}</main>
-      </body>
-    </html>
+    <main>
+      <TopNavigationWrapper></TopNavigationWrapper>
+      <div className="p-6">{children}</div>
+    </main>
   );
 }
