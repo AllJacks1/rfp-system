@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
       { label: "Service Order", href: "/home/finance/service-orders" },
       { label: "Purchase Order", href: "/home/finance/purchase-orders" },
       { label: "Request for Payment", href: "/home/finance/request-for-payment" },
-      { label: "Liquidation", href: "/projects/liquidation" },
+      { label: "Liquidation", href: "/home/finance/liquidation" },
       { label: "Settings", href: "/projects/settings" },
     ],
   },
