@@ -49,6 +49,7 @@ const navItems: NavItem[] = [
       { label: "Settings", href: "/projects/settings" },
     ],
   },
+  { icon: Settings, label: "Settings", href: "/home/settings" },
 ];
 
 export default function TopNavigation({
