@@ -24,11 +24,6 @@ import {
   LogOut,
   User,
   Home,
-  Briefcase,
-  Calendar,
-  FileText,
-  Users,
-  HelpCircle,
   ChevronRight,
   ChevronDown,
   HandCoins,
@@ -36,7 +31,7 @@ import {
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { NavItem, SubNavItem, TopNavigationProps } from "@/lib/interfaces";
+import { NavItem, TopNavigationProps } from "@/lib/interfaces";
 import Notifications from "./Notifications";
 
 const navItems: NavItem[] = [
@@ -45,7 +40,7 @@ const navItems: NavItem[] = [
     icon: HandCoins,
     label: "Finance",
     subsections: [
-      { label: "Service Request", href: "/projects" },
+      { label: "Service Request", href: "/home/finance/service-requests" },
       { label: "Purchase Request", href: "/projects/active", badge: "12" },
       { label: "Service Order", href: "/projects/completed" },
       { label: "Purchase Order", href: "/projects/archived" },
