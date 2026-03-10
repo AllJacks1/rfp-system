@@ -533,7 +533,7 @@ export default function CreateServiceRequest() {
                     <X className="mr-2 h-4 w-4" />
                     Clear
                   </Button>
-                  <Button className="bg-slate-900 hover:bg-slate-800 text-white shadow-sm">
+                  <Button className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-sm">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Item
                   </Button>
@@ -660,7 +660,7 @@ export default function CreateServiceRequest() {
             >
               Cancel
             </Button>
-            <Button className="flex-1 sm:flex-none h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 hover:shadow-slate-900/30 transition-all">
+            <Button className="flex-1 sm:flex-none h-11 px-6 bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-lg shadow-slate-900/20 hover:shadow-[#2B3A9F]/80 transition-all">
               Submit Request
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
