@@ -25,7 +25,7 @@ import {
   Clock,
 } from "lucide-react";
 
-export default function ServiceRequest() {
+export default function PurchaseRequest() {
   const stats = [
     {
       title: "Total Requests",
@@ -62,10 +62,10 @@ export default function ServiceRequest() {
       {/* Header Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">
-          Service Requests
+          Purchase Requests
         </h1>
         <p className="text-slate-500">
-          Manage and track all your service requests in one place
+          Manage and track all your purchase requests in one place
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export default function ServiceRequest() {
       <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 mb-8">
         <Button className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/20">
           <Plus className="mr-2 h-4 w-4" />
-          Create Service Request
+          Create Purchase Request
         </Button>
       </div>
 
@@ -108,7 +108,7 @@ export default function ServiceRequest() {
         <CardHeader className="border-b border-slate-100 pb-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-xl font-semibold text-slate-900">
-              All Service Requests
+              All Purchase Requests
             </CardTitle>
 
             {/* Search and Filter */}
@@ -158,7 +158,7 @@ export default function ServiceRequest() {
                   Request ID
                 </TableHead>
                 <TableHead className="text-slate-500 font-medium">
-                  Service Type
+                  Purchase Type
                 </TableHead>
                 <TableHead className="text-slate-500 font-medium">
                   Status
@@ -178,10 +178,10 @@ export default function ServiceRequest() {
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileText className="h-12 w-12 mb-4 opacity-50" />
                     <p className="text-lg font-medium text-slate-600 mb-1">
-                      No service requests found
+                      No purchase requests found
                     </p>
                     <p className="text-sm">
-                      Create your first service request to get started
+                      Create your first purchase request to get started
                     </p>
                   </div>
                 </TableCell>
