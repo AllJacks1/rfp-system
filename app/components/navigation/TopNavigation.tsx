@@ -79,7 +79,7 @@ export default function TopNavigation({
 
   const isItemActive = (item: NavItem): boolean => {
     if (item.href) {
-      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+      return pathname === item.href || pathname.startsWith(`${item.href}/home`);
     }
     // Check if any subsection is active
     return (
