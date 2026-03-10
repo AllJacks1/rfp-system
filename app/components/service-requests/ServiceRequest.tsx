@@ -1,4 +1,6 @@
+"use client";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -26,6 +28,8 @@ import {
 } from "lucide-react";
 
 export default function ServiceRequest() {
+  const router = useRouter();
+
   const stats = [
     {
       title: "Total Requests",
@@ -71,7 +75,10 @@ export default function ServiceRequest() {
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 mb-8">
-        <Button className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/20">
+        <Button
+          className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/20"
+          onClick={() => router.push("/home/finance/service-requests/create-sr")}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Create Service Request
         </Button>
