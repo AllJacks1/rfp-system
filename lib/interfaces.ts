@@ -1,4 +1,4 @@
-interface SubNavItem {
+export interface SubNavItem {
     label: string;
     href: string;
     badge?: string;

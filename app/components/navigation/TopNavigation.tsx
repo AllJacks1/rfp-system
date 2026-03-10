@@ -36,24 +36,10 @@ import {
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { NavItem, TopNavigationProps } from "@/lib/interfaces";
+import { NavItem, SubNavItem, TopNavigationProps } from "@/lib/interfaces";
 import Notifications from "./Notifications";
 
-// Extended interface to support subsections
-interface SubNavItem {
-  label: string;
-  href: string;
-  badge?: string;
-}
-
-interface NavItemWithSubsections {
-  icon: React.ElementType;
-  label: string;
-  href?: string;
-  subsections?: SubNavItem[];
-}
-
-const navItems: NavItemWithSubsections[] = [
+const navItems: NavItem[] = [
   { icon: Home, label: "Dashboard", href: "/home" },
   {
     icon: HandCoins,
@@ -96,7 +82,7 @@ export default function TopNavigation({
     );
   };
 
-  const isItemActive = (item: NavItemWithSubsections): boolean => {
+  const isItemActive = (item: NavItem): boolean => {
     if (item.href) {
       return pathname === item.href || pathname.startsWith(`${item.href}/`);
     }
