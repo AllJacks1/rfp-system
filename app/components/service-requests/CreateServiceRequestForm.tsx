@@ -38,6 +38,7 @@ import {
   Hash,
   Calculator,
   Clock,
+  Car,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 
@@ -57,6 +58,7 @@ export default function CreateServiceRequestForm() {
   const [category, setCategory] = useState<string>("");
   const [company, setCompany] = useState<string>("");
   const [department, setDepartment] = useState<string>("");
+  const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
 
   // Form state for new item
@@ -410,6 +412,87 @@ export default function CreateServiceRequestForm() {
                   <p className="text-xs text-slate-500">
                     PDF, images, or documents up to 10MB
                   </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Asset Vehicles */}
+          <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-50 rounded-md">
+                  <Car className="w-4 h-4 text-[#2B3A9F]" />
+                </div>
+                <CardTitle className="text-sm font-semibold text-slate-900">
+                  Asset Vehicle
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    Plate Number
+                  </Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
+                      >
+                        {plateNumber || "Select plate number"}
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="start">
+                      {[
+                        "NAA 1234",
+                        "CAB 5678",
+                        "FAG 9012",
+                        "LDT 3456",
+                        "NHV 7890",
+                      ].map((number) => (
+                        <DropdownMenuItem
+                          key={number}
+                          className="cursor-pointer"
+                          onClick={() => setPlateNumber(number)}
+                        >
+                          {number}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Car Type
+                  </Label>
+                  <Input
+                    placeholder="Partner's car type"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Owner's first name
+                  </Label>
+                  <Input
+                    placeholder="Car owner's first name"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Owner's last name
+                  </Label>
+                  <Input
+                    placeholder="Car owner's last name"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
                 </div>
               </div>
             </CardContent>

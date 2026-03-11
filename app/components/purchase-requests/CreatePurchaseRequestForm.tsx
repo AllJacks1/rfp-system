@@ -36,6 +36,7 @@ import {
   ShoppingCart,
   Hash,
   Calculator,
+  Car
 } from "lucide-react";
 import { useState, useMemo } from "react";
 
@@ -55,6 +56,7 @@ export default function CreatePurchaseRequestForm() {
   const [category, setCategory] = useState<string>("");
   const [company, setCompany] = useState<string>("");
   const [department, setDepartment] = useState<string>("");
+  const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
 
   // Form state for new item
@@ -154,14 +156,11 @@ export default function CreatePurchaseRequestForm() {
             <div className="flex items-center gap-3 mb-2">
               <Badge
                 variant="secondary"
-                className="bg-indigo-50 text-indigo-700 border-indigo-200 font-medium"
+                className="bg-indigo-50 text-[#2B3A9F] border-indigo-200 font-medium"
               >
                 <ShoppingCart className="w-3 h-3 mr-1" />
                 New Purchase Request
               </Badge>
-              <span className="text-sm text-slate-400 font-mono">
-                #PR-2024-001
-              </span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
               Create Purchase Request
@@ -170,12 +169,6 @@ export default function CreatePurchaseRequestForm() {
               Submit a new purchase request for review and approval
             </p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-sm text-slate-600 font-medium">
-              Draft saved
-            </span>
-          </div>
         </div>
 
         <div className="space-y-6">
@@ -183,8 +176,8 @@ export default function CreatePurchaseRequestForm() {
           <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-md">
-                  <FileText className="w-4 h-4 text-indigo-600" />
+                <div className="p-1.5 bg-indigo-50 rounded-md">
+                  <FileText className="w-4 h-4 text-[#2B3A9F]" />
                 </div>
                 <CardTitle className="text-sm font-semibold text-slate-900">
                   Request Details
@@ -371,12 +364,93 @@ export default function CreatePurchaseRequestForm() {
             </CardContent>
           </Card>
 
+          {/* Asset Vehicles */}
+          <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-50 rounded-md">
+                  <Car className="w-4 h-4 text-[#2B3A9F]" />
+                </div>
+                <CardTitle className="text-sm font-semibold text-slate-900">
+                  Asset Vehicle
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    Plate Number
+                  </Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
+                      >
+                        {plateNumber || "Select plate number"}
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="start">
+                      {[
+                        "NAA 1234",
+                        "CAB 5678",
+                        "FAG 9012",
+                        "LDT 3456",
+                        "NHV 7890",
+                      ].map((number) => (
+                        <DropdownMenuItem
+                          key={number}
+                          className="cursor-pointer"
+                          onClick={() => setPlateNumber(number)}
+                        >
+                          {number}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Car Type
+                  </Label>
+                  <Input
+                    placeholder="Partner's car type"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Owner's first name
+                  </Label>
+                  <Input
+                    placeholder="Car owner's first name"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Owner's last name
+                  </Label>
+                  <Input
+                    placeholder="Car owner's last name"
+                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Vendor & Payment Card */}
           <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-md">
-                  <User className="w-4 h-4 text-indigo-600" />
+                <div className="p-1.5 bg-indigo-50 rounded-md">
+                  <User className="w-4 h-4 text-[#2B3A9F]" />
                 </div>
                 <CardTitle className="text-sm font-semibold text-slate-900">
                   Vendor Information
@@ -465,8 +539,8 @@ export default function CreatePurchaseRequestForm() {
             <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-100 rounded-md">
-                    <Package className="w-4 h-4 text-indigo-600" />
+                  <div className="p-1.5 bg-indigo-50 rounded-md">
+                    <Package className="w-4 h-4 text-[#2B3A9F]" />
                   </div>
                   <CardTitle className="text-sm font-semibold text-slate-900">
                     Items in Particular
@@ -753,13 +827,7 @@ export default function CreatePurchaseRequestForm() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 pt-6">
-          <Button
-            variant="ghost"
-            className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 order-2 sm:order-1"
-          >
-            Save as Draft
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6">
           <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
             <Button
               variant="outline"
