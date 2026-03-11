@@ -8,17 +8,12 @@ import {
 import {
   BookOpen,
   Car,
-  Truck,
+  Shapes,
+  Weight,
   Store,
   Landmark,
   CreditCard,
-  Receipt,
-  Wallet,
-  FileSpreadsheet,
-  TrendingUp,
   ChevronRight,
-  Calculator,
-  Building,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,16 +31,37 @@ const financeCategories: FinanceCardProps[] = [
   {
     title: "Chart of Accounts",
     description:
-      "Manage account titles, categories, and financial classifications",
+      "Manage account titles, categories, and financial classifications.",
     icon: BookOpen,
     href: "/finance/chart-of-accounts",
-    color: "text-[#2B3A9F]",
-    bgColor: "bg-[#2B3A9F]/10",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
     count: "24 accounts",
   },
   {
+    title: "Types",
+    description:
+      "Manage service categories and purchase types used in transactions.",
+    icon: Shapes,
+    href: "/finance/types",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    count: "24 types",
+  },
+  {
+    title: "Units",
+    description:
+      "Manage units of measurement used for products, services, and inventory.",
+    icon: Shapes,
+    href: "/finance/units",
+    color: "text-sky-600",
+    bgColor: "bg-sky-50",
+    count: "12 units",
+  },
+  {
     title: "Asset Vehicles",
-    description: "Track partner vehicles",
+    description:
+      "Track and manage company or partner vehicles registered as assets.",
     icon: Car,
     href: "/finance/assets",
     color: "text-amber-600",
@@ -54,7 +70,8 @@ const financeCategories: FinanceCardProps[] = [
   },
   {
     title: "Suppliers & Vendors",
-    description: "Suppliers management, Vendor management and payment terms",
+    description:
+      "Manage supplier and vendor records, including contacts and payment terms.",
     icon: Store,
     href: "/finance/suppliers",
     color: "text-violet-600",
@@ -63,7 +80,8 @@ const financeCategories: FinanceCardProps[] = [
   },
   {
     title: "Banks & Institutions",
-    description: "Configure bank accounts",
+    description:
+      "Configure and manage bank accounts and financial institutions.",
     icon: Landmark,
     href: "/finance/banks",
     color: "text-cyan-600",
@@ -72,7 +90,8 @@ const financeCategories: FinanceCardProps[] = [
   },
   {
     title: "Payment Methods",
-    description: "Setup credit cards, digital wallets, and payment gateways",
+    description:
+      "Set up credit cards, digital wallets, and other payment methods.",
     icon: CreditCard,
     href: "/finance/payment-methods",
     color: "text-rose-600",
