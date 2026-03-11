@@ -83,7 +83,7 @@ const mockRequests: Request[] = [
       "Upgrade laptops for development team to handle heavier workloads.",
     preferredDate: "2024-03-18",
     expectedCompletion: "2024-03-25",
-    attachment: ["laptop-specs.pdf","laptop-specs.pdf"],
+    attachment: ["laptop-specs.pdf", "laptop-specs.pdf"],
     plateNumber: "",
     carType: "",
     ownerFirstname: "",
@@ -286,7 +286,7 @@ const mockRequests: Request[] = [
     description: "Printing brochures and flyers for Q2 campaign.",
     preferredDate: "2024-03-20",
     expectedCompletion: "2024-03-22",
-    attachment: ["campaign-design.pdf","campaign-design.pdf"],
+    attachment: ["campaign-design.pdf", "campaign-design.pdf"],
     plateNumber: "",
     carType: "",
     ownerFirstname: "",
@@ -811,14 +811,42 @@ export default function ReviewRequest() {
           </div>
 
           {/* Footer */}
-          <DialogFooter className="px-6 border-t bg-muted/30">
-            <Button
-              className="mb-4"
-              variant="outline"
-              onClick={() => setViewDialogOpen(false)}
-            >
-              Close
-            </Button>
+          {/* Footer */}
+          <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
+            <div className="flex mb-4 gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setViewDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              {selectedRequest?.status === "submitted" && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedRequest, "rejected");
+                    }}
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedRequest, "approved");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
