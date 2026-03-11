@@ -49,3 +49,9 @@ export interface Request {
     dateSubmitted: string;
     description: string;
 }
+
+export interface InfoItemProps {
+    label: string;
+    value: React.ReactNode;
+    className?: string;
+}
