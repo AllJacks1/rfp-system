@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -476,6 +477,7 @@ export default function ServiceOrder() {
   const [orders, setOrders] = useState<ServiceOrder[]>(mockServiceOrders);
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const router = useRouter();
 
   // New state for approved requests dialog
   const [approvedRequestsDialogOpen, setApprovedRequestsDialogOpen] =
@@ -531,6 +533,9 @@ export default function ServiceOrder() {
     console.log("Creating service order from request:", request.id);
     // You can add navigation or modal opening here
     setApprovedRequestsDialogOpen(false);
+    router.push(
+      `/home/finance/service-orders/create-so?requestId=${request.id}`,
+    );
   };
 
   // Stats calculation
