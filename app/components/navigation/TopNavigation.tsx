@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
     subsections: [
       { label: "Service Request", href: "/home/finance/service-requests" },
       { label: "Purchase Request", href: "/home/finance/purchase-requests", badge: "12" },
+      { label: "Review Requests", href: "/home/finance/review-requests" },
       { label: "Service Order", href: "/home/finance/service-orders" },
       { label: "Purchase Order", href: "/home/finance/purchase-orders" },
       { label: "Request for Payment", href: "/home/finance/request-for-payment" },
