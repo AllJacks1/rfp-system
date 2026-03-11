@@ -25,3 +25,14 @@ export interface Notifications {
     time: string;
     unread: boolean;
 }
+
+export interface SelectedRequest {
+    id: string;
+    purchaseType: string;
+    status: string;
+    dateSubmitted: string;
+    requestor: string;
+    department: string;
+    amount: string;
+    description: string;
+}
