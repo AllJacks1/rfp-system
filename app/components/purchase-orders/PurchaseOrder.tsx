@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -267,6 +268,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
 ];
 
 export default function PurchaseOrder() {
+  const router = useRouter();
   const [orders, setOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
@@ -309,6 +311,9 @@ export default function PurchaseOrder() {
     console.log("Creating purchase order from request:", request.id);
     // You can add navigation or modal opening here
     setApprovedRequestsDialogOpen(false);
+    router.push(
+      `/home/finance/purchase-orders/create-po?requestId=${request.id}`,
+    );
   };
 
   // Filter approved requests
