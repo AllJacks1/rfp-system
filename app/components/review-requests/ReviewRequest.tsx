@@ -895,7 +895,7 @@ export default function ReviewRequest() {
           {/* Footer */}
           {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
-            <div className="flex mb-4 gap-4">
+            <div className="flex mb-4 mr-4 gap-4">
               <Button
                 variant="outline"
                 onClick={() => setViewDialogOpen(false)}
