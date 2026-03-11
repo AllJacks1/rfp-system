@@ -489,13 +489,33 @@ export default function ReviewRequest() {
 
   function InfoItem({ label, value, className }: InfoItemProps) {
     return (
-      <div className={cn("space-y-1", className)}>
-        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-        <dd className="text-sm font-semibold text-foreground truncate">
+      <div className={cn("space-y-1.5", className)}>
+        <dt className="text-xs font-semibold text-[#2B3A9F]/70 uppercase tracking-wider">
+          {label}
+        </dt>
+        <dd className="text-sm font-semibold text-slate-900">
           {value || (
-            <span className="text-muted-foreground font-normal italic">—</span>
+            <span className="text-slate-400 font-normal italic">—</span>
           )}
         </dd>
+      </div>
+    );
+  }
+
+  function TimelineItem({ label, value }: { label: string; value: string }) {
+    return (
+      <div className="relative pl-4 border-l-2 border-[#2B3A9F]/20">
+        <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-[#2B3A9F] ring-4 ring-white" />
+        <span className="text-xs font-semibold text-[#2B3A9F]/70 uppercase tracking-wider block mb-1">
+          {label}
+        </span>
+        <span className="text-sm font-bold text-slate-900">
+          {new Date(value).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </span>
       </div>
     );
   }
@@ -609,13 +629,16 @@ export default function ReviewRequest() {
           {/* Scrollable content */}
           <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
             {selectedRequest && (
-              <div className="p-6 space-y-8">
+              <div className="p-8 space-y-10">
                 {/* Request Overview */}
-                <section>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                    Overview
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                      Request Overview
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
                     <InfoItem label="Title" value={selectedRequest.title} />
                     <InfoItem label="Type" value={selectedRequest.type} />
                     <InfoItem
@@ -639,37 +662,45 @@ export default function ReviewRequest() {
                   </div>
                 </section>
 
-                {/* Schedule */}
+                {/* Timeline */}
                 <section>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                    Timeline
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InfoItem
-                      label="Submitted"
-                      value={selectedRequest.dateSubmitted}
-                    />
-                    <InfoItem
-                      label="Preferred Date"
-                      value={selectedRequest.preferredDate}
-                    />
-                    <InfoItem
-                      label="Required By"
-                      value={selectedRequest.requiredBy}
-                    />
-                    <InfoItem
-                      label="Expected Completion"
-                      value={selectedRequest.expectedCompletion}
-                    />
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                      Timeline
+                    </h3>
+                  </div>
+                  <div className="bg-[#2B3A9F]/5 rounded-xl p-6 border border-[#2B3A9F]/10">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <TimelineItem
+                        label="Submitted"
+                        value={selectedRequest.dateSubmitted}
+                      />
+                      <TimelineItem
+                        label="Preferred Date"
+                        value={selectedRequest.preferredDate}
+                      />
+                      <TimelineItem
+                        label="Required By"
+                        value={selectedRequest.requiredBy}
+                      />
+                      <TimelineItem
+                        label="Expected Completion"
+                        value={selectedRequest.expectedCompletion}
+                      />
+                    </div>
                   </div>
                 </section>
 
                 {/* Vendor */}
-                <section>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                    Vendor
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
+                <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                      Vendor Information
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
                     <InfoItem
                       label="Preferred Vendor"
                       value={selectedRequest.preferredVendor}
@@ -683,11 +714,20 @@ export default function ReviewRequest() {
 
                 {/* Vehicle Info */}
                 {selectedRequest.plateNumber && (
-                  <section>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                      Vehicle Information
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
+                  <section className="bg-gradient-to-r from-[#2B3A9F]/5 to-white rounded-xl border border-[#2B3A9F]/10 p-6">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                        Vehicle Information
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className="ml-auto text-xs border-[#2B3A9F] text-[#2B3A9F]"
+                      >
+                        {selectedRequest.carType}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-6">
                       <InfoItem
                         label="Plate Number"
                         value={selectedRequest.plateNumber}
@@ -706,62 +746,79 @@ export default function ReviewRequest() {
 
                 {/* Description */}
                 <section>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    Description
-                  </h3>
-                  <div className="bg-muted/50 rounded-lg p-4 text-sm leading-relaxed text-foreground/90">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                      Description
+                    </h3>
+                  </div>
+                  <div className="bg-[#2B3A9F]/5 border-l-4 border-[#2B3A9F] rounded-r-lg p-5 text-sm leading-relaxed text-slate-700">
                     {selectedRequest.description}
                   </div>
                 </section>
 
                 {/* Items Table */}
                 <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Requested Items
-                    </h3>
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                        Requested Items
+                      </h3>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs font-medium bg-[#2B3A9F]/10 text-[#2B3A9F] hover:bg-[#2B3A9F]/10"
+                    >
                       {selectedRequest.items.length} items
-                    </span>
+                    </Badge>
                   </div>
 
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="font-semibold text-xs">
+                      <TableHeader className="bg-[#2B3A9F]/5">
+                        <TableRow className="hover:bg-transparent border-b-2 border-[#2B3A9F]/10">
+                          <TableHead className="font-bold text-xs text-[#2B3A9F] py-4">
                             Item
                           </TableHead>
-                          <TableHead className="font-semibold text-xs">
+                          <TableHead className="font-bold text-xs text-[#2B3A9F] py-4">
                             Description
                           </TableHead>
-                          <TableHead className="font-semibold text-xs">
+                          <TableHead className="font-bold text-xs text-[#2B3A9F] py-4 text-center">
                             Unit
                           </TableHead>
-                          <TableHead className="font-semibold text-xs text-right">
+                          <TableHead className="font-bold text-xs text-[#2B3A9F] py-4 text-right">
                             Qty
                           </TableHead>
-                          <TableHead className="font-semibold text-xs text-right">
+                          <TableHead className="font-bold text-xs text-[#2B3A9F] py-4 text-right">
                             Unit Price
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedRequest.items.map((item, index) => (
-                          <TableRow key={index} className="group">
-                            <TableCell className="font-medium text-sm">
+                          <TableRow
+                            key={index}
+                            className="group hover:bg-[#2B3A9F]/5 transition-colors"
+                          >
+                            <TableCell className="font-semibold text-sm text-slate-900 py-4">
                               {item.item}
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
+                            <TableCell className="text-sm text-slate-600 py-4">
                               {item.description}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {item.unit}
+                            <TableCell className="text-sm text-slate-600 py-4 text-center">
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-normal border-[#2B3A9F]/30 text-[#2B3A9F]"
+                              >
+                                {item.unit}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-right font-medium">
+                            <TableCell className="text-sm font-semibold text-slate-900 py-4 text-right">
                               {item.quantity}
                             </TableCell>
-                            <TableCell className="text-sm text-right tabular-nums">
+                            <TableCell className="text-sm font-medium text-slate-900 py-4 text-right tabular-nums">
                               {item.estimatedUnitPrice}
                             </TableCell>
                           </TableRow>
@@ -770,42 +827,67 @@ export default function ReviewRequest() {
                     </Table>
                   </div>
 
-                  <div className="flex justify-end mt-4 pt-4 border-t">
-                    <div className="text-right">
-                      <span className="text-xs text-muted-foreground block mb-1">
+                  {/* Total */}
+                  <div className="mt-6 flex justify-end">
+                    <div className="bg-[#2B3A9F] text-white rounded-xl px-6 py-4 text-right">
+                      <span className="text-xs text-white/70 block mb-1 uppercase tracking-wider">
                         Total Estimated Cost
                       </span>
-                      <span className="text-lg font-semibold tabular-nums">
+                      <span className="text-2xl font-bold tabular-nums">
                         {selectedRequest.totalEstimatedCost}
                       </span>
                     </div>
                   </div>
                 </section>
 
-                {/* Attachment */}
-                {selectedRequest.attachment && (
-                  <section>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Attachments
-                    </h3>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                        />
-                      </svg>
-                      View Attachment
-                    </Button>
-                  </section>
-                )}
+                {/* Attachments */}
+                {selectedRequest.attachment &&
+                  selectedRequest.attachment.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                          Attachments
+                        </h3>
+                        <span className="text-xs text-slate-500 ml-auto">
+                          {selectedRequest.attachment.length} file(s)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        {selectedRequest.attachment.map((file, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            className="gap-2 h-auto py-3 px-4 rounded-xl border-slate-200 hover:border-[#2B3A9F] hover:text-[#2B3A9F] hover:bg-[#2B3A9F]/5 transition-colors"
+                          >
+                            <div className="p-2 bg-[#2B3A9F]/10 rounded-lg">
+                              <svg
+                                className="w-4 h-4 text-[#2B3A9F]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                                />
+                              </svg>
+                            </div>
+                            <div className="text-left">
+                              <span className="text-sm font-medium block truncate max-w-[200px]">
+                                {file}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                Click to view
+                              </span>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
               </div>
             )}
           </div>
