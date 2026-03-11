@@ -28,11 +28,24 @@ export interface Notifications {
 
 export interface SelectedRequest {
     id: string;
+    title: string
     purchaseType: string;
     status: string;
     dateSubmitted: string;
     requestor: string;
     department: string;
     amount: string;
+    description: string;
+}
+
+export interface Request {
+    id: string;
+    title: string;
+    purchaseType: string;
+    requestor: string;
+    department: string;
+    amount: string;
+    status: "submitted" | "approved" | "rejected";
+    dateSubmitted: string;
     description: string;
 }
