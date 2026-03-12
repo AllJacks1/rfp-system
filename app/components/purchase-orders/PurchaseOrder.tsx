@@ -269,7 +269,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
 
 export default function PurchaseOrder() {
   const router = useRouter();
-  const [orders, setOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
+  const [orders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null,
   );
@@ -647,16 +647,16 @@ export default function PurchaseOrder() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[180px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-45">
                         Request ID
                       </TableHead>
                       <TableHead className="font-semibold text-xs text-slate-600 py-4">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[140px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-35">
                         Type
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-[160px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-40">
                         Action
                       </TableHead>
                     </TableRow>
