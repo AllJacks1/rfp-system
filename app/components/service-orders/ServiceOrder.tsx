@@ -474,7 +474,7 @@ const mockServiceOrders: ServiceOrder[] = [
 ];
 
 export default function ServiceOrder() {
-  const [orders, setOrders] = useState<ServiceOrder[]>(mockServiceOrders);
+  const [orders] = useState<ServiceOrder[]>(mockServiceOrders);
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const router = useRouter();
@@ -861,22 +861,22 @@ export default function ServiceOrder() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[180px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-45">
                         Request ID
                       </TableHead>
                       <TableHead className="font-semibold text-xs text-slate-600 py-4">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[140px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-35">
                         Type
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-[160px]">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-40">
                         Action
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {approvedRequests.map((request, index) => (
+                    {approvedRequests.map((request) => (
                       <TableRow
                         key={request.id}
                         className="group hover:bg-slate-50 transition-colors"
