@@ -1,4 +1,11 @@
-import { CreditCard, MapPin, Package, Phone, TableIcon } from "lucide-react";
+import {
+  CreditCard,
+  MapPin,
+  Package,
+  Phone,
+  TableIcon,
+  Car,
+} from "lucide-react";
 import Image from "next/image";
 
 interface RequestItem {
@@ -72,6 +79,17 @@ export const PrintPurchaseOrder = ({
     day: "numeric",
   });
 
+  // Check if vehicle details exist
+  const hasVehicleDetails =
+    request.plateNumber?.trim() ||
+    request.carType?.trim() ||
+    request.ownerFirstname?.trim() ||
+    request.ownerLastname?.trim();
+
+  const ownerFullName = [request.ownerFirstname, request.ownerLastname]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="print-content bg-white text-black min-h-[277mm] w-[210mm] mx-auto p-[15mm] box-border text-[12px] leading-normal flex flex-col">
       {/* HEADER */}
@@ -124,10 +142,10 @@ export const PrintPurchaseOrder = ({
 
       {/* Purchase INFO */}
       <div className="mb-5">
-          <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Purchase Details
-          </h3>
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
+          <Package className="h-4 w-4" />
+          Purchase Details
+        </h3>
         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-base font-bold text-gray-900 mb-1">
             {request.title}
@@ -164,6 +182,46 @@ export const PrintPurchaseOrder = ({
           </div>
         </div>
       </div>
+
+      {/* VEHICLE DETAILS - Conditional Section */}
+      {hasVehicleDetails && (
+        <div className="mb-5">
+          <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
+            <Car className="h-4 w-4" />
+            Vehicle Details
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              {request.plateNumber?.trim() && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Plate Number:
+                  </span>
+                  <span className="font-mono font-medium">
+                    {request.plateNumber}
+                  </span>
+                </div>
+              )}
+              {request.carType?.trim() && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Vehicle Type:
+                  </span>
+                  <span>{request.carType}</span>
+                </div>
+              )}
+              {ownerFullName && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Owner:
+                  </span>
+                  <span>{ownerFullName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ITEMS TABLE */}
       <div className="mb-5">
@@ -261,9 +319,9 @@ export const PrintPurchaseOrder = ({
         </div>
 
         <div className="border-2 border-gray-300 rounded-lg p-3">
-            <h4 className="font-bold text-blue-900 text-xs uppercase border-b border-gray-200 mb-2 pb-1">
-              Supplier
-            </h4>
+          <h4 className="font-bold text-blue-900 text-xs uppercase border-b border-gray-200 mb-2 pb-1">
+            Supplier
+          </h4>
           <p className="font-bold text-base text-gray-900">
             {request.preferredVendor}
           </p>
@@ -294,16 +352,12 @@ export const PrintPurchaseOrder = ({
           Terms & Conditions
         </h3>
         <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+          <li>Goods must be delivered by the required date specified above.</li>
+          <li>All goods shall meet specifications and quality standards.</li>
           <li>
-            Goods must be delivered by the required date specified above.
+            Invoices must reference this Purchase Order number for payment
+            processing.
           </li>
-          <li>
-            All goods shall meet specifications and quality standards.
-          </li>
-            <li>
-              Invoices must reference this Purchase Order number for payment
-              processing.
-            </li>
           <li>
             Any changes to scope must be approved in writing by the authorized
             requestor.

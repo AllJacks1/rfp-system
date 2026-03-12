@@ -679,7 +679,7 @@ export default function RequestDetailsPage() {
               <div className="mt-4 flex justify-end">
                 <div className="bg-muted/50 rounded-lg p-4 min-w-50">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="mr-2 text-sm text-muted-foreground">
                       Total Estimated Cost:
                     </span>
                     <span className="text-lg font-bold text-green-600">
