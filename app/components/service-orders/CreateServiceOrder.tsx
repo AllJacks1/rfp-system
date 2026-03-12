@@ -1,15 +1,1104 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Building2,
+  Calendar,
+  User,
+  DollarSign,
+  FileText,
+  Truck,
+  CreditCard,
+  Package,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  ArrowLeft,
+  Download,
+  Printer,
+  TableIcon,
+  Plus,
+  ArrowLeftRight,
+  Trash,
+  Trash2,
+  Save,
+  Coins,
+} from "lucide-react";
+import Link from "next/link";
+import { Label } from "@/components/ui/label";
+import { Dropdown } from "react-day-picker";
+import { DropdownMenu } from "radix-ui";
+import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
-export default function CreateServiceOrder() {
+interface JournalEntry {
+  id: number;
+  accountTitle: string;
+  amount: number;
+  entryType: "debit" | "credit";
+}
+
+interface RequestItem {
+  item: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  estimatedUnitPrice: string;
+}
+
+interface Request {
+  id: string;
+  title: string;
+  type: string;
+  priority: string;
+  status: "submitted" | "approved" | "rejected";
+  dateSubmitted: string;
+  requestor: string;
+  company: string;
+  department: string;
+  amount: string;
+  description: string;
+  preferredDate: string;
+  expectedCompletion: string;
+  attachment: string[];
+  plateNumber: string;
+  carType: string;
+  ownerFirstname: string;
+  ownerLastname: string;
+  preferredVendor: string;
+  vendorContactPerson: string;
+  requiredBy: string;
+  paymentMethod: string;
+  items: RequestItem[];
+  totalEstimatedCost: string;
+}
+
+const mockRequests: Request[] = [
+  {
+    id: "REQ-2024-001",
+    title: "Laptop Upgrades for Dev Team",
+    type: "IT Equipment",
+    priority: "High",
+    status: "approved",
+    dateSubmitted: "2024-03-10",
+    requestor: "John Smith",
+    company: "TechNova Solutions",
+    department: "Engineering",
+    amount: "$12,500",
+    description:
+      "Upgrade laptops for development team to handle heavier workloads.",
+    preferredDate: "2024-03-18",
+    expectedCompletion: "2024-03-25",
+    attachment: ["laptop-specs.pdf", "laptop-specs.pdf"],
+    plateNumber: "",
+    carType: "",
+    ownerFirstname: "",
+    ownerLastname: "",
+    preferredVendor: "Dell Technologies",
+    vendorContactPerson: "Michael Reyes",
+    requiredBy: "2024-03-25",
+    paymentMethod: "Bank Transfer",
+    items: [
+      {
+        item: "Dell XPS 15",
+        description: "Intel i7, 32GB RAM, 1TB SSD",
+        unit: "pcs",
+        quantity: "5",
+        estimatedUnitPrice: "$2,300",
+      },
+      {
+        item: "Laptop Docking Station",
+        description: "USB-C docking station",
+        unit: "pcs",
+        quantity: "5",
+        estimatedUnitPrice: "$150",
+      },
+    ],
+    totalEstimatedCost: "$12,250",
+  },
+  {
+    id: "REQ-2024-002",
+    title: "Q1 Office Supplies",
+    type: "Office Supplies",
+    priority: "Medium",
+    status: "approved",
+    dateSubmitted: "2024-03-09",
+    requestor: "Sarah Johnson",
+    company: "TechNova Solutions",
+    department: "Administration",
+    amount: "$850",
+    description: "Quarterly restocking of office supplies.",
+    preferredDate: "2024-03-12",
+    expectedCompletion: "2024-03-14",
+    attachment: [],
+    plateNumber: "",
+    carType: "",
+    ownerFirstname: "",
+    ownerLastname: "",
+    preferredVendor: "Office Warehouse",
+    vendorContactPerson: "Ana Santos",
+    requiredBy: "2024-03-15",
+    paymentMethod: "Company Credit Card",
+    items: [
+      {
+        item: "Printer Paper",
+        description: "A4 80gsm",
+        unit: "ream",
+        quantity: "20",
+        estimatedUnitPrice: "$5",
+      },
+      {
+        item: "Ballpoint Pens",
+        description: "Blue ink",
+        unit: "box",
+        quantity: "10",
+        estimatedUnitPrice: "$8",
+      },
+      {
+        item: "Staplers",
+        description: "Standard office stapler",
+        unit: "pcs",
+        quantity: "5",
+        estimatedUnitPrice: "$12",
+      },
+    ],
+    totalEstimatedCost: "$850",
+  },
+  {
+    id: "REQ-2024-003",
+    title: "Vehicle Tire Replacement",
+    type: "Vehicle Maintenance",
+    priority: "High",
+    status: "approved",
+    dateSubmitted: "2024-03-07",
+    requestor: "Carlos Mendoza",
+    company: "TechNova Logistics",
+    department: "Operations",
+    amount: "$1,200",
+    description: "Replace worn-out tires for delivery vehicle.",
+    preferredDate: "2024-03-11",
+    expectedCompletion: "2024-03-11",
+    attachment: ["vehicle-inspection.jpg", "vehicle-inspection.jpg"],
+    plateNumber: "ABC-1234",
+    carType: "Toyota Hilux",
+    ownerFirstname: "Carlos",
+    ownerLastname: "Mendoza",
+    preferredVendor: "Goodyear Service Center",
+    vendorContactPerson: "Luis Ramirez",
+    requiredBy: "2024-03-11",
+    paymentMethod: "Bank Transfer",
+    items: [
+      {
+        item: "All-Terrain Tire",
+        description: "265/65R17 Goodyear Wrangler",
+        unit: "pcs",
+        quantity: "4",
+        estimatedUnitPrice: "$250",
+      },
+      {
+        item: "Chrome Valve Stems",
+        description: "Heavy-duty chrome valve stems",
+        unit: "set",
+        quantity: "4",
+        estimatedUnitPrice: "$12",
+      },
+      {
+        item: "Tire Pressure Sensors",
+        description: "TPMS sensors for Toyota Hilux",
+        unit: "pcs",
+        quantity: "4",
+        estimatedUnitPrice: "$45",
+      },
+    ],
+    totalEstimatedCost: "$1,663",
+  },
+  {
+    id: "REQ-2024-004",
+    title: "Marketing Campaign Printing",
+    type: "Marketing Materials",
+    priority: "Medium",
+    status: "approved",
+    dateSubmitted: "2024-03-11",
+    requestor: "Emily Garcia",
+    company: "TechNova Solutions",
+    department: "Marketing",
+    amount: "$2,000",
+    description: "Printing brochures and flyers for Q2 campaign.",
+    preferredDate: "2024-03-20",
+    expectedCompletion: "2024-03-22",
+    attachment: ["campaign-design.pdf", "campaign-design.pdf"],
+    plateNumber: "",
+    carType: "",
+    ownerFirstname: "",
+    ownerLastname: "",
+    preferredVendor: "PrintHub Davao",
+    vendorContactPerson: "Kevin Tan",
+    requiredBy: "2024-03-22",
+    paymentMethod: "Credit Card",
+    items: [
+      {
+        item: "Tri-Fold Brochures",
+        description: "Full color glossy",
+        unit: "pcs",
+        quantity: "2000",
+        estimatedUnitPrice: "$0.60",
+      },
+      {
+        item: "Flyers",
+        description: "A5 promotional flyers",
+        unit: "pcs",
+        quantity: "1500",
+        estimatedUnitPrice: "$0.40",
+      },
+    ],
+    totalEstimatedCost: "$1,800",
+  },
+  {
+    id: "REQ-2024-005",
+    title: "Aircon Maintenance Service",
+    type: "Facility Maintenance",
+    priority: "Low",
+    status: "approved",
+    dateSubmitted: "2024-03-05",
+    requestor: "David Lee",
+    company: "TechNova Solutions",
+    department: "Facilities",
+    amount: "$600",
+    description:
+      "Routine cleaning and maintenance of office air conditioning units.",
+    preferredDate: "2024-03-15",
+    expectedCompletion: "2024-03-15",
+    attachment: [],
+    plateNumber: "",
+    carType: "",
+    ownerFirstname: "",
+    ownerLastname: "",
+    preferredVendor: "CoolAir Services",
+    vendorContactPerson: "Mark Lopez",
+    requiredBy: "2024-03-16",
+    paymentMethod: "Bank Transfer",
+    items: [
+      {
+        item: "Aircon Cleaning",
+        description: "Split-type AC cleaning",
+        unit: "unit",
+        quantity: "6",
+        estimatedUnitPrice: "$70",
+      },
+      {
+        item: "Freon Refill",
+        description: "R410 refrigerant refill",
+        unit: "service",
+        quantity: "1",
+        estimatedUnitPrice: "$150",
+      },
+    ],
+    totalEstimatedCost: "$570",
+  },
+];
+
+const statusConfig = {
+  submitted: {
+    color: "bg-blue-100 text-blue-800 border-blue-200",
+    icon: AlertCircle,
+    label: "Submitted",
+  },
+  approved: {
+    color: "bg-green-100 text-green-800 border-green-200",
+    icon: CheckCircle2,
+    label: "Approved",
+  },
+  rejected: {
+    color: "bg-red-100 text-red-800 border-red-200",
+    icon: XCircle,
+    label: "Rejected",
+  },
+};
+
+const priorityConfig = {
+  High: "bg-red-100 text-red-800 border-red-200",
+  Medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  Low: "bg-green-100 text-green-800 border-green-200",
+};
+
+function DetailItem({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ElementType;
+}) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-3 py-2">
+      {Icon && <Icon className="h-4 w-4 text-muted-foreground mt-0.5" />}
+      <div className="flex-1">
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-sm font-semibold">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function RequestDetailsPage() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId");
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [accountTitle, setAccountTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
+
+  const request = useMemo(() => {
+    return mockRequests.find((r) => r.id === requestId);
+  }, [requestId]);
+
+  const handleAddRow = () => {
+    if (!accountTitle || !amount) return;
+
+    const newEntry: JournalEntry = {
+      id: Date.now(),
+      accountTitle,
+      amount: parseFloat(amount),
+      entryType,
+    };
+
+    setEntries([...entries, newEntry]);
+
+    // Reset form fields (optional - remove if you want to keep values)
+    setAccountTitle("");
+    setAmount("");
+    setEntryType("debit");
+  };
+
+  const handleDeleteEntry = (id: number) => {
+    setEntries(entries.filter((entry) => entry.id !== id));
+  };
+
+  const totalDebits = entries
+    .filter((e) => e.entryType === "debit")
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const totalCredits = entries
+    .filter((e) => e.entryType === "credit")
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const isBalanced = totalDebits === totalCredits && entries.length > 0;
+
+  const formatCurrency = (value: string | number | undefined | null) => {
+    // Handle undefined, null, or empty values
+    if (value === undefined || value === null || value === "") {
+      return "₱0.00";
+    }
+
+    // If it's already a number
+    if (typeof value === "number") {
+      if (isNaN(value)) return "₱0.00";
+      return new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+      }).format(value);
+    }
+
+    // If it's a string, clean it first (remove currency symbols, commas, spaces)
+    const cleanedValue = value
+      .toString()
+      .replace(/[₱$,\s]/g, "") // Remove ₱, $, commas, and spaces
+      .trim();
+
+    // If empty after cleaning
+    if (!cleanedValue || cleanedValue === "") {
+      return "₱0.00";
+    }
+
+    const numValue = parseFloat(cleanedValue);
+
+    // Check if parsing resulted in NaN
+    if (isNaN(numValue)) {
+      return "₱0.00";
+    }
+
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(numValue);
+  };
+
+  if (!request) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Request Not Found</h2>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              {requestId
+                ? `No request found with ID: ${requestId}`
+                : "No request ID provided in URL parameters"}
+            </p>
+            <Link href="/home/finance/service-orders">
+              <Button>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Requests
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const StatusIcon = statusConfig[request.status].icon;
+  const isVehicleRequest = request.type === "Vehicle Maintenance";
 
   return (
-    <div>
-      <h1>Create Service Order from Request: {requestId}</h1>
-      {/* Your form */}
+    <div className="container mx-auto py-8 px-4 max-w-6xl">
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Link href="/home/finance/service-orders">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Request Details</h1>
+            <p className="text-sm text-muted-foreground">
+              Viewing {request.id}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Request Overview Card */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1">
+                  <CardTitle className="text-xl mb-2">
+                    {request.title}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {request.description}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Badge
+                    variant="outline"
+                    className={statusConfig[request.status].color}
+                  >
+                    <StatusIcon className="mr-1 h-3 w-3" />
+                    {statusConfig[request.status].label}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={
+                      priorityConfig[
+                        request.priority as keyof typeof priorityConfig
+                      ]
+                    }
+                  >
+                    {request.priority} Priority
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailItem
+                  label="Request Type"
+                  value={request.type}
+                  icon={Package}
+                />
+                <DetailItem
+                  label="Department"
+                  value={request.department}
+                  icon={Building2}
+                />
+                <DetailItem
+                  label="Date Submitted"
+                  value={new Date(request.dateSubmitted).toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )}
+                  icon={Calendar}
+                />
+                <DetailItem
+                  label="Required By"
+                  value={new Date(request.requiredBy).toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )}
+                  icon={Calendar}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vehicle Details (Conditional) */}
+          {isVehicleRequest && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Vehicle Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DetailItem
+                    label="Plate Number"
+                    value={request.plateNumber}
+                  />
+                  <DetailItem label="Vehicle Type" value={request.carType} />
+                  <DetailItem
+                    label="Owner Name"
+                    value={`${request.ownerFirstname} ${request.ownerLastname}`.trim()}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Items Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Requested Items
+              </CardTitle>
+              <CardDescription>
+                {request.items.length} item
+                {request.items.length !== 1 ? "s" : ""} in this request
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-12.5">#</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-center">Qty</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {request.items.map((item, index) => {
+                      const qty = parseFloat(item.quantity) || 0;
+                      const price =
+                        parseFloat(
+                          item.estimatedUnitPrice.replace(/[$,]/g, ""),
+                        ) || 0;
+                      const total = qty * price;
+
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.item}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {item.description}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.quantity} {item.unit}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.estimatedUnitPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(total)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Total Summary */}
+              <div className="mt-4 flex justify-end">
+                <div className="bg-muted/50 rounded-lg p-4 min-w-50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Total Estimated Cost:
+                    </span>
+                    <span className="text-lg ml-2  font-bold text-green-600">
+                      {formatCurrency(request.totalEstimatedCost)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Attachments */}
+          {request.attachment.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Attachments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {request.attachment.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors cursor-pointer group"
+                    >
+                      <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Click to download
+                        </p>
+                      </div>
+                      <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Requestor Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Requestor Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                    {request.requestor
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{request.requestor}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {request.department}
+                  </p>
+                </div>
+              </div>
+              <Separator />
+              <DetailItem
+                label="Company"
+                value={request.company}
+                icon={Building2}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Vendor Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Vendor Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <DetailItem
+                label="Preferred Vendor"
+                value={request.preferredVendor}
+                icon={Building2}
+              />
+              <DetailItem
+                label="Contact Person"
+                value={request.vendorContactPerson}
+                icon={User}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Payment Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Payment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <DetailItem
+                label="Payment Method"
+                value={request.paymentMethod}
+                icon={CreditCard}
+              />
+              <DetailItem
+                label="Amount"
+                value={formatCurrency(request.amount)}
+                icon={DollarSign}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      <div className="mt-6">
+        <Card className="border-l-4 border-l-[#2B3A9F] shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Journal Entry</CardTitle>
+                  <CardDescription>
+                    Record double-entry bookkeeping transaction
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200"
+              >
+                Accounting
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Form Controls Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-lg border">
+              {/* Account Title */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  Account Title
+                </Label>
+                <Select value={accountTitle} onValueChange={setAccountTitle}>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="Select account..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="accounts-receivable">
+                      Accounts Receivable
+                    </SelectItem>
+                    <SelectItem value="inventory">Inventory</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="accounts-payable">
+                      Accounts Payable
+                    </SelectItem>
+                    <SelectItem value="expenses">Expenses</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-muted-foreground" />
+                  Amount
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="bg-white font-mono"
+                />
+              </div>
+
+              {/* Debit/Credit */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+                  Entry Type
+                </Label>
+                <Select
+                  value={entryType}
+                  onValueChange={(value: "debit" | "credit") =>
+                    setEntryType(value)
+                  }
+                >
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="debit">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        Debit
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="credit">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-red-500" />
+                        Credit
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Add Row Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleAddRow}
+                disabled={!accountTitle || !amount}
+                className="w-full md:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Entry to Table
+              </Button>
+            </div>
+
+            <Separator className="my-4" />
+
+            {/* Journal Entries Table */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">
+                  Journal Entries ({entries.length})
+                </Label>
+                {entries.length > 0 && (
+                  <Badge
+                    variant={isBalanced ? "default" : "destructive"}
+                    className={
+                      isBalanced
+                        ? "bg-green-100 text-green-800 hover:bg-green-100"
+                        : ""
+                    }
+                  >
+                    {isBalanced ? "Balanced" : "Unbalanced"}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="rounded-lg border overflow-hidden bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-100 hover:bg-slate-100">
+                      <TableHead className="w-12 text-center font-bold text-slate-700">
+                        #
+                      </TableHead>
+                      <TableHead className="font-bold text-slate-700">
+                        Account Title
+                      </TableHead>
+                      <TableHead className="w-40 text-right font-bold text-green-700">
+                        Debit
+                      </TableHead>
+                      <TableHead className="w-40 text-right font-bold text-red-700">
+                        Credit
+                      </TableHead>
+                      <TableHead className="w-16"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entries.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                            <AlertCircle className="h-8 w-8 text-muted-foreground/50" />
+                            <p>
+                              No entries yet. Fill the form above and click
+                              &quot;Add Entry&quot;.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      entries.map((entry, index) => (
+                        <TableRow
+                          key={entry.id}
+                          className="group hover:bg-slate-50/50"
+                        >
+                          <TableCell className="text-center text-muted-foreground font-medium">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium capitalize">
+                            {entry.accountTitle.replace(/-/g, " ")}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-mono font-semibold ${
+                              entry.entryType === "debit"
+                                ? "text-green-700 bg-green-50/30"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {entry.entryType === "debit"
+                              ? formatCurrency(entry.amount)
+                              : "—"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-mono font-semibold ${
+                              entry.entryType === "credit"
+                                ? "text-red-700 bg-red-50/30"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {entry.entryType === "credit"
+                              ? formatCurrency(entry.amount)
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+
+                    {/* Totals Row */}
+                    {entries.length > 0 && (
+                      <TableRow className="bg-slate-50 font-bold border-t-2">
+                        <TableCell></TableCell>
+                        <TableCell className="text-slate-700">TOTAL</TableCell>
+                        <TableCell
+                          className={`text-right font-mono ${
+                            totalDebits === totalCredits
+                              ? "text-green-700"
+                              : "text-orange-600"
+                          }`}
+                        >
+                          {formatCurrency(totalDebits)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-mono ${
+                            totalDebits === totalCredits
+                              ? "text-red-700"
+                              : "text-orange-600"
+                          }`}
+                        >
+                          {formatCurrency(totalCredits)}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Summary Footer */}
+              {entries.length > 0 && (
+                <div className="flex justify-end pt-2">
+                  <div
+                    className={`rounded-lg p-4 min-w-[280px] space-y-2 border ${
+                      isBalanced
+                        ? "bg-green-50 border-green-200"
+                        : "bg-orange-50 border-orange-200"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        Total Debits
+                      </span>
+                      <span className="font-mono font-semibold text-green-700">
+                        {formatCurrency(totalDebits)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-red-500" />
+                        Total Credits
+                      </span>
+                      <span className="font-mono font-semibold text-red-700">
+                        {formatCurrency(totalCredits)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-sm">Difference</span>
+                      <span
+                        className={`font-mono font-bold ${
+                          isBalanced ? "text-green-600" : "text-orange-600"
+                        }`}
+                      >
+                        {formatCurrency(Math.abs(totalDebits - totalCredits))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => setEntries([])}>
+                Clear All
+              </Button>
+              <Button disabled={!isBalanced || entries.length === 0}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Journal Entry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
