@@ -36,9 +36,11 @@ import {
   ShoppingCart,
   Hash,
   Calculator,
-  Car
+  Car,
+  ArrowLeft,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import Link from "next/link";
 
 interface LineItem {
   id: number;
@@ -151,23 +153,30 @@ export default function CreatePurchaseRequestForm() {
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Badge
-                variant="secondary"
-                className="bg-indigo-50 text-[#2B3A9F] border-indigo-200 font-medium"
-              >
-                <ShoppingCart className="w-3 h-3 mr-1" />
-                New Purchase Request
-              </Badge>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
+          <div className="flex items-center gap-3">
+            <Link href="/home/finance/service-requests">
+              <Button variant="outline" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge
+                  variant="secondary"
+                  className="bg-indigo-50 text-[#2B3A9F] border-indigo-200 font-medium"
+                >
+                  <ShoppingCart className="w-3 h-3 mr-1" />
+                  New Purchase Request
+                </Badge>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Create Purchase Request
+              </h1>
+              <p className="text-sm text-slate-500">
+                Submit a new purchase request for review and approval
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Create Purchase Request
-            </h1>
-            <p className="text-slate-500 mt-1">
-              Submit a new purchase request for review and approval
-            </p>
           </div>
         </div>
 
@@ -358,7 +367,7 @@ export default function CreatePurchaseRequestForm() {
                 </Label>
                 <textarea
                   placeholder="Provide detailed information about the items or services needed, including specifications, purpose, and any other relevant details..."
-                  className="w-full min-h-[100px] px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-y transition-all"
+                  className="w-full min-h-25 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-y transition-all"
                 />
               </div>
             </CardContent>
@@ -424,7 +433,7 @@ export default function CreatePurchaseRequestForm() {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner's first name
+                    Owner&rsquo;s first name
                   </Label>
                   <Input
                     placeholder="Car owner's first name"
@@ -434,7 +443,7 @@ export default function CreatePurchaseRequestForm() {
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner's last name
+                    Owner&rsquo;s last name
                   </Label>
                   <Input
                     placeholder="Car owner's last name"
