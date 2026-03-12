@@ -1,4 +1,4 @@
-import { CreditCard, MapPin, Package, Phone, TableIcon } from "lucide-react";
+import { CreditCard, MapPin, Package, Phone, TableIcon, Truck } from "lucide-react";
 import Image from "next/image";
 
 interface RequestItem {
@@ -71,6 +71,9 @@ export const PrintServiceOrder = ({
     month: "short",
     day: "numeric",
   });
+
+  // Check if vehicle details exist
+  const hasVehicleDetails = request.plateNumber || request.carType || request.ownerFirstname || request.ownerLastname;
 
   return (
     <div className="print-content bg-white text-black min-h-[277mm] w-[210mm] mx-auto p-[15mm] box-border text-[12px] leading-normal flex flex-col">
@@ -165,6 +168,48 @@ export const PrintServiceOrder = ({
         </div>
       </div>
 
+      {/* VEHICLE DETAILS - Conditional Section */}
+      {hasVehicleDetails && (
+        <div className="mb-5">
+          <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Vehicle Information
+          </h3>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              {request.plateNumber && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Plate Number:
+                  </span>
+                  <span className="font-mono font-semibold text-blue-900">
+                    {request.plateNumber}
+                  </span>
+                </div>
+              )}
+              {request.carType && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Vehicle Type:
+                  </span>
+                  <span>{request.carType}</span>
+                </div>
+              )}
+              {(request.ownerFirstname || request.ownerLastname) && (
+                <div className="flex">
+                  <span className="font-semibold text-gray-600 w-28">
+                    Owner:
+                  </span>
+                  <span>
+                    {request.ownerFirstname} {request.ownerLastname}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ITEMS TABLE */}
       <div className="mb-5">
         <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
@@ -225,7 +270,7 @@ export const PrintServiceOrder = ({
         <div className="flex justify-end mt-3">
           <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-2 min-w-50">
             <div className="flex justify-between items-center">
-              <span className="font-bold text-blue-900">TOTAL AMOUNT:</span>
+              <span className="mr-2 font-bold text-blue-900">TOTAL AMOUNT:</span>
               <span className="font-mono font-bold text-lg text-blue-900">
                 {formatCurrency(request.totalEstimatedCost)}
               </span>
