@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import {
   Card,
   CardContent,
@@ -39,16 +41,16 @@ import {
   TableIcon,
   Plus,
   ArrowLeftRight,
-  Trash,
   Trash2,
   Save,
   Coins,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
-import { Dropdown } from "react-day-picker";
-import { DropdownMenu } from "radix-ui";
-import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -57,6 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 interface JournalEntry {
   id: number;
@@ -369,6 +372,316 @@ function DetailItem({
   );
 }
 
+const COMPANY_INFO = {
+  name: "Astra Business Solutions",
+  tagline: "Innovative Business Solutions",
+  address: "iHub at Pines Place, Pioneer Dr, Bajada",
+  city: "Davao City",
+  country: "Philippines",
+  postalCode: "8000",
+  phone: "+63 985-571-3768",
+  email: "info@technova-solutions.com",
+  logo: "/astra_logo_small.png", // Replace with your actual logo path
+};
+
+// Printable Content Component
+const PrintableContent = ({
+  request,
+  entries,
+  totalDebits,
+  totalCredits,
+  formatCurrency,
+  serviceOrderNumber,
+}: {
+  request: Request;
+  entries: JournalEntry[];
+  totalDebits: number;
+  totalCredits: number;
+  isBalanced: boolean;
+  formatCurrency: (value: string | number | undefined | null) => string;
+  serviceOrderNumber: string;
+}) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  return (
+    <div className="print-content bg-white text-black min-h-[277mm] w-[210mm] mx-auto p-[15mm] box-border text-[12px] leading-normal flex flex-col">
+      {/* HEADER */}
+      <div className="border-b-2 border-blue-900 pb-3 mb-4 flex justify-between items-start">
+        <div className="flex gap-3 items-center">
+          <Image
+            src="/astra_logo_small.png"
+            alt="Logo"
+            width={48}
+            height={48}
+            priority
+            className="rounded"
+          />
+          <div>
+            <h1 className="text-lg font-bold text-blue-900 uppercase tracking-wide">
+              {COMPANY_INFO.name}
+            </h1>
+            <p className="text-[10px] text-gray-600 italic">
+              {COMPANY_INFO.tagline}
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[10px] text-gray-600">
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {COMPANY_INFO.address}, {COMPANY_INFO.city}
+              </span>
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                {COMPANY_INFO.phone}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 border-2 border-blue-900 rounded-lg px-4 py-2 text-center min-w-[140px]">
+          <p className="text-[10px] text-gray-600 uppercase font-bold">
+            Service Order
+          </p>
+          <p className="text-lg font-bold text-blue-900">
+            {serviceOrderNumber}
+          </p>
+          <p className="text-[10px] text-gray-500">{today}</p>
+        </div>
+      </div>
+
+      {/* TITLE & STATUS */}
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-gray-900 uppercase tracking-widestinline-block px-8 pb-1">
+          Official Service Order
+        </h2>
+      </div>
+
+      {/* SERVICE INFO */}
+      <div className="mb-5">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
+          <Package className="h-4 w-4" />
+          Service Details
+        </h3>
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <h4 className="text-base font-bold text-gray-900 mb-1">
+            {request.title}
+          </h4>
+          <p className="text-gray-700 text-sm mb-3">{request.description}</p>
+
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+            <div className="flex">
+              <span className="font-semibold text-gray-600 w-28">
+                Service Type:
+              </span>
+              <span>{request.type}</span>
+            </div>
+            <div className="flex">
+              <span className="font-semibold text-gray-600 w-28">
+                Department:
+              </span>
+              <span>{request.department}</span>
+            </div>
+            <div className="flex">
+              <span className="font-semibold text-gray-600 w-28">
+                Date Submitted:
+              </span>
+              <span>{formatDate(request.dateSubmitted)}</span>
+            </div>
+            <div className="flex">
+              <span className="font-semibold text-gray-600 w-28">
+                Required By:
+              </span>
+              <span className="text-red-700 font-semibold">
+                {formatDate(request.requiredBy)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ITEMS TABLE */}
+      <div className="mb-5">
+        <h3 className="text-sm font-bold text-blue-900 uppercase border-b-2 border-blue-200 mb-2 pb-1 flex items-center gap-2">
+          <TableIcon className="h-4 w-4" />
+          Line Items ({request.items.length} items)
+        </h3>
+        <table className="w-full border-collapse border-2 border-gray-400">
+          <thead>
+            <tr className="bg-blue-50">
+              <th className="border-2 border-gray-400 px-2 py-2 text-center font-bold text-gray-800 w-10">
+                #
+              </th>
+              <th className="border-2 border-gray-400 px-2 py-2 text-left font-bold text-gray-800">
+                Item Description
+              </th>
+              <th className="border-2 border-gray-400 px-2 py-2 text-center font-bold text-gray-800 w-16">
+                Qty
+              </th>
+              <th className="border-2 border-gray-400 px-2 py-2 text-right font-bold text-gray-800 w-24">
+                Unit Price
+              </th>
+              <th className="border-2 border-gray-400 px-2 py-2 text-right font-bold text-gray-800 w-24">
+                Amount
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {request.items.map((item, index) => {
+              const qty = parseFloat(item.quantity) || 0;
+              const price =
+                parseFloat(item.estimatedUnitPrice.replace(/[$,]/g, "")) || 0;
+              const total = qty * price;
+              return (
+                <tr key={index} className="bg-white">
+                  <td className="border-2 border-gray-400 px-2 py-2 text-center font-medium">
+                    {index + 1}
+                  </td>
+                  <td className="border-2 border-gray-400 px-2 py-2">
+                    <p className="font-semibold text-gray-900">{item.item}</p>
+                    <p className="text-xs text-gray-500">{item.description}</p>
+                  </td>
+                  <td className="border-2 border-gray-400 px-2 py-2 text-center">
+                    {item.quantity}{" "}
+                    <span className="text-xs uppercase">{item.unit}</span>
+                  </td>
+                  <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono">
+                    {formatCurrency(item.estimatedUnitPrice)}
+                  </td>
+                  <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono font-bold">
+                    {formatCurrency(total)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="flex justify-end mt-3">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-2 min-w-[200px]">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-blue-900">TOTAL AMOUNT:</span>
+              <span className="font-mono font-bold text-lg text-blue-900">
+                {formatCurrency(request.totalEstimatedCost)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PARTIES - Side by Side */}
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="border-2 border-gray-300 rounded-lg p-3">
+          <h4 className="font-bold text-blue-900 text-xs uppercase border-b border-gray-200 mb-2 pb-1">
+            Requestor / Client
+          </h4>
+          <p className="font-bold text-base text-gray-900">
+            {request.requestor}
+          </p>
+          <p className="text-xs text-gray-600">
+            {request.department} Department
+          </p>
+          <p className="text-xs text-gray-600">{request.company}</p>
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <p className="text-[10px] text-gray-500 uppercase font-semibold">
+              Authorized Signature
+            </p>
+            <div className="h-10 border-b-2 border-gray-400 mt-1"></div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] text-gray-500">
+                Date: ___________
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-2 border-gray-300 rounded-lg p-3">
+          <h4 className="font-bold text-blue-900 text-xs uppercase border-b border-gray-200 mb-2 pb-1">
+            Service Provider
+          </h4>
+          <p className="font-bold text-base text-gray-900">
+            {request.preferredVendor}
+          </p>
+          <p className="text-xs text-gray-600">
+            Contact: {request.vendorContactPerson}
+          </p>
+          <p className="text-xs text-gray-600 flex items-center gap-1">
+            <CreditCard className="h-3 w-3" />
+            {request.paymentMethod}
+          </p>
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <p className="text-[10px] text-gray-500 uppercase font-semibold">
+              Vendor Acknowledgment
+            </p>
+            <div className="h-10 border-b-2 border-gray-400 mt-1"></div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] text-gray-500">
+                Date: ___________
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TERMS & CONDITIONS */}
+      <div className="mb-5">
+        <h3 className="text-xs font-bold text-gray-700 uppercase border-b border-gray-300 mb-2 pb-1">
+          Terms & Conditions
+        </h3>
+        <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+          <li>
+            Service must be completed by the required date specified above.
+          </li>
+          <li>
+            All materials and workmanship shall meet industry standards and
+            company specifications.
+          </li>
+          <li>
+            Invoices must reference this Service Order number for payment
+            processing.
+          </li>
+          <li>
+            Any changes to scope must be approved in writing by the authorized
+            requestor.
+          </li>
+          <li>
+            {COMPANY_INFO.name} reserves the right to inspect all work before
+            final payment.
+          </li>
+        </ol>
+      </div>
+
+      {/* SPACER - Pushes footer to bottom when content is short */}
+      <div className="flex-grow"></div>
+
+      {/* FOOTER */}
+      <div className="pt-3 border-t-2 border-blue-900">
+        <div className="flex justify-between items-center text-[10px] text-gray-500">
+          <div>
+            <p className="font-semibold text-blue-900">{COMPANY_INFO.name}</p>
+          </div>
+          <div className="text-center">
+            <p>This is an official document. Please retain for your records.</p>
+            <p>Generated on {today} | Page 1 of 1</p>
+          </div>
+          <div className="text-right">
+            <p>Questions? Contact Finance</p>
+            <p>{COMPANY_INFO.phone}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function RequestDetailsPage() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId");
@@ -377,23 +690,37 @@ export default function RequestDetailsPage() {
   const [amount, setAmount] = useState("");
   const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
 
+  // react-to-print setup
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: `Request_${requestId || "Details"}`,
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-content { padding: 0 !important; }
+      }
+    `,
+  });
+
   const request = useMemo(() => {
     return mockRequests.find((r) => r.id === requestId);
   }, [requestId]);
 
   const handleAddRow = () => {
     if (!accountTitle || !amount) return;
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return;
 
     const newEntry: JournalEntry = {
       id: Date.now(),
       accountTitle,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       entryType,
     };
-
     setEntries([...entries, newEntry]);
-
-    // Reset form fields (optional - remove if you want to keep values)
     setAccountTitle("");
     setAmount("");
     setEntryType("debit");
@@ -405,51 +732,37 @@ export default function RequestDetailsPage() {
 
   const totalDebits = entries
     .filter((e) => e.entryType === "debit")
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + (isNaN(e.amount) ? 0 : e.amount), 0);
 
   const totalCredits = entries
     .filter((e) => e.entryType === "credit")
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce((sum, e) => sum + (isNaN(e.amount) ? 0 : e.amount), 0);
 
   const isBalanced = totalDebits === totalCredits && entries.length > 0;
 
   const formatCurrency = (value: string | number | undefined | null) => {
-    // Handle undefined, null, or empty values
-    if (value === undefined || value === null || value === "") {
-      return "₱0.00";
-    }
+    if (value === undefined || value === null || value === "") return "₱0.00";
+    if (typeof value === "number")
+      return isNaN(value)
+        ? "₱0.00"
+        : new Intl.NumberFormat("en-PH", {
+            style: "currency",
+            currency: "PHP",
+          }).format(value);
 
-    // If it's already a number
-    if (typeof value === "number") {
-      if (isNaN(value)) return "₱0.00";
-      return new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-      }).format(value);
-    }
-
-    // If it's a string, clean it first (remove currency symbols, commas, spaces)
     const cleanedValue = value
       .toString()
-      .replace(/[₱$,\s]/g, "") // Remove ₱, $, commas, and spaces
+      .replace(/[₱$,\s]/g, "")
       .trim();
-
-    // If empty after cleaning
-    if (!cleanedValue || cleanedValue === "") {
-      return "₱0.00";
-    }
+    if (!cleanedValue) return "₱0.00";
 
     const numValue = parseFloat(cleanedValue);
-
-    // Check if parsing resulted in NaN
-    if (isNaN(numValue)) {
-      return "₱0.00";
-    }
-
-    return new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-    }).format(numValue);
+    return isNaN(numValue)
+      ? "₱0.00"
+      : new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(numValue);
   };
 
   if (!request) {
@@ -462,7 +775,7 @@ export default function RequestDetailsPage() {
             <p className="text-muted-foreground text-center max-w-md mb-6">
               {requestId
                 ? `No request found with ID: ${requestId}`
-                : "No request ID provided in URL parameters"}
+                : "No request ID provided"}
             </p>
             <Link href="/home/finance/service-orders">
               <Button>
@@ -481,8 +794,8 @@ export default function RequestDetailsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      {/* Header Actions - Hidden when printing */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 print:hidden">
         <div className="flex items-center gap-3">
           <Link href="/home/finance/service-orders">
             <Button variant="outline" size="icon">
@@ -497,18 +810,30 @@ export default function RequestDetailsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
+            Print / PDF
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Hidden Printable Content */}
+      <div className="hidden">
+        <div ref={contentRef}>
+          <PrintableContent
+            request={request}
+            entries={entries}
+            totalDebits={totalDebits}
+            totalCredits={totalCredits}
+            isBalanced={isBalanced}
+            formatCurrency={formatCurrency}
+            serviceOrderNumber={requestId || "N/A"}
+          />
+        </div>
+      </div>
+
+      {/* Screen Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Request Overview Card */}
@@ -586,7 +911,7 @@ export default function RequestDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Vehicle Details (Conditional) */}
+          {/* Vehicle Details */}
           {isVehicleRequest && (
             <Card>
               <CardHeader>
@@ -628,7 +953,7 @@ export default function RequestDetailsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="w-12.5">#</TableHead>
+                      <TableHead className="w-12">#</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
@@ -644,7 +969,6 @@ export default function RequestDetailsPage() {
                           item.estimatedUnitPrice.replace(/[$,]/g, ""),
                         ) || 0;
                       const total = qty * price;
-
                       return (
                         <TableRow key={index}>
                           <TableCell className="font-medium text-muted-foreground">
@@ -671,15 +995,13 @@ export default function RequestDetailsPage() {
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Total Summary */}
               <div className="mt-4 flex justify-end">
-                <div className="bg-muted/50 rounded-lg p-4 min-w-50">
+                <div className="bg-muted/50 rounded-lg p-4 min-w-[200px]">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       Total Estimated Cost:
                     </span>
-                    <span className="text-lg ml-2  font-bold text-green-600">
+                    <span className="text-lg font-bold text-green-600">
                       {formatCurrency(request.totalEstimatedCost)}
                     </span>
                   </div>
@@ -724,7 +1046,6 @@ export default function RequestDetailsPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Requestor Info */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Requestor Information</CardTitle>
@@ -755,7 +1076,6 @@ export default function RequestDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Vendor Info */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Vendor Information</CardTitle>
@@ -774,7 +1094,6 @@ export default function RequestDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Payment Info */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Payment Details</CardTitle>
@@ -794,8 +1113,10 @@ export default function RequestDetailsPage() {
           </Card>
         </div>
       </div>
-      <div className="mt-6">
-        <Card className="border-l-4 border-l-[#2B3A9F] shadow-sm">
+
+      {/* Journal Entry Section */}
+      <div className="mt-6 print:hidden">
+        <Card className="border-l-4 border-l-primary shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -819,9 +1140,7 @@ export default function RequestDetailsPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Form Controls Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-lg border">
-              {/* Account Title */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -847,7 +1166,6 @@ export default function RequestDetailsPage() {
                 </Select>
               </div>
 
-              {/* Amount */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold flex items-center gap-2">
                   <Coins className="h-4 w-4 text-muted-foreground" />
@@ -862,7 +1180,6 @@ export default function RequestDetailsPage() {
                 />
               </div>
 
-              {/* Debit/Credit */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
@@ -895,7 +1212,6 @@ export default function RequestDetailsPage() {
               </div>
             </div>
 
-            {/* Add Row Button */}
             <div className="flex justify-end">
               <Button
                 onClick={handleAddRow}
@@ -909,7 +1225,6 @@ export default function RequestDetailsPage() {
 
             <Separator className="my-4" />
 
-            {/* Journal Entries Table */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">
@@ -977,22 +1292,14 @@ export default function RequestDetailsPage() {
                             {entry.accountTitle.replace(/-/g, " ")}
                           </TableCell>
                           <TableCell
-                            className={`text-right font-mono font-semibold ${
-                              entry.entryType === "debit"
-                                ? "text-green-700 bg-green-50/30"
-                                : "text-slate-300"
-                            }`}
+                            className={`text-right font-mono font-semibold ${entry.entryType === "debit" ? "text-green-700 bg-green-50/30" : "text-slate-300"}`}
                           >
                             {entry.entryType === "debit"
                               ? formatCurrency(entry.amount)
                               : "—"}
                           </TableCell>
                           <TableCell
-                            className={`text-right font-mono font-semibold ${
-                              entry.entryType === "credit"
-                                ? "text-red-700 bg-red-50/30"
-                                : "text-slate-300"
-                            }`}
+                            className={`text-right font-mono font-semibold ${entry.entryType === "credit" ? "text-red-700 bg-red-50/30" : "text-slate-300"}`}
                           >
                             {entry.entryType === "credit"
                               ? formatCurrency(entry.amount)
@@ -1011,27 +1318,17 @@ export default function RequestDetailsPage() {
                         </TableRow>
                       ))
                     )}
-
-                    {/* Totals Row */}
                     {entries.length > 0 && (
                       <TableRow className="bg-slate-50 font-bold border-t-2">
                         <TableCell></TableCell>
                         <TableCell className="text-slate-700">TOTAL</TableCell>
                         <TableCell
-                          className={`text-right font-mono ${
-                            totalDebits === totalCredits
-                              ? "text-green-700"
-                              : "text-orange-600"
-                          }`}
+                          className={`text-right font-mono ${totalDebits === totalCredits ? "text-green-700" : "text-orange-600"}`}
                         >
                           {formatCurrency(totalDebits)}
                         </TableCell>
                         <TableCell
-                          className={`text-right font-mono ${
-                            totalDebits === totalCredits
-                              ? "text-red-700"
-                              : "text-orange-600"
-                          }`}
+                          className={`text-right font-mono ${totalDebits === totalCredits ? "text-red-700" : "text-orange-600"}`}
                         >
                           {formatCurrency(totalCredits)}
                         </TableCell>
@@ -1042,15 +1339,10 @@ export default function RequestDetailsPage() {
                 </Table>
               </div>
 
-              {/* Summary Footer */}
               {entries.length > 0 && (
                 <div className="flex justify-end pt-2">
                   <div
-                    className={`rounded-lg p-4 min-w-[280px] space-y-2 border ${
-                      isBalanced
-                        ? "bg-green-50 border-green-200"
-                        : "bg-orange-50 border-orange-200"
-                    }`}
+                    className={`rounded-lg p-4 min-w-[280px] space-y-2 border ${isBalanced ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
                   >
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground flex items-center gap-2">
@@ -1074,9 +1366,7 @@ export default function RequestDetailsPage() {
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-sm">Difference</span>
                       <span
-                        className={`font-mono font-bold ${
-                          isBalanced ? "text-green-600" : "text-orange-600"
-                        }`}
+                        className={`font-mono font-bold ${isBalanced ? "text-green-600" : "text-orange-600"}`}
                       >
                         {formatCurrency(Math.abs(totalDebits - totalCredits))}
                       </span>
@@ -1086,7 +1376,6 @@ export default function RequestDetailsPage() {
               )}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button variant="outline" onClick={() => setEntries([])}>
                 Clear All
