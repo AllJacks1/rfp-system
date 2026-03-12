@@ -50,7 +50,7 @@ interface RequestForPayment {
 }
 
 // Mock Purchase Orders that can be converted to RFP
-interface PurchaseOrder {
+interface Order {
   id: string;
   poTitle: string;
   poType: string;
@@ -63,7 +63,7 @@ interface PurchaseOrder {
   description: string;
 }
 
-const mockPurchaseOrders: PurchaseOrder[] = [
+const mockPurchaseOrders: Order[] = [
   {
     id: "PO-2024-001",
     poTitle: "Q1 Software License Payment",
@@ -257,11 +257,11 @@ export default function RequestForPayment() {
     setApprovedPODialogOpen(true);
   };
 
-  const handleCreateRFP = (po: PurchaseOrder) => {
+  const handleCreateRFP = (order: Order) => {
     // Logic to create RFP from approved PO
-    console.log("Creating RFP from PO:", po.id);
+    console.log("Creating RFP from PO:", order.id);
     setApprovedPODialogOpen(false);
-    router.push(`/home/finance/requests-for-payment/create-rfp?poId=${po.id}`);
+    router.push(`/home/finance/request-for-payment/create-rfp?orderId=${order.id}`);
   };
 
   // Stats calculation
