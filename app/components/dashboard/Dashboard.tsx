@@ -167,13 +167,6 @@ const recentActivity = [
   },
 ];
 
-const pipelineData = [
-  { label: "Purchase Requests", count: 8, color: "bg-[#2B3A9F]", width: "33%" },
-  { label: "RFPs", count: 15, color: "bg-cyan-500", width: "45%" },
-  { label: "Service Orders", count: 4, color: "bg-amber-500", width: "27%" },
-  { label: "Liquidation", count: 6, color: "bg-rose-500", width: "35%" },
-];
-
 export default function Dashboard() {
   const totalPending = moduleData.reduce((acc, mod) => acc + mod.pending, 0);
   const totalApproved = moduleData.reduce((acc, mod) => acc + mod.approved, 0);
@@ -204,7 +197,7 @@ export default function Dashboard() {
       {/* Executive Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {/* Primary Metric */}
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-[#2B3A9F] to-[#1e2a6f] text-white overflow-hidden relative">
+        <Card className="border-0 shadow-sm bg-linear-to-br from-[#2B3A9F] to-[#1e2a6f] text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Wallet className="h-24 w-24" />
           </div>
