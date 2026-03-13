@@ -270,7 +270,7 @@ export function DataTableCard<T>({
                   </TableHead>
                 ))}
                 {actions && (
-                  <TableHead className="text-slate-500 font-medium text-center w-[240px]">
+                  <TableHead className="text-slate-500 font-medium text-center w-60">
                     Actions
                   </TableHead>
                 )}
@@ -402,7 +402,7 @@ export function DataTableCard<T>({
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
+                  <SelectTrigger className="h-8 w-17.5">
                     <SelectValue placeholder={pageSize} />
                   </SelectTrigger>
                   <SelectContent side="top">
