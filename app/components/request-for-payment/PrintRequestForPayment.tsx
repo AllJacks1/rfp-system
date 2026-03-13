@@ -51,6 +51,9 @@ interface RFP {
   requestor: string;
   totalPayable: number;
   journalEntry: JournalEntry[];
+  invoiceNumber?: string;
+  approvedBy?: string;
+  approvedDate?: string;
 }
 
 const COMPANY_INFO = {
@@ -66,7 +69,6 @@ const COMPANY_INFO = {
   taxId: "000-123-456-789",
 };
 
-// Utility for currency formatting
 const formatCurrency = (value: number | string | undefined | null): string => {
   if (value === undefined || value === null) return "₱0.00";
   const num = typeof value === "string" ? parseFloat(value) : value;
@@ -77,24 +79,22 @@ const formatCurrency = (value: number | string | undefined | null): string => {
   }).format(num);
 };
 
-// Utility for date formatting
 const formatDate = (dateString: string): string => {
   if (!dateString) return "-";
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 };
 
-export const PrintServiceOrder = ({ rfp }: { rfp: RFP }) => {
+export const PrintRequestForPayment = ({ rfp }: { rfp: RFP }) => {
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 
-  // Calculate totals for journal entries
   const totalDebits = rfp.journalEntry
     .filter((e) => e.entryType === "debit")
     .reduce((sum, e) => sum + e.amount, 0);
@@ -103,457 +103,241 @@ export const PrintServiceOrder = ({ rfp }: { rfp: RFP }) => {
     .reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div className="print-content bg-white text-slate-900 min-h-[297mm] w-[210mm] mx-auto p-10 box-border text-[11px] leading-relaxed flex flex-col shadow-2xl">
-      {/* HEADER SECTION */}
-      <header className="border-b-2 border-slate-800 pb-4 mb-6">
-        <div className="flex justify-between items-start">
-          {/* Company Info */}
-          <div className="flex gap-4 items-start">
-            <div className="relative w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200">
-              <Image
-                src={COMPANY_INFO.logo}
-                alt={COMPANY_INFO.name}
-                width={64}
-                height={64}
-                priority
-                className="object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
-                {COMPANY_INFO.name}
-              </h1>
-              <p className="text-[10px] text-slate-500 font-medium">
-                {COMPANY_INFO.tagline}
-              </p>
-              <div className="mt-2 space-y-0.5 text-[9px] text-slate-600">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3 text-slate-400" />
-                  <span>
-                    {COMPANY_INFO.address}, {COMPANY_INFO.city}{" "}
-                    {COMPANY_INFO.postalCode}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3 w-3 text-slate-400" />
-                  <span>{COMPANY_INFO.phone}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3 w-3 text-slate-400" />
-                  <span>{COMPANY_INFO.email}</span>
-                </div>
-              </div>
+    <div className="bg-white text-slate-900 w-[210mm] min-h-[297mm] mx-auto p-[10mm] box-border text-[10px] leading-tight flex flex-col">
+      {/* COMPACT HEADER */}
+      <header className="border-b-2 border-slate-800 pb-3 mb-4 flex justify-between items-start">
+        <div className="flex gap-3 items-center">
+          <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center border border-slate-200">
+            <Image
+              src={COMPANY_INFO.logo}
+              alt={COMPANY_INFO.name}
+              width={40}
+              height={40}
+              priority
+              className="object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+              {COMPANY_INFO.name}
+            </h1>
+            <p className="text-[9px] text-slate-500 italic leading-none">
+              {COMPANY_INFO.tagline}
+            </p>
+            <div className="mt-1 text-[8px] text-slate-600 space-x-3">
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-2.5 w-2.5" />
+                {COMPANY_INFO.city}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Phone className="h-2.5 w-2.5" />
+                {COMPANY_INFO.phone}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Document Control */}
-          <div className="text-right space-y-3">
-            {/* RFP Reference */}
-            <div className="bg-slate-900 text-white rounded-lg px-5 py-3 inline-block min-w-[180px]">
-              <p className="text-[9px] uppercase tracking-widest font-semibold text-slate-400 mb-1">
-                RFP Reference No.
-              </p>
-              <p className="text-xl font-bold font-mono tracking-tight">
-                {rfp.id}
-              </p>
-              <div className="flex items-center justify-end gap-1.5 mt-1.5 text-[10px] text-slate-400">
-                <Calendar className="h-3 w-3" />
-                <span>{today}</span>
-              </div>
-            </div>
-
-            {/* Order Reference */}
-            <div className="bg-white border-2 border-slate-200 rounded-lg px-5 py-3 inline-block min-w-[180px]">
-              <p className="text-[9px] uppercase tracking-widest font-semibold text-slate-500 mb-1">
-                Order Reference No.
-              </p>
-              <p className="text-xl font-bold text-slate-900 font-mono tracking-tight">
-                {rfp.orderId}
-              </p>
-              <div className="flex items-center justify-end gap-1.5 mt-1.5 text-[10px] text-slate-400">
-                <Calendar className="h-3 w-3" />
-                <span>{today}</span>
-              </div>
-            </div>
+        {/* Compact Reference Boxes */}
+        <div className="text-right space-y-1.5">
+          <div className="bg-slate-900 text-white rounded px-3 py-1.5 inline-block">
+            <p className="text-[8px] uppercase tracking-wider text-slate-400 leading-none">RFP Ref</p>
+            <p className="text-base font-bold font-mono leading-tight">{rfp.id}</p>
           </div>
+          <div className="bg-white border border-slate-300 rounded px-3 py-1.5 inline-block ml-2">
+            <p className="text-[8px] uppercase tracking-wider text-slate-500 leading-none">PO Ref</p>
+            <p className="text-base font-bold font-mono text-slate-900 leading-tight">{rfp.orderId}</p>
+          </div>
+          <p className="text-[8px] text-slate-400 mt-1">{today}</p>
         </div>
       </header>
 
-      {/* DOCUMENT TITLE */}
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-[0.2em] border-b-2 border-slate-300 inline-block pb-2 px-12">
+      {/* TITLE */}
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-bold text-slate-900 uppercase tracking-wider border-b-2 border-slate-300 inline-block pb-1 px-6">
           Request for Payment
         </h2>
-        <p className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest">
-          Official Payment Authorization Document
+      </div>
+
+      {/* 3-COLUMN INFO GRID - More Compact */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {/* Payee */}
+        <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
+          <h3 className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <User className="h-3 w-3" />
+            Payee
+          </h3>
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold text-slate-900 leading-tight">{rfp.payableTo}</p>
+            <p className="text-[9px] text-slate-600">{rfp.contactNumber}</p>
+            <p className="text-[9px] text-slate-500">{rfp.department}</p>
+          </div>
+        </div>
+
+        {/* Payment */}
+        <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
+          <h3 className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <CreditCard className="h-3 w-3" />
+            Payment
+          </h3>
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold text-slate-900">{rfp.paymentType}</p>
+            <p className="text-[9px] text-slate-600 flex items-center gap-1">
+              <Calendar className="h-2.5 w-2.5" />
+              Due: {formatDate(rfp.dueDate)}
+            </p>
+            <p className="text-[9px] text-slate-500 font-mono">INV: {rfp.invoiceNumber || "-"}</p>
+          </div>
+        </div>
+
+        {/* Requestor */}
+        <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
+          <h3 className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <Building2 className="h-3 w-3" />
+            Request
+          </h3>
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold text-slate-900">{rfp.requestor}</p>
+            <p className="text-[9px] text-slate-600">{formatDate(rfp.requestDate)}</p>
+            <p className="text-[9px] text-slate-500">Dept: {rfp.department}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* NOTES - Compact */}
+      <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+        <p className="text-[8px] text-amber-800 leading-tight">
+          <span className="font-semibold">Note:</span> Cheque advances require liquidation within 3 days. 
+          Fund transfers require liquidation within 24 hours.
         </p>
       </div>
 
-      {/* PAYEE & PAYMENT DETAILS GRID */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        {/* Left Column - Payee Information */}
-        <div className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <User className="h-3.5 w-3.5" />
-              Payee Information
-            </h3>
-            <div className="space-y-2">
-              <div>
-                <label className="text-[9px] text-slate-500 uppercase font-semibold block">
-                  Payable To
-                </label>
-                <p className="text-sm font-semibold text-slate-900">
-                  {rfp.payableTo}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[9px] text-slate-500 uppercase font-semibold block">
-                    Contact Number
-                  </label>
-                  <p className="text-[11px] text-slate-700">
-                    {rfp.contactNumber || "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 uppercase font-semibold block">
-                    Department
-                  </label>
-                  <p className="text-[11px] text-slate-700">{rfp.department}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5" />
-              Requestor Details
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[9px] text-slate-500 uppercase font-semibold block">
-                  Requested By
-                </label>
-                <p className="text-[11px] font-medium text-slate-900">
-                  {rfp.requestor}
-                </p>
-              </div>
-              <div>
-                <label className="text-[9px] text-slate-500 uppercase font-semibold block">
-                  Request Date
-                </label>
-                <p className="text-[11px] text-slate-700">
-                  {formatDate(rfp.requestDate)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Payment Terms */}
-        <div className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <CreditCard className="h-3.5 w-3.5" />
-              Payment Terms
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                <span className="text-[9px] text-slate-500 uppercase font-semibold">
-                  Payment Method
-                </span>
-                <Badge variant="outline" className="text-[10px] font-semibold">
-                  {rfp.paymentType}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] text-slate-500 uppercase font-semibold">
-                  Due Date
-                </span>
-                <span className="text-[11px] font-semibold text-slate-900 flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-slate-400" />
-                  {formatDate(rfp.dueDate)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Special Notes Box */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-[9px] font-semibold text-amber-800 uppercase">
-                  Important Notes
-                </p>
-                <p className="text-[9px] text-amber-700 leading-relaxed">
-                  • Cheque to Employee: Cash advance for liquidation within 3
-                  days
-                </p>
-                <p className="text-[9px] text-amber-700 leading-relaxed">
-                  • Fund Transfer Request: Main to EWB Account (liquidation
-                  within 24 hours)
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* LINE ITEMS TABLE */}
-      <div className="mb-6">
-        <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <FileText className="h-3.5 w-3.5" />
+      {/* LINE ITEMS - Tighter Table */}
+      <div className="mb-3">
+        <h3 className="text-[9px] font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+          <FileText className="h-3 w-3" />
           Itemized Expenses
         </h3>
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-100 hover:bg-slate-100">
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase w-[80px]">
-                  Ref Doc
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase">
-                  Particulars
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase text-center w-[60px]">
-                  Qty
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase text-right w-[100px]">
-                  Unit Price
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase text-right w-[100px]">
-                  Amount
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase w-[100px]">
-                  Charge To
-                </TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2">Ref</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2">Particulars</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 text-center w-[40px]">Qty</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 text-right w-[80px]">Price</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 text-right w-[80px]">Amount</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 w-[90px]">Charge To</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rfp.lineItems.map((item, index) => (
-                <TableRow key={item.id} className="text-[10px]">
-                  <TableCell className="font-mono text-slate-600">
-                    {item.referenceDocument}
-                  </TableCell>
-                  <TableCell className="text-slate-900">
-                    {item.particulars}
-                  </TableCell>
-                  <TableCell className="text-center">{item.qty}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCurrency(item.price)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-medium">
-                    {formatCurrency(item.totalAmount)}
-                  </TableCell>
-                  <TableCell className="text-slate-600">
-                    {item.chargeTo}
-                  </TableCell>
+              {rfp.lineItems.map((item) => (
+                <TableRow key={item.id} className="text-[9px]">
+                  <TableCell className="py-1 px-2 font-mono text-slate-600">{rfp.orderId}</TableCell>
+                  <TableCell className="py-1 px-2 text-slate-900">{item.particulars}</TableCell>
+                  <TableCell className="py-1 px-2 text-center">{item.qty}</TableCell>
+                  <TableCell className="py-1 px-2 text-right font-mono">{formatCurrency(item.price)}</TableCell>
+                  <TableCell className="py-1 px-2 text-right font-mono font-medium">{formatCurrency(item.totalAmount)}</TableCell>
+                  <TableCell className="py-1 px-2 text-slate-600 text-[8px]">{item.chargeTo}</TableCell>
                 </TableRow>
               ))}
-              {rfp.lineItems.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-slate-400 py-4 italic"
-                  >
-                    No line items recorded
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>
-
-        {/* Total Summary */}
-        <div className="flex justify-end mt-3">
-          <div className="bg-slate-900 text-white px-6 py-3 rounded-lg min-w-[200px]">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] uppercase tracking-wider font-semibold">
-                Total Payable
-              </span>
-              <span className="text-lg font-bold font-mono">
-                {formatCurrency(rfp.totalPayable)}
-              </span>
-            </div>
+        <div className="flex justify-end mt-1.5">
+          <div className="bg-slate-900 text-white px-4 py-1.5 rounded">
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-300 mr-2">Total</span>
+            <span className="text-base font-bold font-mono">{formatCurrency(rfp.totalPayable)}</span>
           </div>
         </div>
       </div>
 
-      {/* JOURNAL ENTRIES */}
-      <div className="mb-6">
-        <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Hash className="h-3.5 w-3.5" />
-          Accounting Distribution (Journal Entry)
+      {/* JOURNAL ENTRIES - Side by Side if Space Permits */}
+      <div className="mb-3">
+        <h3 className="text-[9px] font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+          <Hash className="h-3 w-3" />
+          Journal Entry
         </h3>
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-100 hover:bg-slate-100">
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase w-[80px]">
-                  Entry #
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase">
-                  Account Title
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase text-right w-[120px]">
-                  Debit
-                </TableHead>
-                <TableHead className="text-[9px] font-bold text-slate-700 uppercase text-right w-[120px]">
-                  Credit
-                </TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 w-[50px]">#</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2">Account</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 text-right w-[90px]">Debit</TableHead>
+                <TableHead className="text-[8px] font-bold text-slate-700 uppercase py-1 px-2 text-right w-[90px]">Credit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rfp.journalEntry.map((entry) => (
-                <TableRow key={entry.id} className="text-[10px]">
-                  <TableCell className="font-mono text-slate-600">
-                    #{entry.id}
+                <TableRow key={entry.id} className="text-[9px]">
+                  <TableCell className="py-1 px-2 font-mono text-slate-600">#{entry.id}</TableCell>
+                  <TableCell className="py-1 px-2 text-slate-900">{entry.accountTitle}</TableCell>
+                  <TableCell className="py-1 px-2 text-right font-mono">
+                    {entry.entryType === "debit" ? formatCurrency(entry.amount) : "-"}
                   </TableCell>
-                  <TableCell className="text-slate-900">
-                    {entry.accountTitle}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {entry.entryType === "debit"
-                      ? formatCurrency(entry.amount)
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {entry.entryType === "credit"
-                      ? formatCurrency(entry.amount)
-                      : "-"}
+                  <TableCell className="py-1 px-2 text-right font-mono">
+                    {entry.entryType === "credit" ? formatCurrency(entry.amount) : "-"}
                   </TableCell>
                 </TableRow>
               ))}
-              {/* Totals Row */}
-              <TableRow className="bg-slate-50 font-semibold border-t-2 border-slate-200">
-                <TableCell
-                  colSpan={2}
-                  className="text-right text-[9px] uppercase tracking-wider"
-                >
-                  Total
-                </TableCell>
-                <TableCell className="text-right font-mono text-slate-900">
-                  {formatCurrency(totalDebits)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-slate-900">
-                  {formatCurrency(totalCredits)}
-                </TableCell>
+              <TableRow className="bg-slate-50 font-semibold border-t border-slate-200">
+                <TableCell colSpan={2} className="py-1 px-2 text-right text-[8px] uppercase tracking-wider">Total</TableCell>
+                <TableCell className="py-1 px-2 text-right font-mono text-slate-900">{formatCurrency(totalDebits)}</TableCell>
+                <TableCell className="py-1 px-2 text-right font-mono text-slate-900">{formatCurrency(totalCredits)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
         {totalDebits !== totalCredits && (
-          <p className="text-[9px] text-red-600 mt-1 flex items-center gap-1">
+          <p className="text-[8px] text-red-600 mt-1 flex items-center gap-1">
             <AlertCircle className="h-3 w-3" />
-            Warning: Journal entry is not balanced
+            Warning: Entry not balanced
           </p>
         )}
       </div>
 
-      {/* AUTHORIZATION SECTION */}
-      <div className="mb-6">
-        <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-3">
-          Authorization & Approval
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          {["Prepared By", "Reviewed By", "Approved By"].map((role, index) => (
-            <div
-              key={role}
-              className="border border-slate-300 rounded-lg p-3 bg-white"
-            >
-              <p className="text-[9px] text-slate-500 uppercase font-semibold mb-4">
-                {role}
-              </p>
-              <div className="h-12 border-b border-slate-400 mb-2"></div>
-              <p className="text-[9px] text-slate-400 text-center">Signature</p>
-              <div className="mt-3 space-y-1">
-                <div className="h-4 bg-slate-100 rounded w-3/4"></div>
-                <div className="h-3 bg-slate-50 rounded w-1/2"></div>
-              </div>
-              <p className="text-[8px] text-slate-400 mt-2 text-center">
-                Date: _____________
-              </p>
+      {/* AUTHORIZATION - Horizontal Layout */}
+      <div className="mb-3">
+        <h3 className="text-[9px] font-bold text-slate-800 uppercase tracking-wider mb-2">Authorization</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {["Prepared By", "Reviewed By", "Approved By"].map((role) => (
+            <div key={role} className="border border-slate-300 rounded p-2">
+              <p className="text-[8px] text-slate-500 uppercase font-semibold mb-2">{role}</p>
+              <div className="h-8 border-b border-slate-300 mb-1"></div>
+              <p className="text-[7px] text-slate-400 text-center">Signature</p>
+              <div className="mt-2 h-2 bg-slate-100 rounded w-2/3 mx-auto"></div>
+              <p className="text-[7px] text-slate-400 mt-1 text-center">Date: _______</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* TERMS & CONDITIONS */}
-      <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-3">
-          Terms & Conditions
-        </h3>
-        <ol className="text-[9px] text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed">
-          <li>
-            Payment is subject to verification of all supporting documents and
-            approval by authorized signatories.
-          </li>
-          <li>
-            All expenses must comply with company policy and be supported by
-            valid receipts/invoices.
-          </li>
-          <li>
-            Cash advances must be liquidated within the specified timeframe (3
-            days for cheque, 24 hours for fund transfers).
-          </li>
-          <li>
-            Unliquidated advances will be deducted from subsequent payroll or
-            reimbursements.
-          </li>
-          <li>
-            This document serves as official authorization for the Finance
-            Department to process the payment.
-          </li>
-          <li>
-            Any alterations to this document must be initialed by the requestor
-            and approver.
-          </li>
-        </ol>
+      {/* TERMS - Compact Single Paragraph */}
+      <div className="mb-3 p-2.5 bg-slate-50 rounded border border-slate-200">
+        <h3 className="text-[9px] font-bold text-slate-700 uppercase tracking-wider mb-1">Terms</h3>
+        <p className="text-[8px] text-slate-600 leading-tight">
+          1. Payment subject to document verification. 2. Expenses must comply with company policy. 
+          3. Cash advances: 3 days (cheque), 24 hours (transfer). 4. Unliquidated advances deducted from payroll. 
+          5. Official authorization for Finance. 6. Alterations must be initialed.
+        </p>
       </div>
 
-      {/* SPACER */}
-      <div className="flex-grow"></div>
-
-      {/* FOOTER */}
-      <footer className="pt-4 border-t-2 border-slate-800 mt-auto">
-        <div className="flex justify-between items-end text-[9px] text-slate-500">
+      {/* FOOTER - Compact */}
+      <div className="mt-auto pt-3 border-t-2 border-slate-800">
+        <div className="flex justify-between items-center text-[8px] text-slate-500">
           <div>
-            <p className="font-bold text-slate-800">{COMPANY_INFO.name}</p>
+            <p className="font-bold text-slate-800 text-[9px]">{COMPANY_INFO.name}</p>
             <p>TIN: {COMPANY_INFO.taxId}</p>
           </div>
           <div className="text-center">
-            <p className="italic">This is a system-generated document.</p>
-            <p>Generated on {today} | Page 1 of 1</p>
+            <p className="italic">System-generated document</p>
+            <p>{today} | Page 1 of 1</p>
           </div>
           <div className="text-right">
-            <p>Finance Department</p>
-            <p>{COMPANY_INFO.phone}</p>
+            <p>Finance: {COMPANY_INFO.phone}</p>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };
-
-// Print-specific styles
-const printStyles = `
-  @media print {
-    @page {
-      size: A4;
-      margin: 0;
-    }
-    body {
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
-    }
-    .print-content {
-      box-shadow: none !important;
-      margin: 0 !important;
-      width: 100% !important;
-      min-height: 100vh !important;
-    }
-  }
-`;

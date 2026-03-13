@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,13 @@ import {
   Clock,
   Eye,
   ArrowRight,
+  Calendar,
+  User,
+  Building2,
+  Hash,
+  CreditCard,
+  AlertCircle,
+  Printer,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -31,25 +38,51 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useReactToPrint } from "react-to-print";
+import { PrintRequestForPayment } from "@/app/components/request-for-payment/PrintRequestForPayment";
 
 // Types
-interface RequestForPayment {
+interface LineItem {
   id: string;
+  referenceDocument: string;
+  particulars: string;
+  qty: number;
+  price: number;
+  totalAmount: number;
+  chargeTo: string;
+}
+
+interface JournalEntry {
+  id: number;
+  accountTitle: string;
+  amount: number;
+  entryType: "debit" | "credit";
+}
+
+interface RFP {
+  id: string;
+  orderId: string;
   rfpTitle: string;
-  paymentType: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
+  payableTo: string;
+  paymentType: "Cheque" | "Cash" | "Bank Transfer" | "Fund Transfer";
+  dueDate: string;
+  requestDate: string;
+  contactNumber: string;
   department: string;
-  amount: string;
-  description: string;
-  vendor: string;
+  lineItems: LineItem[];
+  requestor: string;
+  totalPayable: number;
+  journalEntry: JournalEntry[];
   invoiceNumber?: string;
   approvedBy?: string;
   approvedDate?: string;
+  status: "submitted" | "approved" | "rejected";
+  dateSubmitted: string;
+  amount: string;
+  description: string;
+  vendor: string;
 }
 
-// Mock Purchase Orders that can be converted to RFP
 interface Order {
   id: string;
   poTitle: string;
@@ -102,15 +135,61 @@ const mockPurchaseOrders: Order[] = [
   },
 ];
 
-const mockRFPs: RequestForPayment[] = [
+const mockRFPs: RFP[] = [
   {
     id: "RFP-2024-001",
+    orderId: "PO-2024-001",
     rfpTitle: "Q1 Software License Payment",
-    paymentType: "Software License",
+    payableTo: "Microsoft / AWS",
+    paymentType: "Bank Transfer",
+    dueDate: "2024-03-15",
+    requestDate: "2024-03-10",
+    contactNumber: "+63 912 345 6789",
+    department: "Engineering",
+    lineItems: [
+      {
+        id: "LI-001",
+        referenceDocument: "INV-2024-001",
+        particulars: "Microsoft 365 Annual Subscription",
+        qty: 1,
+        price: 7500,
+        totalAmount: 7500,
+        chargeTo: "Software Licenses Expense",
+      },
+      {
+        id: "LI-002",
+        referenceDocument: "INV-2024-001",
+        particulars: "AWS Cloud Infrastructure Subscription",
+        qty: 1,
+        price: 5000,
+        totalAmount: 5000,
+        chargeTo: "Cloud Services Expense",
+      },
+    ],
+    requestor: "John Smith",
+    totalPayable: 12500,
+    journalEntry: [
+      {
+        id: 1,
+        accountTitle: "Software Licenses Expense",
+        amount: 7500,
+        entryType: "debit",
+      },
+      {
+        id: 2,
+        accountTitle: "Cloud Services Expense",
+        amount: 5000,
+        entryType: "debit",
+      },
+      {
+        id: 3,
+        accountTitle: "Accounts Payable",
+        amount: 12500,
+        entryType: "credit",
+      },
+    ],
     status: "submitted",
     dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    department: "Engineering",
     amount: "$12,500",
     description: "Payment for annual Microsoft 365 and AWS subscriptions",
     vendor: "Microsoft / AWS",
@@ -118,12 +197,43 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-002",
+    orderId: "PO-2024-002",
     rfpTitle: "Office Rent - March 2024",
-    paymentType: "Rent",
+    payableTo: "Prime Properties LLC",
+    paymentType: "Cheque",
+    dueDate: "2024-03-15",
+    requestDate: "2024-03-09",
+    contactNumber: "+63 912 345 6790",
+    department: "Administration",
+    lineItems: [
+      {
+        id: "LI-003",
+        referenceDocument: "INV-2024-002",
+        particulars: "Office Rent - March",
+        qty: 1,
+        price: 25000,
+        totalAmount: 25000,
+        chargeTo: "Rent Expense",
+      },
+    ],
+    requestor: "Sarah Johnson",
+    totalPayable: 25000,
+    journalEntry: [
+      {
+        id: 4,
+        accountTitle: "Rent Expense",
+        amount: 25000,
+        entryType: "debit",
+      },
+      {
+        id: 5,
+        accountTitle: "Accounts Payable",
+        amount: 25000,
+        entryType: "credit",
+      },
+    ],
     status: "approved",
     dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Administration",
     amount: "$25,000",
     description: "Monthly office space rental payment",
     vendor: "Prime Properties LLC",
@@ -133,12 +243,52 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-003",
+    orderId: "PO-2024-003",
     rfpTitle: "Marketing Campaign Payment",
-    paymentType: "Marketing Services",
+    payableTo: "Digital Marketing Pro",
+    paymentType: "Bank Transfer",
+    dueDate: "2024-03-20",
+    requestDate: "2024-03-08",
+    contactNumber: "+63 912 345 6791",
+    department: "Marketing",
+    lineItems: [
+      {
+        id: "LI-004",
+        referenceDocument: "INV-2024-003",
+        particulars: "Digital Ads Management",
+        qty: 1,
+        price: 9000,
+        totalAmount: 9000,
+        chargeTo: "Marketing Expense",
+      },
+      {
+        id: "LI-005",
+        referenceDocument: "INV-2024-003",
+        particulars: "Social Media Campaign",
+        qty: 1,
+        price: 6000,
+        totalAmount: 6000,
+        chargeTo: "Marketing Expense",
+      },
+    ],
+    requestor: "Mike Chen",
+    totalPayable: 15000,
+    journalEntry: [
+      {
+        id: 6,
+        accountTitle: "Marketing Expense",
+        amount: 15000,
+        entryType: "debit",
+      },
+      {
+        id: 7,
+        accountTitle: "Accounts Payable",
+        amount: 15000,
+        entryType: "credit",
+      },
+    ],
     status: "submitted",
     dateSubmitted: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Marketing",
     amount: "$15,000",
     description: "Payment for Q1 digital marketing campaign execution",
     vendor: "Digital Marketing Pro",
@@ -146,12 +296,43 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-004",
+    orderId: "PO-2024-004",
     rfpTitle: "Consulting Fees - Q1",
-    paymentType: "Consulting",
+    payableTo: "McKinsey & Company",
+    paymentType: "Bank Transfer",
+    dueDate: "2024-03-25",
+    requestDate: "2024-03-07",
+    contactNumber: "+63 912 345 6792",
+    department: "Strategy",
+    lineItems: [
+      {
+        id: "LI-006",
+        referenceDocument: "INV-2024-004",
+        particulars: "Strategy Consulting Services",
+        qty: 1,
+        price: 45000,
+        totalAmount: 45000,
+        chargeTo: "Consulting Expense",
+      },
+    ],
+    requestor: "Emily Davis",
+    totalPayable: 45000,
+    journalEntry: [
+      {
+        id: 8,
+        accountTitle: "Consulting Expense",
+        amount: 45000,
+        entryType: "debit",
+      },
+      {
+        id: 9,
+        accountTitle: "Accounts Payable",
+        amount: 45000,
+        entryType: "credit",
+      },
+    ],
     status: "rejected",
     dateSubmitted: "2024-03-07",
-    requestor: "Emily Davis",
-    department: "Strategy",
     amount: "$45,000",
     description: "Strategy consulting fees for market expansion project",
     vendor: "McKinsey & Company",
@@ -161,12 +342,52 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-005",
+    orderId: "PO-2024-005",
     rfpTitle: "IT Equipment Maintenance",
-    paymentType: "Maintenance",
+    payableTo: "TechSupport Inc.",
+    paymentType: "Cheque",
+    dueDate: "2024-03-18",
+    requestDate: "2024-03-06",
+    contactNumber: "+63 912 345 6793",
+    department: "Engineering",
+    lineItems: [
+      {
+        id: "LI-007",
+        referenceDocument: "INV-2024-005",
+        particulars: "Server Maintenance",
+        qty: 1,
+        price: 2000,
+        totalAmount: 2000,
+        chargeTo: "IT Maintenance Expense",
+      },
+      {
+        id: "LI-008",
+        referenceDocument: "INV-2024-005",
+        particulars: "Network Equipment Check",
+        qty: 1,
+        price: 1500,
+        totalAmount: 1500,
+        chargeTo: "IT Maintenance Expense",
+      },
+    ],
+    requestor: "Robert Wilson",
+    totalPayable: 3500,
+    journalEntry: [
+      {
+        id: 10,
+        accountTitle: "IT Maintenance Expense",
+        amount: 3500,
+        entryType: "debit",
+      },
+      {
+        id: 11,
+        accountTitle: "Accounts Payable",
+        amount: 3500,
+        entryType: "credit",
+      },
+    ],
     status: "approved",
     dateSubmitted: "2024-03-06",
-    requestor: "Robert Wilson",
-    department: "Engineering",
     amount: "$3,500",
     description: "Quarterly server and network equipment maintenance",
     vendor: "TechSupport Inc.",
@@ -176,12 +397,43 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-006",
+    orderId: "PO-2024-006",
     rfpTitle: "Employee Training Program",
-    paymentType: "Training",
+    payableTo: "FranklinCovey",
+    paymentType: "Bank Transfer",
+    dueDate: "2024-03-22",
+    requestDate: "2024-03-05",
+    contactNumber: "+63 912 345 6794",
+    department: "HR",
+    lineItems: [
+      {
+        id: "LI-009",
+        referenceDocument: "INV-2024-006",
+        particulars: "Leadership Development Workshop",
+        qty: 10,
+        price: 800,
+        totalAmount: 8000,
+        chargeTo: "Training Expense",
+      },
+    ],
+    requestor: "Lisa Anderson",
+    totalPayable: 8000,
+    journalEntry: [
+      {
+        id: 12,
+        accountTitle: "Training Expense",
+        amount: 8000,
+        entryType: "debit",
+      },
+      {
+        id: 13,
+        accountTitle: "Accounts Payable",
+        amount: 8000,
+        entryType: "credit",
+      },
+    ],
     status: "submitted",
     dateSubmitted: "2024-03-05",
-    requestor: "Lisa Anderson",
-    department: "HR",
     amount: "$8,000",
     description: "Payment for leadership development workshop",
     vendor: "FranklinCovey",
@@ -189,12 +441,52 @@ const mockRFPs: RequestForPayment[] = [
   },
   {
     id: "RFP-2024-007",
+    orderId: "PO-2024-007",
     rfpTitle: "Travel Expenses - Sales Team",
-    paymentType: "Travel",
+    payableTo: "Various Airlines/Hotels",
+    paymentType: "Cash",
+    dueDate: "2024-03-12",
+    requestDate: "2024-03-04",
+    contactNumber: "+63 912 345 6795",
+    department: "Sales",
+    lineItems: [
+      {
+        id: "LI-010",
+        referenceDocument: "INV-2024-007",
+        particulars: "Airfare - Client Visit",
+        qty: 2,
+        price: 1500,
+        totalAmount: 3000,
+        chargeTo: "Travel Expense",
+      },
+      {
+        id: "LI-011",
+        referenceDocument: "INV-2024-007",
+        particulars: "Hotel Accommodation",
+        qty: 2,
+        price: 1100,
+        totalAmount: 2200,
+        chargeTo: "Travel Expense",
+      },
+    ],
+    requestor: "David Brown",
+    totalPayable: 5200,
+    journalEntry: [
+      {
+        id: 14,
+        accountTitle: "Travel Expense",
+        amount: 5200,
+        entryType: "debit",
+      },
+      {
+        id: 15,
+        accountTitle: "Cash on Hand",
+        amount: 5200,
+        entryType: "credit",
+      },
+    ],
     status: "approved",
     dateSubmitted: "2024-03-04",
-    requestor: "David Brown",
-    department: "Sales",
     amount: "$5,200",
     description: "Client visit travel expenses for March",
     vendor: "Various Airlines/Hotels",
@@ -202,53 +494,72 @@ const mockRFPs: RequestForPayment[] = [
     approvedBy: "Michael Brown",
     approvedDate: "2024-03-04",
   },
-  {
-    id: "RFP-2024-008",
-    rfpTitle: "Legal Services - Contract Review",
-    paymentType: "Legal",
-    status: "rejected",
-    dateSubmitted: "2024-03-03",
-    requestor: "Jennifer Lee",
-    department: "Legal",
-    amount: "$18,000",
-    description: "External legal counsel for merger documentation",
-    vendor: "Baker & McKenzie",
-    invoiceNumber: "INV-2024-008",
-    approvedBy: "Lisa Wong",
-    approvedDate: "2024-03-03",
-  },
 ];
 
 export default function RequestForPayment() {
-  const [rfps, setRfps] = useState<RequestForPayment[]>(mockRFPs);
-  const [selectedRfp, setSelectedRfp] = useState<RequestForPayment | null>(
-    null,
-  );
+  const [rfps, setRfps] = useState<RFP[]>(mockRFPs);
+  const [selectedRfp, setSelectedRfp] = useState<RFP | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [approvedPODialogOpen, setApprovedPODialogOpen] = useState(false);
   const router = useRouter();
 
-  // New state for approved POs dialog
-  const [approvedPODialogOpen, setApprovedPODialogOpen] = useState(false);
+  // ✅ CORRECT v3.x setup: Create ref and use it with contentRef
+  const printContentRef = useRef<HTMLDivElement>(null);
 
-  const getStatusBadge = (status: RequestForPayment["status"]) => {
-    const styles = {
-      submitted: "bg-amber-100 text-amber-700 hover:bg-amber-100",
-      approved: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
-      rejected: "bg-rose-100 text-rose-700 hover:bg-rose-100",
+  // ✅ CORRECT v3.x: useReactToPrint returns a function, takes options with contentRef
+  const handlePrint = useReactToPrint({
+    contentRef: printContentRef,
+    documentTitle: selectedRfp ? `RFP_${selectedRfp.id}` : "RFP_Details",
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 15mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-only { display: block !important; }
+        .no-print { display: none !important; }
+      }
+    `,
+  });
+
+  const getStatusBadge = (status: RFP["status"]) => {
+    const config = {
+      submitted: {
+        bg: "bg-amber-50",
+        text: "text-amber-700",
+        border: "border-amber-200",
+        icon: Clock,
+        label: "Submitted",
+      },
+      approved: {
+        bg: "bg-emerald-50",
+        text: "text-emerald-700",
+        border: "border-emerald-200",
+        icon: CheckCircle,
+        label: "Approved",
+      },
+      rejected: {
+        bg: "bg-rose-50",
+        text: "text-rose-700",
+        border: "border-rose-200",
+        icon: XCircle,
+        label: "Rejected",
+      },
     };
-    const labels = {
-      submitted: "Submitted",
-      approved: "Approved",
-      rejected: "Rejected",
-    };
+    const style = config[status];
+    const Icon = style.icon;
+
     return (
-      <Badge className={styles[status]} variant="secondary">
-        {labels[status]}
-      </Badge>
+      <div
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${style.bg} ${style.text} ${style.border}`}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        <span className="text-xs font-semibold uppercase tracking-wide">
+          {style.label}
+        </span>
+      </div>
     );
   };
 
-  const handleView = (rfp: RequestForPayment) => {
+  const handleView = (rfp: RFP) => {
     setSelectedRfp(rfp);
     setViewDialogOpen(true);
   };
@@ -258,114 +569,161 @@ export default function RequestForPayment() {
   };
 
   const handleCreateRFP = (order: Order) => {
-    // Logic to create RFP from approved PO
     console.log("Creating RFP from PO:", order.id);
     setApprovedPODialogOpen(false);
     router.push(`/home/finance/request-for-payment/create-rfp?orderId=${order.id}`);
   };
 
-  // Stats calculation
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const stats = [
     {
       title: "Total Requests",
       value: rfps.length,
       icon: FileText,
-      color: "text-[#2B3A9F]",
-      bgColor: "bg-[#2B3A9F]/10",
+      color: "text-slate-700",
+      bgColor: "bg-slate-100",
+      borderColor: "border-slate-200",
     },
     {
-      title: "Submitted",
+      title: "Pending Review",
       value: rfps.filter((r) => r.status === "submitted").length,
       icon: Clock,
-      color: "text-amber-600",
+      color: "text-amber-700",
       bgColor: "bg-amber-50",
+      borderColor: "border-amber-200",
     },
     {
       title: "Approved",
       value: rfps.filter((r) => r.status === "approved").length,
       icon: CheckCircle,
-      color: "text-emerald-600",
+      color: "text-emerald-700",
       bgColor: "bg-emerald-50",
+      borderColor: "border-emerald-200",
     },
     {
       title: "Rejected",
       value: rfps.filter((r) => r.status === "rejected").length,
       icon: XCircle,
-      color: "text-rose-600",
+      color: "text-rose-700",
       bgColor: "bg-rose-50",
+      borderColor: "border-rose-200",
     },
   ];
 
-  // Define columns for RFP
-  const columns: Column<RequestForPayment>[] = [
-    { key: "id", header: "RFP ID", width: "w-[140px]" },
-    { key: "rfpTitle", header: "RFP Title", width: "min-w-[200px]" },
-    { key: "paymentType", header: "Payment Type", width: "w-[160px]" },
+  const columns: Column<RFP>[] = [
     {
-      key: "requestor",
-      header: "Requestor",
+      key: "id",
+      header: "RFP Reference",
       width: "w-[140px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.requestor}</span>
-          <span className="text-xs text-slate-500">{row.department}</span>
+          <span className="font-mono text-sm font-semibold text-slate-900">{row.id}</span>
+          <span className="text-[10px] text-slate-500">PO: {row.orderId}</span>
         </div>
       ),
     },
-    { key: "amount", header: "Amount", width: "w-[100px]" },
+    {
+      key: "rfpTitle",
+      header: "Description",
+      width: "min-w-[240px]",
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-900 text-sm">{row.rfpTitle}</span>
+          <span className="text-xs text-slate-500 truncate max-w-[200px]">{row.description}</span>
+        </div>
+      ),
+    },
+    {
+      key: "paymentType",
+      header: "Payment Method",
+      width: "w-[130px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5">
+          <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-sm text-slate-700">{row.paymentType}</span>
+        </div>
+      ),
+    },
+    {
+      key: "requestor",
+      header: "Requestor",
+      width: "w-[160px]",
+      render: (row) => (
+        <div className="flex items-start gap-2">
+          <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
+            {row.requestor.split(" ").map((n) => n[0]).join("")}
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm text-slate-900">{row.requestor}</span>
+            <span className="text-xs text-slate-500">{row.department}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      width: "w-[120px]",
+      render: (row) => (
+        <div className="text-right">
+          <span className="font-mono text-sm font-semibold text-slate-900">{row.amount}</span>
+        </div>
+      ),
+    },
     {
       key: "status",
       header: "Status",
-      width: "w-[110px]",
+      width: "w-[130px]",
       render: (row) => getStatusBadge(row.status),
     },
     {
       key: "dateSubmitted",
-      header: "Date Submitted",
-      width: "w-[130px]",
-      render: (row) =>
-        new Date(row.dateSubmitted).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
+      header: "Date",
+      width: "w-[110px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-sm">{formatDate(row.dateSubmitted)}</span>
+        </div>
+      ),
     },
   ];
 
   const filterOptions = [
-    { value: "submitted", label: "Submitted" },
+    { value: "submitted", label: "Pending Review" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
   ];
 
   return (
     <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
-          Requests for Payment
-        </h1>
-        <p className="text-slate-500">
-          Manage and track all your RFP requests in one place
-        </p>
+      {/* Header */}
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Requests for Payment</h1>
+          <p className="text-sm text-slate-500">Manage payment authorizations and track RFP status</p>
+        </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.title} className="border-0 shadow-sm bg-white">
-            <CardContent className="p-6">
+          <Card key={stat.title} className={`border ${stat.borderColor} shadow-sm bg-white`}>
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">
-                    {stat.title}
-                  </p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stat.value}
-                  </p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{stat.title}</p>
+                  <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
                 </div>
-                <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={`p-3 rounded-lg ${stat.bgColor} ${stat.color}`}>
+                  <stat.icon className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
@@ -373,297 +731,381 @@ export default function RequestForPayment() {
         ))}
       </div>
 
-      {/* Data Table Card - Only View Action */}
+      {/* Data Table */}
       <DataTableCard
         data={rfps}
         columns={columns}
         keyExtractor={(row) => row.id}
-        title="All RFP Requests"
-        subtitle="View and manage your requests for payment"
-        searchPlaceholder="Search RFPs..."
+        title="Payment Requests"
+        subtitle={`${rfps.length} total requests in the system`}
+        searchPlaceholder="Search by RFP ID, title, vendor, or requestor..."
         searchable
-        searchKeys={[
-          "id",
-          "rfpTitle",
-          "paymentType",
-          "requestor",
-          "department",
-          "vendor",
-          "invoiceNumber",
-        ]}
+        searchKeys={["id", "rfpTitle", "paymentType", "requestor", "department", "vendor", "invoiceNumber", "description"]}
         filterable
         filterKey="status"
         filterOptions={filterOptions}
         pagination
         defaultPageSize={5}
         headerActions={
-          <Button
-            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/20"
-            onClick={handleReviewOrders}
-          >
+          <Button onClick={handleReviewOrders} className="bg-slate-900 hover:bg-slate-800 text-white">
             <Plus className="mr-2 h-4 w-4" />
-            Review Orders
+            Create from PO
           </Button>
         }
         actions={(row) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleView(row)}
-            className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#2B3A9F]/5"
-          >
+          <Button variant="outline" size="sm" onClick={() => handleView(row)} className="h-8 px-3 text-xs">
             <Eye className="h-3.5 w-3.5 mr-1.5" />
-            View
+            View Details
           </Button>
         )}
       />
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-slate-900">
-              RFP Request Details
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Full details for {selectedRfp?.id}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRfp && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">RFP ID</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.id}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Status</p>
-                  <div className="mt-1">
-                    {getStatusBadge(selectedRfp.status)}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Payment Type
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.paymentType}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Amount</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.amount}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Vendor</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.vendor}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Invoice Number
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.invoiceNumber || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Requestor
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.requestor}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Department
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRfp.department}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Date Submitted
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedRfp.dateSubmitted).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    )}
-                  </p>
-                </div>
-                {selectedRfp.approvedBy && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {selectedRfp.status === "approved"
-                        ? "Approved By"
-                        : "Rejected By"}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {selectedRfp.approvedBy}
-                    </p>
-                  </div>
-                )}
-              </div>
+        <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden max-h-[90vh]">
+          {/* Screen Header */}
+          <DialogHeader className="px-6 py-5 border-b bg-slate-50 no-print">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  Description
-                </p>
-                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">
-                  {selectedRfp.description}
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <DialogTitle className="text-lg font-semibold text-slate-900">RFP Details</DialogTitle>
+                  {selectedRfp && getStatusBadge(selectedRfp.status)}
+                </div>
+                <DialogDescription className="text-sm text-slate-500">
+                  Reference: <span className="font-mono font-medium text-slate-700">{selectedRfp?.id}</span>
+                </DialogDescription>
               </div>
-              {selectedRfp.approvedDate && (
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    {selectedRfp.status === "approved"
-                      ? "Approved Date"
-                      : "Rejected Date"}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedRfp.approvedDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    )}
-                  </p>
+              {selectedRfp && (
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Amount</p>
+                  <p className="text-2xl font-bold font-mono text-slate-900">{formatCurrency(selectedRfp.amount)}</p>
                 </div>
               )}
             </div>
+          </DialogHeader>
+
+          {/* ✅ PRINTABLE CONTENT - This is what gets printed */}
+          <div ref={printContentRef} className="print-only">
+            {selectedRfp && <PrintRequestForPayment rfp={selectedRfp} />}
+          </div>
+
+          {/* Screen Content */}
+          {selectedRfp && (
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)] no-print">
+              <div className="p-6 space-y-6">
+                {/* Payee & Payment Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <User className="h-3.5 w-3.5" />
+                      Payee Information
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Payable To</label>
+                        <p className="text-sm font-semibold text-slate-900">{selectedRfp.payableTo}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Vendor</label>
+                        <p className="text-sm text-slate-700">{selectedRfp.vendor}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Contact</label>
+                        <p className="text-sm text-slate-700">{selectedRfp.contactNumber}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <CreditCard className="h-3.5 w-3.5" />
+                      Payment Details
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Method</label>
+                        <p className="text-sm font-semibold text-slate-900">{selectedRfp.paymentType}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Invoice Number</label>
+                        <p className="text-sm text-slate-700">{selectedRfp.invoiceNumber || "-"}</p>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Due Date</label>
+                        <p className="text-sm text-slate-700 flex items-center gap-1.5">
+                          <Calendar className="h-3 w-3 text-slate-400" />
+                          {formatDate(selectedRfp.dueDate)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Requestor Info */}
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Request Information
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Requested By</label>
+                      <p className="text-sm font-medium text-slate-900">{selectedRfp.requestor}</p>
+                      <p className="text-xs text-slate-500">{selectedRfp.department}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Request Date</label>
+                      <p className="text-sm text-slate-700">{formatDate(selectedRfp.requestDate)}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Submitted</label>
+                      <p className="text-sm text-slate-700">{formatDate(selectedRfp.dateSubmitted)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-2">
+                    Purpose / Description
+                  </label>
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <p className="text-sm text-slate-700 leading-relaxed">{selectedRfp.description}</p>
+                  </div>
+                </div>
+
+                {/* Line Items */}
+                {selectedRfp.lineItems?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5" />
+                      Itemized Expenses
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[100px]">Ref Doc</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">Particulars</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-center w-[60px]">Qty</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[100px]">Unit Price</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[100px]">Amount</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[100px]">Charge To</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedRfp.lineItems.map((item) => (
+                            <TableRow key={item.id} className="text-[11px]">
+                              <TableCell className="font-mono text-slate-600">{item.referenceDocument}</TableCell>
+                              <TableCell className="text-slate-900">{item.particulars}</TableCell>
+                              <TableCell className="text-center">{item.qty}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(item.price)}</TableCell>
+                              <TableCell className="text-right font-mono font-medium text-slate-900">{formatCurrency(item.totalAmount)}</TableCell>
+                              <TableCell className="text-slate-600">{item.chargeTo}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="flex justify-end mt-3">
+                      <div className="bg-slate-900 text-white px-4 py-2 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-300">Total Payable</span>
+                          <span className="text-lg font-bold font-mono">{formatCurrency(selectedRfp.totalPayable)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Journal Entries */}
+                {selectedRfp.journalEntry?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Hash className="h-3.5 w-3.5" />
+                      Accounting Distribution
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[80px]">Entry #</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">Account Title</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[120px]">Debit</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[120px]">Credit</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedRfp.journalEntry.map((entry) => (
+                            <TableRow key={entry.id} className="text-[11px]">
+                              <TableCell className="font-mono text-slate-600">#{entry.id}</TableCell>
+                              <TableCell className="text-slate-900">{entry.accountTitle}</TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.entryType === "debit" ? formatCurrency(entry.amount) : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.entryType === "credit" ? formatCurrency(entry.amount) : "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-slate-50 font-semibold border-t-2 border-slate-200">
+                            <TableCell colSpan={2} className="text-right text-[10px] uppercase tracking-wider text-slate-600">Total</TableCell>
+                            <TableCell className="text-right font-mono text-slate-900">
+                              {formatCurrency(selectedRfp.journalEntry.filter((e) => e.entryType === "debit").reduce((sum, e) => sum + e.amount, 0))}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-slate-900">
+                              {formatCurrency(selectedRfp.journalEntry.filter((e) => e.entryType === "credit").reduce((sum, e) => sum + e.amount, 0))}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Approval Info */}
+                {selectedRfp.approvedBy && (
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                      {selectedRfp.status === "approved" ? "Approval" : "Rejection"} Details
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{selectedRfp.approvedBy}</p>
+                        <p className="text-xs text-slate-500">
+                          {selectedRfp.status === "approved" ? "Approved on" : "Rejected on"} {formatDate(selectedRfp.approvedDate!)}
+                        </p>
+                      </div>
+                      {selectedRfp.status === "approved" ? (
+                        <CheckCircle className="h-8 w-8 text-emerald-600" />
+                      ) : (
+                        <XCircle className="h-8 w-8 text-rose-600" />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+
+          {/* Footer */}
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50 no-print">
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)} className="border-slate-300">
               Close
+            </Button>
+            <Button variant="outline" onClick={() => handlePrint()} className="border-slate-300">
+              <Printer className="mr-2 h-4 w-4" />
+              Print / PDF
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* NEW: Approved Purchase Orders Dialog */}
-      <Dialog
-        open={approvedPODialogOpen}
-        onOpenChange={setApprovedPODialogOpen}
-      >
+      {/* Approved POs Dialog */}
+      <Dialog open={approvedPODialogOpen} onOpenChange={setApprovedPODialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-          {/* Header */}
-          <DialogHeader className="px-6 py-5 border-b bg-slate-50/50">
+          <DialogHeader className="px-6 py-5 border-b bg-slate-50">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900 tracking-tight">
-                  Approved Purchase and Service Orders
-                </DialogTitle>
-                <DialogDescription className="text-sm text-slate-500 mt-1">
-                  Select a purchase order or service order to create a new request for payment
-                </DialogDescription>
+                <DialogTitle className="text-lg font-semibold text-slate-900">Approved Purchase Orders</DialogTitle>
+                <DialogDescription className="text-sm text-slate-500 mt-1">Select an approved PO to generate a new payment request</DialogDescription>
               </div>
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700 hover:bg-slate-200"
-              >
-                {mockPurchaseOrders.length} orders
+              <Badge variant="secondary" className="bg-slate-200 text-slate-700 font-semibold">
+                {mockPurchaseOrders.length} available
               </Badge>
             </div>
           </DialogHeader>
 
-          {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-            {mockPurchaseOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                  No approved orders
-                </h3>
-                <p className="text-sm text-slate-500">
-                  There are no approved purchase or service orders available at this time.
-                </p>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[140px]">
-                        PO ID
-                      </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4">
-                        Title
-                      </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[140px]">
-                        Type
-                      </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-[180px]">
-                        Action
-                      </TableHead>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow className="hover:bg-transparent border-b border-slate-200">
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[120px]">PO Reference</TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4">Description</TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[120px]">Type</TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-[140px]">Amount</TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-[140px]">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockPurchaseOrders.map((po) => (
+                    <TableRow key={po.id} className="group hover:bg-slate-50">
+                      <TableCell className="py-4">
+                        <span className="font-mono text-sm font-semibold text-slate-900">{po.id}</span>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-slate-900">{po.poTitle}</span>
+                          <span className="text-xs text-slate-500 truncate max-w-[250px]">{po.description}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <Badge variant="outline" className="text-xs border-slate-300 text-slate-600 font-medium">{po.poType}</Badge>
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        <span className="font-mono text-sm font-semibold text-slate-900">{po.totalAmount}</span>
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        <Button size="sm" onClick={() => handleCreateRFP(po)} className="bg-slate-900 hover:bg-slate-800 text-white gap-2">
+                          Create RFP
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockPurchaseOrders.map((po) => (
-                      <TableRow
-                        key={po.id}
-                        className="group hover:bg-slate-50 transition-colors"
-                      >
-                        <TableCell className="font-medium text-sm text-slate-700 py-4">
-                          {po.id}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium text-slate-900 py-4">
-                          {po.poTitle}
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600 py-4">
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-slate-300 text-slate-600"
-                          >
-                            {po.poType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right py-4">
-                          <Button
-                            size="sm"
-                            onClick={() => handleCreateRFP(po)}
-                            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white gap-2"
-                          >
-                            Create RFP
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
-          {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-slate-50">
-            <div className="mb-4 mr-4">
-              <Button
-                variant="outline"
-                onClick={() => setApprovedPODialogOpen(false)}
-                className="border-slate-300 text-slate-700 hover:bg-slate-100"
-              >
-                Close
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setApprovedPODialogOpen(false)} className="border-slate-300">
+              Cancel
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+        }
+        @media screen {
+          .print-only {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
+
+// Utility for currency formatting
+const formatCurrency = (value: string | number | undefined | null) => {
+  if (value === undefined || value === null || value === "") return "₱0.00";
+  if (typeof value === "number")
+    return isNaN(value)
+      ? "₱0.00"
+      : new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(value);
+
+  const cleanedValue = value.toString().replace(/[₱$,\s]/g, "").trim();
+  if (!cleanedValue) return "₱0.00";
+
+  const numValue = parseFloat(cleanedValue);
+  return isNaN(numValue)
+    ? "₱0.00"
+    : new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+      }).format(numValue);
+};
