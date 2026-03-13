@@ -26,7 +26,6 @@ import {
   Building2,
   Hash,
   CreditCard,
-  AlertCircle,
   Printer,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
@@ -571,7 +570,9 @@ export default function RequestForPayment() {
   const handleCreateRFP = (order: Order) => {
     console.log("Creating RFP from PO:", order.id);
     setApprovedPODialogOpen(false);
-    router.push(`/home/finance/request-for-payment/create-rfp?orderId=${order.id}`);
+    router.push(
+      `/home/finance/request-for-payment/create-rfp?orderId=${order.id}`,
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -624,7 +625,9 @@ export default function RequestForPayment() {
       width: "w-[140px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-mono text-sm font-semibold text-slate-900">{row.id}</span>
+          <span className="font-mono text-sm font-semibold text-slate-900">
+            {row.id}
+          </span>
           <span className="text-[10px] text-slate-500">PO: {row.orderId}</span>
         </div>
       ),
@@ -635,8 +638,12 @@ export default function RequestForPayment() {
       width: "min-w-[240px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium text-slate-900 text-sm">{row.rfpTitle}</span>
-          <span className="text-xs text-slate-500 truncate max-w-[200px]">{row.description}</span>
+          <span className="font-medium text-slate-900 text-sm">
+            {row.rfpTitle}
+          </span>
+          <span className="text-xs text-slate-500 truncate max-w-50">
+            {row.description}
+          </span>
         </div>
       ),
     },
@@ -658,10 +665,15 @@ export default function RequestForPayment() {
       render: (row) => (
         <div className="flex items-start gap-2">
           <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
-            {row.requestor.split(" ").map((n) => n[0]).join("")}
+            {row.requestor
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
           </div>
           <div className="flex flex-col">
-            <span className="font-medium text-sm text-slate-900">{row.requestor}</span>
+            <span className="font-medium text-sm text-slate-900">
+              {row.requestor}
+            </span>
             <span className="text-xs text-slate-500">{row.department}</span>
           </div>
         </div>
@@ -673,7 +685,9 @@ export default function RequestForPayment() {
       width: "w-[120px]",
       render: (row) => (
         <div className="text-right">
-          <span className="font-mono text-sm font-semibold text-slate-900">{row.amount}</span>
+          <span className="font-mono text-sm font-semibold text-slate-900">
+            {row.amount}
+          </span>
         </div>
       ),
     },
@@ -707,20 +721,31 @@ export default function RequestForPayment() {
       {/* Header */}
       <div className="mb-8 flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Requests for Payment</h1>
-          <p className="text-sm text-slate-500">Manage payment authorizations and track RFP status</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Requests for Payment
+          </h1>
+          <p className="text-sm text-slate-500">
+            Manage payment authorizations and track RFP status
+          </p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.title} className={`border ${stat.borderColor} shadow-sm bg-white`}>
+          <Card
+            key={stat.title}
+            className={`border ${stat.borderColor} shadow-sm bg-white`}
+          >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    {stat.title}
+                  </p>
+                  <p className="text-3xl font-bold text-slate-900">
+                    {stat.value}
+                  </p>
                 </div>
                 <div className={`p-3 rounded-lg ${stat.bgColor} ${stat.color}`}>
                   <stat.icon className="h-5 w-5" />
@@ -740,20 +765,37 @@ export default function RequestForPayment() {
         subtitle={`${rfps.length} total requests in the system`}
         searchPlaceholder="Search by RFP ID, title, vendor, or requestor..."
         searchable
-        searchKeys={["id", "rfpTitle", "paymentType", "requestor", "department", "vendor", "invoiceNumber", "description"]}
+        searchKeys={[
+          "id",
+          "rfpTitle",
+          "paymentType",
+          "requestor",
+          "department",
+          "vendor",
+          "invoiceNumber",
+          "description",
+        ]}
         filterable
         filterKey="status"
         filterOptions={filterOptions}
         pagination
         defaultPageSize={5}
         headerActions={
-          <Button onClick={handleReviewOrders} className="bg-slate-900 hover:bg-slate-800 text-white">
+          <Button
+            onClick={handleReviewOrders}
+            className="bg-slate-900 hover:bg-slate-800 text-white"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Create from PO
           </Button>
         }
         actions={(row) => (
-          <Button variant="outline" size="sm" onClick={() => handleView(row)} className="h-8 px-3 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleView(row)}
+            className="h-8 px-3 text-xs"
+          >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
             View Details
           </Button>
@@ -768,17 +810,26 @@ export default function RequestForPayment() {
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <DialogTitle className="text-lg font-semibold text-slate-900">RFP Details</DialogTitle>
+                  <DialogTitle className="text-lg font-semibold text-slate-900">
+                    RFP Details
+                  </DialogTitle>
                   {selectedRfp && getStatusBadge(selectedRfp.status)}
                 </div>
                 <DialogDescription className="text-sm text-slate-500">
-                  Reference: <span className="font-mono font-medium text-slate-700">{selectedRfp?.id}</span>
+                  Reference:{" "}
+                  <span className="font-mono font-medium text-slate-700">
+                    {selectedRfp?.id}
+                  </span>
                 </DialogDescription>
               </div>
               {selectedRfp && (
                 <div className="text-right">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Amount</p>
-                  <p className="text-2xl font-bold font-mono text-slate-900">{formatCurrency(selectedRfp.amount)}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+                    Total Amount
+                  </p>
+                  <p className="text-2xl font-bold font-mono text-slate-900">
+                    {formatCurrency(selectedRfp.amount)}
+                  </p>
                 </div>
               )}
             </div>
@@ -802,16 +853,28 @@ export default function RequestForPayment() {
                     </h4>
                     <div className="space-y-2">
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Payable To</label>
-                        <p className="text-sm font-semibold text-slate-900">{selectedRfp.payableTo}</p>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Payable To
+                        </label>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedRfp.payableTo}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Vendor</label>
-                        <p className="text-sm text-slate-700">{selectedRfp.vendor}</p>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Vendor
+                        </label>
+                        <p className="text-sm text-slate-700">
+                          {selectedRfp.vendor}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Contact</label>
-                        <p className="text-sm text-slate-700">{selectedRfp.contactNumber}</p>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Contact
+                        </label>
+                        <p className="text-sm text-slate-700">
+                          {selectedRfp.contactNumber}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -823,15 +886,25 @@ export default function RequestForPayment() {
                     </h4>
                     <div className="space-y-2">
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Method</label>
-                        <p className="text-sm font-semibold text-slate-900">{selectedRfp.paymentType}</p>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Method
+                        </label>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedRfp.paymentType}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Invoice Number</label>
-                        <p className="text-sm text-slate-700">{selectedRfp.invoiceNumber || "-"}</p>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Invoice Number
+                        </label>
+                        <p className="text-sm text-slate-700">
+                          {selectedRfp.invoiceNumber || "-"}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">Due Date</label>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold block">
+                          Due Date
+                        </label>
                         <p className="text-sm text-slate-700 flex items-center gap-1.5">
                           <Calendar className="h-3 w-3 text-slate-400" />
                           {formatDate(selectedRfp.dueDate)}
@@ -849,28 +922,32 @@ export default function RequestForPayment() {
                   </h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Requested By</label>
-                      <p className="text-sm font-medium text-slate-900">{selectedRfp.requestor}</p>
-                      <p className="text-xs text-slate-500">{selectedRfp.department}</p>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">
+                        Requested By
+                      </label>
+                      <p className="text-sm font-medium text-slate-900">
+                        {selectedRfp.requestor}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {selectedRfp.department}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Request Date</label>
-                      <p className="text-sm text-slate-700">{formatDate(selectedRfp.requestDate)}</p>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">
+                        Request Date
+                      </label>
+                      <p className="text-sm text-slate-700">
+                        {formatDate(selectedRfp.requestDate)}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Submitted</label>
-                      <p className="text-sm text-slate-700">{formatDate(selectedRfp.dateSubmitted)}</p>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">
+                        Submitted
+                      </label>
+                      <p className="text-sm text-slate-700">
+                        {formatDate(selectedRfp.dateSubmitted)}
+                      </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-2">
-                    Purpose / Description
-                  </label>
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <p className="text-sm text-slate-700 leading-relaxed">{selectedRfp.description}</p>
                   </div>
                 </div>
 
@@ -885,33 +962,61 @@ export default function RequestForPayment() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50">
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[100px]">Ref Doc</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">Particulars</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-center w-[60px]">Qty</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[100px]">Unit Price</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[100px]">Amount</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[100px]">Charge To</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-25">
+                              Ref Doc
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">
+                              Particulars
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-center w-15">
+                              Qty
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-25">
+                              Unit Price
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-25">
+                              Amount
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-25">
+                              Charge To
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {selectedRfp.lineItems.map((item) => (
                             <TableRow key={item.id} className="text-[11px]">
-                              <TableCell className="font-mono text-slate-600">{item.referenceDocument}</TableCell>
-                              <TableCell className="text-slate-900">{item.particulars}</TableCell>
-                              <TableCell className="text-center">{item.qty}</TableCell>
-                              <TableCell className="text-right font-mono">{formatCurrency(item.price)}</TableCell>
-                              <TableCell className="text-right font-mono font-medium text-slate-900">{formatCurrency(item.totalAmount)}</TableCell>
-                              <TableCell className="text-slate-600">{item.chargeTo}</TableCell>
+                              <TableCell className="font-mono text-slate-600">
+                                {item.referenceDocument}
+                              </TableCell>
+                              <TableCell className="text-slate-900">
+                                {item.particulars}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {item.qty}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatCurrency(item.price)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-medium text-slate-900">
+                                {formatCurrency(item.totalAmount)}
+                              </TableCell>
+                              <TableCell className="text-slate-600">
+                                {item.chargeTo}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
                     <div className="flex justify-end mt-3">
-                      <div className="bg-slate-900 text-white px-4 py-2 rounded-lg">
+                      <div className="bg-[#2B3A9F] text-white px-4 py-2 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-300">Total Payable</span>
-                          <span className="text-lg font-bold font-mono">{formatCurrency(selectedRfp.totalPayable)}</span>
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-300">
+                            Total Payable
+                          </span>
+                          <span className="text-lg font-bold font-mono">
+                            {formatCurrency(selectedRfp.totalPayable)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -929,34 +1034,41 @@ export default function RequestForPayment() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50">
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-[80px]">Entry #</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">Account Title</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[120px]">Debit</TableHead>
-                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-[120px]">Credit</TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-20">
+                              Entry #
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase">
+                              Account Title
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-30">
+                              Debit
+                            </TableHead>
+                            <TableHead className="text-[10px] font-bold text-slate-600 uppercase text-right w-30">
+                              Credit
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {selectedRfp.journalEntry.map((entry) => (
                             <TableRow key={entry.id} className="text-[11px]">
-                              <TableCell className="font-mono text-slate-600">#{entry.id}</TableCell>
-                              <TableCell className="text-slate-900">{entry.accountTitle}</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {entry.entryType === "debit" ? formatCurrency(entry.amount) : "-"}
+                              <TableCell className="font-mono text-slate-600">
+                                #{entry.id}
+                              </TableCell>
+                              <TableCell className="text-slate-900">
+                                {entry.accountTitle}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {entry.entryType === "credit" ? formatCurrency(entry.amount) : "-"}
+                                {entry.entryType === "debit"
+                                  ? formatCurrency(entry.amount)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.entryType === "credit"
+                                  ? formatCurrency(entry.amount)
+                                  : "-"}
                               </TableCell>
                             </TableRow>
                           ))}
-                          <TableRow className="bg-slate-50 font-semibold border-t-2 border-slate-200">
-                            <TableCell colSpan={2} className="text-right text-[10px] uppercase tracking-wider text-slate-600">Total</TableCell>
-                            <TableCell className="text-right font-mono text-slate-900">
-                              {formatCurrency(selectedRfp.journalEntry.filter((e) => e.entryType === "debit").reduce((sum, e) => sum + e.amount, 0))}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-slate-900">
-                              {formatCurrency(selectedRfp.journalEntry.filter((e) => e.entryType === "credit").reduce((sum, e) => sum + e.amount, 0))}
-                            </TableCell>
-                          </TableRow>
                         </TableBody>
                       </Table>
                     </div>
@@ -967,13 +1079,21 @@ export default function RequestForPayment() {
                 {selectedRfp.approvedBy && (
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                      {selectedRfp.status === "approved" ? "Approval" : "Rejection"} Details
+                      {selectedRfp.status === "approved"
+                        ? "Approval"
+                        : "Rejection"}{" "}
+                      Details
                     </h4>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{selectedRfp.approvedBy}</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {selectedRfp.approvedBy}
+                        </p>
                         <p className="text-xs text-slate-500">
-                          {selectedRfp.status === "approved" ? "Approved on" : "Rejected on"} {formatDate(selectedRfp.approvedDate!)}
+                          {selectedRfp.status === "approved"
+                            ? "Approved on"
+                            : "Rejected on"}{" "}
+                          {formatDate(selectedRfp.approvedDate!)}
                         </p>
                       </div>
                       {selectedRfp.status === "approved" ? (
@@ -990,27 +1110,47 @@ export default function RequestForPayment() {
 
           {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-slate-50 no-print">
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)} className="border-slate-300">
-              Close
-            </Button>
-            <Button variant="outline" onClick={() => handlePrint()} className="border-slate-300">
-              <Printer className="mr-2 h-4 w-4" />
-              Print / PDF
-            </Button>
+            <div className="flex mb-4 mr-4 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setViewDialogOpen(false)}
+                className="border-slate-300"
+              >
+                Close
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handlePrint()}
+                className="border-slate-300"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print / PDF
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Approved POs Dialog */}
-      <Dialog open={approvedPODialogOpen} onOpenChange={setApprovedPODialogOpen}>
+      <Dialog
+        open={approvedPODialogOpen}
+        onOpenChange={setApprovedPODialogOpen}
+      >
         <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 py-5 border-b bg-slate-50">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900">Approved Purchase Orders</DialogTitle>
-                <DialogDescription className="text-sm text-slate-500 mt-1">Select an approved PO to generate a new payment request</DialogDescription>
+                <DialogTitle className="text-lg font-semibold text-slate-900">
+                  Approved Purchase Orders
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-500 mt-1">
+                  Select an approved PO to generate a new payment request
+                </DialogDescription>
               </div>
-              <Badge variant="secondary" className="bg-slate-200 text-slate-700 font-semibold">
+              <Badge
+                variant="secondary"
+                className="bg-slate-200 text-slate-700 font-semibold"
+              >
                 {mockPurchaseOrders.length} available
               </Badge>
             </div>
@@ -1021,33 +1161,60 @@ export default function RequestForPayment() {
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow className="hover:bg-transparent border-b border-slate-200">
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[120px]">PO Reference</TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4">Description</TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-[120px]">Type</TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-[140px]">Amount</TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-[140px]">Action</TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-30">
+                      PO Reference
+                    </TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4">
+                      Description
+                    </TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-30">
+                      Type
+                    </TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-35">
+                      Amount
+                    </TableHead>
+                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-35">
+                      Action
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {mockPurchaseOrders.map((po) => (
                     <TableRow key={po.id} className="group hover:bg-slate-50">
                       <TableCell className="py-4">
-                        <span className="font-mono text-sm font-semibold text-slate-900">{po.id}</span>
+                        <span className="font-mono text-sm font-semibold text-slate-900">
+                          {po.id}
+                        </span>
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-900">{po.poTitle}</span>
-                          <span className="text-xs text-slate-500 truncate max-w-[250px]">{po.description}</span>
+                          <span className="text-sm font-medium text-slate-900">
+                            {po.poTitle}
+                          </span>
+                          <span className="text-xs text-slate-500 truncate max-w-62.5">
+                            {po.description}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
-                        <Badge variant="outline" className="text-xs border-slate-300 text-slate-600 font-medium">{po.poType}</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-slate-300 text-slate-600 font-medium"
+                        >
+                          {po.poType}
+                        </Badge>
                       </TableCell>
                       <TableCell className="py-4 text-right">
-                        <span className="font-mono text-sm font-semibold text-slate-900">{po.totalAmount}</span>
+                        <span className="font-mono text-sm font-semibold text-slate-900">
+                          {po.totalAmount}
+                        </span>
                       </TableCell>
                       <TableCell className="py-4 text-right">
-                        <Button size="sm" onClick={() => handleCreateRFP(po)} className="bg-slate-900 hover:bg-slate-800 text-white gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleCreateRFP(po)}
+                          className="bg-slate-900 hover:bg-slate-800 text-white gap-2"
+                        >
                           Create RFP
                           <ArrowRight className="w-4 h-4" />
                         </Button>
@@ -1060,7 +1227,11 @@ export default function RequestForPayment() {
           </div>
 
           <DialogFooter className="px-6 py-4 border-t bg-slate-50">
-            <Button variant="outline" onClick={() => setApprovedPODialogOpen(false)} className="border-slate-300">
+            <Button
+              variant="outline"
+              onClick={() => setApprovedPODialogOpen(false)}
+              className="border-slate-300"
+            >
               Cancel
             </Button>
           </DialogFooter>
@@ -1098,7 +1269,10 @@ const formatCurrency = (value: string | number | undefined | null) => {
           currency: "PHP",
         }).format(value);
 
-  const cleanedValue = value.toString().replace(/[₱$,\s]/g, "").trim();
+  const cleanedValue = value
+    .toString()
+    .replace(/[₱$,\s]/g, "")
+    .trim();
   if (!cleanedValue) return "₱0.00";
 
   const numValue = parseFloat(cleanedValue);
