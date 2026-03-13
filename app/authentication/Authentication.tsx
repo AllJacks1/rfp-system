@@ -25,12 +25,12 @@ export default function Authentication() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#1b2365] via-[#3a42a5] to-[#1b2365] px-6">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-[#1b2365] via-[#3a42a5] to-[#1b2365] px-6">
       {/* Background Glow */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-[420px] w-[420px] rounded-full bg-indigo-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -left-40 h-[420px] w-[420px] rounded-full bg-blue-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 -right-40 h-105 w-105 rounded-full bg-indigo-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-40 h-105 w-105 rounded-full bg-blue-400/20 blur-3xl" />
 
-      <Card className="w-[380px] border-0 bg-white shadow-2xl backdrop-blur-xl">
+      <Card className="w-95 border-0 bg-white shadow-2xl backdrop-blur-xl">
         {/* HEADER */}
         <CardHeader className="space-y-6 pb-6">
           <div className="flex justify-center mt-4">
