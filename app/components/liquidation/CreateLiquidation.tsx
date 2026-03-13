@@ -549,7 +549,7 @@ export default function CreateLiquidation() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50 hover:bg-slate-50">
-                      <TableHead className="w-[100px] text-xs font-bold text-slate-700">
+                      <TableHead className="w-25 text-xs font-bold text-slate-700">
                         Date
                       </TableHead>
                       <TableHead className="text-xs font-bold text-slate-700">
@@ -567,7 +567,7 @@ export default function CreateLiquidation() {
                       <TableHead className="text-right text-xs font-bold text-slate-700">
                         Amount
                       </TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead className="w-12.5"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
