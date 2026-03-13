@@ -735,7 +735,7 @@ export default function RequestForPayment() {
         {stats.map((stat) => (
           <Card
             key={stat.title}
-            className={`border ${stat.borderColor} shadow-sm bg-white`}
+            className={`shadow-sm bg-white`}
           >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
@@ -783,7 +783,7 @@ export default function RequestForPayment() {
         headerActions={
           <Button
             onClick={handleReviewOrders}
-            className="bg-slate-900 hover:bg-slate-800 text-white"
+            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
             Create from PO
