@@ -112,7 +112,7 @@ export default function TopNavigation({
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] p-0 bg-slate-50">
+            <SheetContent side="left" className="w-75 p-0 bg-slate-50">
               <SheetHeader className="border-b border-slate-200 bg-white p-6">
                 <SheetTitle className="flex items-center gap-3">
                   <Image
@@ -299,7 +299,7 @@ export default function TopNavigation({
               >
                 <Avatar className="h-9 w-9 border-2 border-slate-200 hover:border-indigo-300 transition-colors">
                   <AvatarImage src="/avatar.png" alt="User" />
-                  <AvatarFallback className="bg-gradient-to-br from-[#2B3A9F] to-[#2B3A9F]/60 text-white font-semibold text-sm">
+                  <AvatarFallback className="bg-linear-to-br from-[#2B3A9F] to-[#2B3A9F]/60 text-white font-semibold text-sm">
                     JD
                   </AvatarFallback>
                 </Avatar>
