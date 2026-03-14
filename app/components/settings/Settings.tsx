@@ -1,3 +1,4 @@
+// Settings.tsx
 "use client";
 import {
   Card,
@@ -15,9 +16,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import UserAccountDialog from "./UserAccountDialog";
 import CompanySettingsDialog from "./CompanySettingsDialog";
-import { useState } from "react";
+import BranchSettingsDialog from "./BranchSettingsDialog";
+import DepartmentSettingsDialog from "./DepartmentSettingsDialog";
+import RolesSettingsDialog from "./RolesSettingDialog";
 
 interface SettingsCardProps {
   title: string;
@@ -32,6 +36,9 @@ interface SettingsCardProps {
 const Settings = () => {
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
+  const [rolesDialogOpen, setRolesDialogOpen] = useState(false);
 
   const settingsCategories: SettingsCardProps[] = [
     {
@@ -54,25 +61,25 @@ const Settings = () => {
       title: "Branch Settings",
       description: "Manage office locations",
       icon: MapPin,
-      href: "/settings/branches",
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#2B3A9F]/10",
+      onClick: () => setBranchDialogOpen(true),
     },
     {
       title: "Department Settings",
       description: "Organize your departments",
       icon: Users,
-      href: "/settings/departments",
-      color: "text-violet-600",
-      bgColor: "bg-violet-50",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#2B3A9F]/10",
+      onClick: () => setDepartmentDialogOpen(true),
     },
     {
       title: "Roles Settings",
       description: "Define the roles of your employees",
       icon: ShieldCheck,
-      href: "/settings/roles",
-      color: "text-rose-600",
-      bgColor: "bg-rose-50",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#2B3A9F]/10",
+      onClick: () => setRolesDialogOpen(true),
     },
   ];
 
@@ -138,6 +145,18 @@ const Settings = () => {
       <CompanySettingsDialog
         open={companyDialogOpen}
         onOpenChange={setCompanyDialogOpen}
+      />
+      <BranchSettingsDialog
+        open={branchDialogOpen}
+        onOpenChange={setBranchDialogOpen}
+      />
+      <DepartmentSettingsDialog
+        open={departmentDialogOpen}
+        onOpenChange={setDepartmentDialogOpen}
+      />
+      <RolesSettingsDialog
+        open={rolesDialogOpen}
+        onOpenChange={setRolesDialogOpen}
       />
     </div>
   );
