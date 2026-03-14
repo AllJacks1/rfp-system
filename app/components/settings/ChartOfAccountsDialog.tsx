@@ -13,6 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -24,6 +25,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   MoreHorizontal,
   Plus,
@@ -33,6 +42,7 @@ import {
   Eye,
   Pencil,
   Hash,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -113,17 +123,86 @@ export default function ChartOfAccountsDialog({
 }: ChartOfAccountsDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [accounts, setAccounts] = useState<Account[]>(mockAccounts);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState<Partial<Account>>({
+    code: "",
+    name: "",
+    type: "Asset",
+    category: "",
+    balance: "$0.00",
+  });
 
   const activeAccounts = accounts.filter((a) => a.status === "active");
   const filteredAccounts = activeAccounts.filter(
     (a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.code.includes(searchQuery) ||
-      a.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      a.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRemove = (id: string) => {
     setAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleOpenForm = (account?: Account) => {
+    if (account) {
+      setEditingAccount(account);
+      setFormData(account);
+    } else {
+      setEditingAccount(null);
+      setFormData({
+        code: "",
+        name: "",
+        type: "Asset",
+        category: "",
+        balance: "$0.00",
+      });
+    }
+    setFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingAccount(null);
+    setFormData({
+      code: "",
+      name: "",
+      type: "Asset",
+      category: "",
+      balance: "$0.00",
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingAccount) {
+      // Update existing
+      setAccounts((prev) =>
+        prev.map((a) =>
+          a.id === editingAccount.id
+            ? { ...a, ...(formData as Account) }
+            : a
+        )
+      );
+    } else {
+      // Create new
+      const newAccount: Account = {
+        id: Math.random().toString(36).substr(2, 9),
+        code: formData.code || "",
+        name: formData.name || "",
+        type: (formData.type as Account["type"]) || "Asset",
+        category: formData.category || "",
+        balance: formData.balance || "$0.00",
+        status: "active",
+      };
+      setAccounts((prev) => [...prev, newAccount]);
+    }
+    
+    handleCloseForm();
   };
 
   const getTypeColor = (type: string) => {
@@ -144,168 +223,322 @@ export default function ChartOfAccountsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-indigo-600">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-2xl flex items-center gap-2 text-indigo-600">
-            <div className="p-2 rounded-lg bg-indigo-50">
-              <BookOpen className="w-6 h-6 text-indigo-600" />
-            </div>
-            Chart of Accounts
-          </DialogTitle>
-          <DialogDescription className="text-slate-500">
-            Manage account titles, categories, and financial classifications.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 mt-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-600" />
-              <Input
-                placeholder="Search accounts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20"
-              />
-            </div>
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Account
-            </Button>
-          </div>
-
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
-                    Accounts
-                    <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200">
-                      {activeAccounts.length}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-slate-500 mt-1">
-                    Financial accounts and classifications
-                  </CardDescription>
-                </div>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-indigo-600">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl flex items-center gap-2 text-indigo-600">
+              <div className="p-2 rounded-lg bg-indigo-50">
+                <BookOpen className="w-6 h-6 text-indigo-600" />
               </div>
-            </CardHeader>
+              Chart of Accounts
+            </DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Manage account titles, categories, and financial classifications.
+            </DialogDescription>
+          </DialogHeader>
 
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                    <TableHead className="text-indigo-600 font-semibold">
-                      Code
-                    </TableHead>
-                    <TableHead className="text-indigo-600 font-semibold">
-                      Account Name
-                    </TableHead>
-                    <TableHead className="text-indigo-600 font-semibold">
-                      Type
-                    </TableHead>
-                    <TableHead className="text-indigo-600 font-semibold">
-                      Category
-                    </TableHead>
-                    <TableHead className="text-indigo-600 font-semibold">
-                      Balance
-                    </TableHead>
-                    <TableHead className="w-[100px] text-indigo-600 font-semibold">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAccounts.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center text-slate-400 py-12"
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <BookOpen className="w-8 h-8 text-slate-300" />
-                          <p>No accounts found</p>
-                        </div>
-                      </TableCell>
+          <div className="space-y-6 mt-6">
+            {/* Header Actions */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-600" />
+                <Input
+                  placeholder="Search accounts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20"
+                />
+              </div>
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                onClick={() => handleOpenForm()}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Account
+              </Button>
+            </div>
+
+            {/* Accounts Table */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+                      Accounts
+                      <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200">
+                        {activeAccounts.length}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="text-slate-500 mt-1">
+                      Financial accounts and classifications
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="text-indigo-600 font-semibold">
+                        Code
+                      </TableHead>
+                      <TableHead className="text-indigo-600 font-semibold">
+                        Account Name
+                      </TableHead>
+                      <TableHead className="text-indigo-600 font-semibold">
+                        Type
+                      </TableHead>
+                      <TableHead className="text-indigo-600 font-semibold">
+                        Category
+                      </TableHead>
+                      <TableHead className="text-indigo-600 font-semibold">
+                        Balance
+                      </TableHead>
+                      <TableHead className="w-[100px] text-indigo-600 font-semibold">
+                        Actions
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    filteredAccounts.map((account) => (
-                      <TableRow
-                        key={account.id}
-                        className="hover:bg-indigo-50/50 transition-colors"
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-indigo-600" />
-                            <span className="font-mono font-medium text-indigo-600">
-                              {account.code}
-                            </span>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAccounts.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center text-slate-400 py-12"
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                            <BookOpen className="w-8 h-8 text-slate-300" />
+                            <p>No accounts found</p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="font-medium text-slate-900">
-                            {account.name}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={getTypeColor(account.type)}
-                          >
-                            {account.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {account.category}
-                        </TableCell>
-                        <TableCell className="font-medium text-slate-900">
-                          {account.balance}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-indigo-100 hover:text-indigo-600"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuLabel className="text-xs text-slate-500">
-                                Actions
-                              </DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600">
-                                <Eye className="w-4 h-4 mr-2 text-indigo-600" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600">
-                                <Pencil className="w-4 h-4 mr-2 text-indigo-600" />
-                                Edit Account
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                onClick={() => handleRemove(account.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remove
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
+                    ) : (
+                      filteredAccounts.map((account) => (
+                        <TableRow
+                          key={account.id}
+                          className="hover:bg-indigo-50/50 transition-colors"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Hash className="w-4 h-4 text-indigo-600" />
+                              <span className="font-mono font-medium text-indigo-600">
+                                {account.code}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-slate-900">
+                              {account.name}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={getTypeColor(account.type)}
+                            >
+                              {account.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {account.category}
+                          </TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {account.balance}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:bg-indigo-100 hover:text-indigo-600"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuLabel className="text-xs text-slate-500">
+                                  Actions
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600">
+                                  <Eye className="w-4 h-4 mr-2 text-indigo-600" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600"
+                                  onClick={() => handleOpenForm(account)}
+                                >
+                                  <Pencil className="w-4 h-4 mr-2 text-indigo-600" />
+                                  Edit Account
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
+                                  onClick={() => handleRemove(account.id)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Account Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-[500px] p-6 border-t-4 border-t-indigo-600">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl flex items-center gap-2 text-indigo-600">
+              <div className="p-2 rounded-lg bg-indigo-50">
+                {editingAccount ? (
+                  <Pencil className="w-5 h-5 text-indigo-600" />
+                ) : (
+                  <Plus className="w-5 h-5 text-indigo-600" />
+                )}
+              </div>
+              {editingAccount ? "Edit Account" : "Add New Account"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500">
+              {editingAccount
+                ? "Update the account details below."
+                : "Fill in the details to create a new account."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-slate-700">
+                  Account Code
+                </Label>
+                <Input
+                  id="code"
+                  placeholder="e.g., 1000"
+                  value={formData.code}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, code: e.target.value }))
+                  }
+                  className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-slate-700">
+                  Account Type
+                </Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      type: value as Account["type"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Asset">Asset</SelectItem>
+                    <SelectItem value="Liability">Liability</SelectItem>
+                    <SelectItem value="Equity">Equity</SelectItem>
+                    <SelectItem value="Revenue">Revenue</SelectItem>
+                    <SelectItem value="Expense">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-slate-700">
+                Account Name
+              </Label>
+              <Input
+                id="name"
+                placeholder="e.g., Cash and Cash Equivalents"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-slate-700">
+                Category
+              </Label>
+              <Input
+                id="category"
+                placeholder="e.g., Current Assets"
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, category: e.target.value }))
+                }
+                className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="balance" className="text-slate-700">
+                Opening Balance
+              </Label>
+              <Input
+                id="balance"
+                placeholder="$0.00"
+                value={formData.balance}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, balance: e.target.value }))
+                }
+                className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20 font-mono"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseForm}
+                className="border-slate-200 hover:bg-slate-50"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {editingAccount ? (
+                  <>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Update Account
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Account
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
