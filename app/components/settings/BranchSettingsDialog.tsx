@@ -57,7 +57,7 @@ export default function BranchSettingsDialog({ open, onOpenChange }: BranchSetti
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[950px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
+      <DialogContent className="sm:max-w-237.5 lg:max-w-300 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-2xl flex items-center gap-2 text-[#2B3A9F]">
             <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
@@ -113,7 +113,7 @@ export default function BranchSettingsDialog({ open, onOpenChange }: BranchSetti
                     <TableHead className="text-[#2B3A9F] font-semibold">Address</TableHead>
                     <TableHead className="text-[#2B3A9F] font-semibold">Manager</TableHead>
                     <TableHead className="text-[#2B3A9F] font-semibold">Contact</TableHead>
-                    <TableHead className="w-[100px] text-[#2B3A9F] font-semibold">Actions</TableHead>
+                    <TableHead className="w-25 text-[#2B3A9F] font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

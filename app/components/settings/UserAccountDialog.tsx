@@ -106,7 +106,7 @@ export default function UserAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[850px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
+      <DialogContent className="sm:max-w-212.5 lg:max-w-250 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-2xl flex items-center gap-2 text-[#2B3A9F]">
             <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
@@ -171,7 +171,7 @@ export default function UserAccountDialog({
                     <TableHead className="text-[#2B3A9F] font-semibold">
                       Status
                     </TableHead>
-                    <TableHead className="w-[100px] text-[#2B3A9F] font-semibold">
+                    <TableHead className="w-25 text-[#2B3A9F] font-semibold">
                       Actions
                     </TableHead>
                   </TableRow>
