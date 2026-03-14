@@ -12,27 +12,26 @@ import {
   MapPin,
   Users,
   ShieldCheck,
-  Bell,
-  Palette,
-  Database,
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import UserAccountDialog from "./UserAccountDialog";
+import CompanySettingsDialog from "./CompanySettingsDialog";
 import { useState } from "react";
 
 interface SettingsCardProps {
   title: string;
   description: string;
   icon: React.ElementType;
-  href?: string; // Made optional for dialog-triggering items
+  href?: string;
   color: string;
   bgColor: string;
-  onClick?: () => void; // Added for dialog trigger
+  onClick?: () => void;
 }
 
 const Settings = () => {
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
 
   const settingsCategories: SettingsCardProps[] = [
     {
@@ -41,15 +40,15 @@ const Settings = () => {
       icon: User,
       color: "text-[#2B3A9F]",
       bgColor: "bg-[#2B3A9F]/10",
-      onClick: () => setAccountDialogOpen(true), // Open dialog on click
+      onClick: () => setAccountDialogOpen(true),
     },
     {
       title: "Company Settings",
       description: "Configure company information",
       icon: Building2,
-      href: "/settings/company",
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#2B3A9F]/10",
+      onClick: () => setCompanyDialogOpen(true),
     },
     {
       title: "Branch Settings",
@@ -101,19 +100,14 @@ const Settings = () => {
       </Card>
     );
 
-    // If it has an onClick handler (like User Account Settings), render as button
     if (category.onClick) {
       return (
-        <button 
-          onClick={category.onClick} 
-          className="group text-left w-full"
-        >
+        <button onClick={category.onClick} className="group text-left w-full">
           {cardContent}
         </button>
       );
     }
 
-    // Otherwise render as Link
     return (
       <Link href={category.href!} className="group">
         {cardContent}
@@ -123,7 +117,6 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-      {/* Header Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Settings</h1>
         <p className="text-slate-500 max-w-2xl">
@@ -132,17 +125,19 @@ const Settings = () => {
         </p>
       </div>
 
-      {/* Settings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {settingsCategories.map((category) => (
           <SettingsCard key={category.title} category={category} />
         ))}
       </div>
 
-      {/* Dialog rendered at page level with controlled state */}
-      <UserAccountDialog 
-        open={accountDialogOpen} 
-        onOpenChange={setAccountDialogOpen} 
+      <UserAccountDialog
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
+      />
+      <CompanySettingsDialog
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
       />
     </div>
   );
