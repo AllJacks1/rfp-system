@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { MoreHorizontal, Plus, Search, UserCog, UserX, Eye } from 'lucide-react'
+import { MoreHorizontal, Plus, Search, UserCog, UserX, Eye, KeyRound } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -177,6 +177,10 @@ export default function UserAccountDialog({ open, onOpenChange }: UserAccountDia
                               <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-[#2B3A9F]/5 hover:text-[#2B3A9F]">
                                 <UserCog className="w-4 h-4 mr-2 text-[#2B3A9F]" />
                                 Edit Account
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-[#2B3A9F]/5 hover:text-[#2B3A9F]">
+                                <KeyRound className="w-4 h-4 mr-2 text-[#2B3A9F]" />
+                                Page and Section Access
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
