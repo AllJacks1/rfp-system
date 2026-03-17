@@ -41,14 +41,26 @@ const navItems: NavItem[] = [
     icon: User,
     label: "Employee Portal",
     subsections: [
-      { 
+      {
         label: "Requests",
         subsections: [
-          { label: "Service Request", href: "/home/employee-portal/requests/service-requests" },
-          { label: "Purchase Request", href: "/home/employee-portal/requests/purchase-requests" },
-          { label: "Request for Payment", href: "/home/employee-portal/requests/request-for-payment" },
-          { label: "Liquidation", href: "/home/employee-portal/requests/liquidation" },
-        ]
+          {
+            label: "Service Request",
+            href: "/home/employee-portal/requests/service-requests",
+          },
+          {
+            label: "Purchase Request",
+            href: "/home/employee-portal/requests/purchase-requests",
+          },
+          {
+            label: "Request for Payment",
+            href: "/home/employee-portal/requests/request-for-payment",
+          },
+          {
+            label: "Liquidation",
+            href: "/home/employee-portal/requests/liquidation",
+          },
+        ],
       },
     ],
   },
@@ -85,18 +97,29 @@ export default function TopNavigation({
 
   // Auto-expand when route matches subsection (at any level)
   useEffect(() => {
-    const findAndExpandParents = (items: NavItem[], currentPath: string, parentPath: string[] = []): string[] => {
+    const findAndExpandParents = (
+      items: NavItem[],
+      currentPath: string,
+      parentPath: string[] = [],
+    ): string[] => {
       for (const item of items) {
         const currentItemPath = [...parentPath, item.label];
-        
+
         // Check if this item's href matches
-        if (item.href && (currentPath === item.href || currentPath.startsWith(`${item.href}/`))) {
+        if (
+          item.href &&
+          (currentPath === item.href || currentPath.startsWith(`${item.href}/`))
+        ) {
           return parentPath; // Return all parent labels to expand
         }
-        
+
         // Check subsections recursively
         if (item.subsections) {
-          const found = findAndExpandParents(item.subsections, currentPath, currentItemPath);
+          const found = findAndExpandParents(
+            item.subsections,
+            currentPath,
+            currentItemPath,
+          );
           if (found.length > 0) {
             return [...parentPath, item.label];
           }
@@ -106,7 +129,7 @@ export default function TopNavigation({
     };
 
     const parentsToExpand = findAndExpandParents(navItems, pathname);
-    
+
     if (parentsToExpand.length > 0) {
       setExpandedItems((prev) => {
         const newExpanded = [...prev];
@@ -141,16 +164,17 @@ export default function TopNavigation({
       if (pathname === item.href) return true;
       // Check if current path starts with this href + "/" (meaning it's a parent)
       // But exclude "/home" from matching "/home/employee-portal" etc
-      if (item.href !== "/home" && pathname.startsWith(`${item.href}/`)) return true;
+      if (item.href !== "/home" && pathname.startsWith(`${item.href}/`))
+        return true;
       // Special case: /home should only match exactly, not subpaths
       if (item.href === "/home" && pathname === "/home") return true;
     }
-    
+
     // Check if any subsection is active (recursively)
     if (item.subsections) {
       return item.subsections.some((sub) => isItemActive(sub));
     }
-    
+
     return false;
   };
 
@@ -187,7 +211,9 @@ export default function TopNavigation({
               />
             )}
             {depth > 0 && (
-              <div className={`h-2 w-2 rounded-full ${isActive ? "bg-[#2B3A9F]" : "bg-slate-400"}`} />
+              <div
+                className={`h-2 w-2 rounded-full ${isActive ? "bg-[#2B3A9F]" : "bg-slate-400"}`}
+              />
             )}
             <span className="font-medium flex-1">{item.label}</span>
             {item.badge && (
@@ -222,12 +248,16 @@ export default function TopNavigation({
             {depth === 0 && item.icon && (
               <item.icon
                 className={`h-5 w-5 transition-colors ${
-                  isExactActive(item.href!) ? "text-white" : "group-hover:text-[#2B3A9F]"
+                  isExactActive(item.href!)
+                    ? "text-white"
+                    : "group-hover:text-[#2B3A9F]"
                 }`}
               />
             )}
             {depth > 0 && (
-              <div className={`h-1.5 w-1.5 rounded-full ${isExactActive(item.href!) ? "bg-white" : "bg-slate-400"}`} />
+              <div
+                className={`h-1.5 w-1.5 rounded-full ${isExactActive(item.href!) ? "bg-white" : "bg-slate-400"}`}
+              />
             )}
             <span className="font-medium">{item.label}</span>
             <ChevronRight
@@ -242,7 +272,9 @@ export default function TopNavigation({
 
         {/* Subsections - Recursive rendering */}
         {hasSubsections && isExpanded && (
-          <div className={`mt-1 flex flex-col gap-1 ${depth === 0 ? "ml-4 border-l-2 border-slate-200 pl-4" : "ml-2 pl-2"}`}>
+          <div
+            className={`mt-1 flex flex-col gap-1 ${depth === 0 ? "ml-4 border-l-2 border-slate-200 pl-4" : "ml-2 pl-2"}`}
+          >
             {item.subsections!.map((sub) => renderNavItem(sub, depth + 1))}
           </div>
         )}
@@ -263,11 +295,16 @@ export default function TopNavigation({
                 size="icon"
                 className="shrink-0 hover:bg-slate-100"
               >
-                <Menu className="h-6 w-6 text-slate-700" />
-                <span className="sr-only">Open menu</span>
+                <>
+                  <Menu className="h-6 w-6 text-slate-700" />
+                  <p className="sr-only">Open menu</p>
+                </>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80 p-0 bg-slate-50 overflow-y-auto">
+            <SheetContent
+              side="left"
+              className="w-80 p-0 bg-slate-50 overflow-y-auto"
+            >
               <SheetHeader className="border-b border-slate-200 bg-white p-6">
                 <SheetTitle className="flex items-center gap-3">
                   <Image

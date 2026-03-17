@@ -36,7 +36,7 @@ interface SettingsCardProps {
 const Settings = ({
   user,
   companies,
-  branch,
+  branches,
   department,
   roles,
 }: SettingsPageProps) => {
@@ -154,6 +154,8 @@ const Settings = ({
         onOpenChange={setCompanyDialogOpen}
       />
       <BranchSettingsDialog
+        companies={companies}
+        branches={branches}
         open={branchDialogOpen}
         onOpenChange={setBranchDialogOpen}
       />
