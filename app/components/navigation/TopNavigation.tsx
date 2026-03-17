@@ -97,7 +97,7 @@ export default function TopNavigation({
         // Check subsections recursively
         if (item.subsections) {
           const found = findAndExpandParents(item.subsections, currentPath, currentItemPath);
-          if (found.length > 0 || (item.href && (currentPath === item.href || currentPath.startsWith(`${item.href}/`)))) {
+          if (found.length > 0) {
             return [...parentPath, item.label];
           }
         }
@@ -128,23 +128,30 @@ export default function TopNavigation({
     );
   };
 
+  // Check if this specific item is the exact active page (not just a parent)
+  const isExactActive = (href: string): boolean => {
+    return pathname === href;
+  };
+
+  // Check if this item or any of its children are active
   const isItemActive = (item: NavItem): boolean => {
+    // If it has a href, check exact match or if it's a parent of current path
     if (item.href) {
-      return pathname === item.href || pathname.startsWith(`${item.href}/home`);
+      // Exact match
+      if (pathname === item.href) return true;
+      // Check if current path starts with this href + "/" (meaning it's a parent)
+      // But exclude "/home" from matching "/home/employee-portal" etc
+      if (item.href !== "/home" && pathname.startsWith(`${item.href}/`)) return true;
+      // Special case: /home should only match exactly, not subpaths
+      if (item.href === "/home" && pathname === "/home") return true;
     }
+    
     // Check if any subsection is active (recursively)
-    const checkSubsections = (subsections: NavItem[]): boolean => {
-      return subsections.some((sub) => {
-        if (sub.href) {
-          return pathname === sub.href || pathname.startsWith(`${sub.href}/`);
-        }
-        if (sub.subsections) {
-          return checkSubsections(sub.subsections);
-        }
-        return false;
-      });
-    };
-    return item.subsections ? checkSubsections(item.subsections) : false;
+    if (item.subsections) {
+      return item.subsections.some((sub) => isItemActive(sub));
+    }
+    
+    return false;
   };
 
   const isSubItemActive = (href: string): boolean => {
@@ -206,7 +213,7 @@ export default function TopNavigation({
             href={item.href!}
             onClick={() => setIsOpen(false)}
             className={`group flex items-center gap-3 rounded-lg px-3 py-3 transition-all ${
-              isSubItemActive(item.href!)
+              isExactActive(item.href!)
                 ? "bg-[#2B3A9F] text-white shadow-md"
                 : "text-slate-600 hover:bg-white hover:text-[#2B3A9F] hover:shadow-sm"
             }`}
@@ -215,17 +222,17 @@ export default function TopNavigation({
             {depth === 0 && item.icon && (
               <item.icon
                 className={`h-5 w-5 transition-colors ${
-                  isSubItemActive(item.href!) ? "text-white" : "group-hover:text-[#2B3A9F]"
+                  isExactActive(item.href!) ? "text-white" : "group-hover:text-[#2B3A9F]"
                 }`}
               />
             )}
             {depth > 0 && (
-              <div className={`h-1.5 w-1.5 rounded-full ${isSubItemActive(item.href!) ? "bg-white" : "bg-slate-400"}`} />
+              <div className={`h-1.5 w-1.5 rounded-full ${isExactActive(item.href!) ? "bg-white" : "bg-slate-400"}`} />
             )}
             <span className="font-medium">{item.label}</span>
             <ChevronRight
               className={`ml-auto h-4 w-4 transition-all ${
-                isSubItemActive(item.href!)
+                isExactActive(item.href!)
                   ? "opacity-100 translate-x-0 text-white"
                   : "opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
               }`}
