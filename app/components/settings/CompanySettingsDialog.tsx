@@ -27,13 +27,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   MoreHorizontal,
   Plus,
   Search,
@@ -42,10 +35,6 @@ import {
   Eye,
   Pencil,
   X,
-  MapPin,
-  Users,
-  Briefcase,
-  Calendar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -55,120 +44,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
-
-interface Company {
-  id: string;
-  name: string;
-  industry: string;
-  location: string;
-  employees: number;
-  status: "active" | "inactive";
-  createdAt: string;
-}
-
-const mockCompanies: Company[] = [
-  {
-    id: "1",
-    name: "Acme Corporation",
-    industry: "Technology",
-    location: "New York, NY",
-    employees: 250,
-    status: "active",
-    createdAt: "2023-01-15",
-  },
-  {
-    id: "2",
-    name: "Globex Industries",
-    industry: "Manufacturing",
-    location: "Chicago, IL",
-    employees: 1200,
-    status: "active",
-    createdAt: "2022-08-22",
-  },
-  {
-    id: "3",
-    name: "Soylent Corp",
-    industry: "Food & Beverage",
-    location: "Los Angeles, CA",
-    employees: 85,
-    status: "inactive",
-    createdAt: "2023-05-10",
-  },
-  {
-    id: "4",
-    name: "Initech LLC",
-    industry: "Software",
-    location: "Austin, TX",
-    employees: 45,
-    status: "active",
-    createdAt: "2023-11-03",
-  },
-];
-
-const industryOptions = [
-  "Technology",
-  "Manufacturing",
-  "Food & Beverage",
-  "Software",
-  "Healthcare",
-  "Finance",
-  "Retail",
-  "Construction",
-  "Education",
-  "Other",
-];
-
-interface CompanySettingsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import React, { useState, useEffect } from "react";
+import { Company, CompanySettingsDialogProps } from "@/lib/interfaces";
 
 export default function CompanySettingsDialog({
   open,
   onOpenChange,
+  companies: initialCompanies,
 }: CompanySettingsDialogProps) {
+  // Local state for companies (since we need to modify the list)
+  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
   const [searchQuery, setSearchQuery] = useState("");
-  const [companies, setCompanies] = useState<Company[]>(mockCompanies);
   const [formOpen, setFormOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  
+  // Form state - only name since that's what the database stores
+  const [companyName, setCompanyName] = useState("");
 
-  // Form state
-  const [formData, setFormData] = useState<Partial<Company>>({
-    name: "",
-    industry: "",
-    location: "",
-    employees: 0,
-    status: "active",
-    createdAt: new Date().toISOString().split("T")[0],
-  });
+  // Sync with props when they change
+  useEffect(() => {
+    setCompanies(initialCompanies);
+  }, [initialCompanies]);
 
-  const activeCompanies = companies.filter((c) => c.status === "active");
-  const filteredCompanies = activeCompanies.filter(
+  // Filter companies based on search
+  const filteredCompanies = companies.filter(
     (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location.toLowerCase().includes(searchQuery.toLowerCase())
+      c.name.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.company_id.toString().toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRemove = (id: string) => {
-    setCompanies((prev) => prev.filter((c) => c.id !== id));
+    setCompanies((prev) => prev.filter((c) => c.company_id !== id));
   };
 
   const handleOpenForm = (company?: Company) => {
     if (company) {
       setEditingCompany(company);
-      setFormData(company);
+      setCompanyName(company.name);
     } else {
       setEditingCompany(null);
-      setFormData({
-        name: "",
-        industry: "",
-        location: "",
-        employees: 0,
-        status: "active",
-        createdAt: new Date().toISOString().split("T")[0],
-      });
+      setCompanyName("");
     }
     setFormOpen(true);
   };
@@ -176,14 +91,7 @@ export default function CompanySettingsDialog({
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingCompany(null);
-    setFormData({
-      name: "",
-      industry: "",
-      location: "",
-      employees: 0,
-      status: "active",
-      createdAt: new Date().toISOString().split("T")[0],
-    });
+    setCompanyName("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -193,32 +101,19 @@ export default function CompanySettingsDialog({
       // Update existing
       setCompanies((prev) =>
         prev.map((c) =>
-          c.id === editingCompany.id ? { ...c, ...(formData as Company) } : c
+          c.company_id === editingCompany.company_id ? { ...c, name: companyName } : c
         )
       );
     } else {
       // Create new
       const newCompany: Company = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || "",
-        industry: formData.industry || "Other",
-        location: formData.location || "",
-        employees: formData.employees || 0,
-        status: "active",
-        createdAt: formData.createdAt || new Date().toISOString().split("T")[0],
+        company_id: Math.random().toString(36).substr(2, 9),
+        name: companyName,
       };
       setCompanies((prev) => [...prev, newCompany]);
     }
 
     handleCloseForm();
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
   };
 
   const getInitials = (name: string) => {
@@ -233,7 +128,7 @@ export default function CompanySettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] lg:max-w-[1100px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
+        <DialogContent className="sm:max-w-150 lg:max-w-200 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-[#2B3A9F]">
               <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
@@ -276,7 +171,7 @@ export default function CompanySettingsDialog({
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Companies
                       <Badge className="bg-[#2B3A9F]/10 text-[#2B3A9F] border-[#2B3A9F]/20 hover:bg-[#2B3A9F]/20">
-                        {activeCompanies.length}
+                        {companies.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
@@ -293,19 +188,7 @@ export default function CompanySettingsDialog({
                       <TableHead className="text-[#2B3A9F] font-semibold">
                         Company
                       </TableHead>
-                      <TableHead className="text-[#2B3A9F] font-semibold">
-                        Industry
-                      </TableHead>
-                      <TableHead className="text-[#2B3A9F] font-semibold">
-                        Location
-                      </TableHead>
-                      <TableHead className="text-[#2B3A9F] font-semibold">
-                        Employees
-                      </TableHead>
-                      <TableHead className="text-[#2B3A9F] font-semibold">
-                        Created
-                      </TableHead>
-                      <TableHead className="w-[100px] text-[#2B3A9F] font-semibold">
+                      <TableHead className="text-[#2B3A9F] font-semibold text-right">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -314,7 +197,7 @@ export default function CompanySettingsDialog({
                     {filteredCompanies.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={2}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -326,7 +209,7 @@ export default function CompanySettingsDialog({
                     ) : (
                       filteredCompanies.map((company) => (
                         <TableRow
-                          key={company.id}
+                          key={company.company_id}
                           className="hover:bg-[#2B3A9F]/5 transition-colors"
                         >
                           <TableCell>
@@ -339,29 +222,12 @@ export default function CompanySettingsDialog({
                                   {company.name}
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                  ID: {company.id}
+                                  ID: {company.company_id}
                                 </span>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className="border-[#2B3A9F]/30 text-[#2B3A9F]"
-                            >
-                              {company.industry}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {company.location}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {company.employees.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-slate-500 text-sm">
-                            {formatDate(company.createdAt)}
-                          </TableCell>
-                          <TableCell>
+                          <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -391,7 +257,7 @@ export default function CompanySettingsDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(company.id)}
+                                  onClick={() => handleRemove(company.company_id)}
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -412,7 +278,7 @@ export default function CompanySettingsDialog({
 
       {/* Add/Edit Company Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[550px] p-6 border-t-4 border-t-[#2B3A9F]">
+        <DialogContent className="sm:max-w-[450px] p-6 border-t-4 border-t-[#2B3A9F]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-[#2B3A9F]">
               <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
@@ -426,8 +292,8 @@ export default function CompanySettingsDialog({
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {editingCompany
-                ? "Update the company details below."
-                : "Fill in the details to register a new organization."}
+                ? "Update the company name below."
+                : "Enter a name for the new company."}
             </DialogDescription>
           </DialogHeader>
 
@@ -441,109 +307,11 @@ export default function CompanySettingsDialog({
                 <Input
                   id="name"
                   placeholder="e.g., Acme Corporation"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   className="pl-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
                   required
                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="industry" className="text-slate-700">
-                Industry
-              </Label>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-                <Select
-                  value={formData.industry}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, industry: value }))
-                  }
-                >
-                  <SelectTrigger className="pl-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20">
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {industryOptions.map((industry) => (
-                      <SelectItem key={industry} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-slate-700">
-                Location
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  id="location"
-                  placeholder="e.g., New York, NY"
-                  value={formData.location}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      location: e.target.value,
-                    }))
-                  }
-                  className="pl-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="employees" className="text-slate-700">
-                  Employees
-                </Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="employees"
-                    type="number"
-                    placeholder="0"
-                    value={formData.employees}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        employees: parseInt(e.target.value) || 0,
-                      }))
-                    }
-                    className="pl-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
-                    min="0"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="createdAt" className="text-slate-700">
-                  Created Date
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="createdAt"
-                    type="date"
-                    value={formData.createdAt}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        createdAt: e.target.value,
-                      }))
-                    }
-                    className="pl-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
-                    required
-                  />
-                </div>
               </div>
             </div>
 
@@ -552,7 +320,7 @@ export default function CompanySettingsDialog({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-600">Company ID</span>
                   <span className="text-sm font-mono text-slate-900">
-                    {editingCompany.id}
+                    {editingCompany.company_id}
                   </span>
                 </div>
               </div>
@@ -571,6 +339,7 @@ export default function CompanySettingsDialog({
               <Button
                 type="submit"
                 className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white"
+                disabled={!companyName.trim()}
               >
                 {editingCompany ? (
                   <>

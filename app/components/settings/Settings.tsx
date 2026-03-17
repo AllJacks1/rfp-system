@@ -1,4 +1,3 @@
-// Settings.tsx
 "use client";
 import {
   Card,
@@ -22,6 +21,7 @@ import CompanySettingsDialog from "./CompanySettingsDialog";
 import BranchSettingsDialog from "./BranchSettingsDialog";
 import DepartmentSettingsDialog from "./DepartmentSettingsDialog";
 import RolesSettingsDialog from "./RolesSettingDialog";
+import { SettingsPageProps } from "@/lib/interfaces";
 
 interface SettingsCardProps {
   title: string;
@@ -33,7 +33,13 @@ interface SettingsCardProps {
   onClick?: () => void;
 }
 
-const Settings = () => {
+const Settings = ({
+  user,
+  companies,
+  branch,
+  department,
+  roles,
+}: SettingsPageProps) => {
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
@@ -143,6 +149,7 @@ const Settings = () => {
         onOpenChange={setAccountDialogOpen}
       />
       <CompanySettingsDialog
+        companies={companies}
         open={companyDialogOpen}
         onOpenChange={setCompanyDialogOpen}
       />
