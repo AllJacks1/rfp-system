@@ -1,14 +1,9 @@
-export interface SubNavItem {
-    label: string;
-    href: string;
-    badge?: string;
-}
-
 export interface NavItem {
-    icon: React.ElementType;
-    label: string;
-    href?: string;
-    subsections?: SubNavItem[];
+  icon?: React.ComponentType;
+  label: string;
+  href?: string;
+  badge?: string;
+  subsections?: NavItem[];  // Recursive reference
 }
 
 export interface TopNavigationProps {
