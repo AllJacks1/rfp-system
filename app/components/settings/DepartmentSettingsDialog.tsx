@@ -45,6 +45,7 @@ import {
   Building2,
   X,
   MapPin,
+  Building,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -55,7 +56,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import React, { useState, useMemo, useCallback } from "react";
-import { Department, DepartmentSettingsDialogProps } from "@/lib/interfaces";
+import {
+  Department,
+  DepartmentSettingsDialogProps,
+  Company,
+} from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 const THEME_COLOR = "#2B3A9F";
 
@@ -64,7 +70,7 @@ export default function DepartmentSettingsDialog({
   onOpenChange,
   departments: initialDepartments,
   branches,
-}: DepartmentSettingsDialogProps) {
+}: DepartmentSettingsDialogProps & { companies?: Company[] }) {
   const [departments, setDepartments] =
     useState<Department[]>(initialDepartments);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,8 +78,38 @@ export default function DepartmentSettingsDialog({
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(
     null,
   );
+
+  // Form state
   const [name, setName] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
+  // Extract companies from branches (since companies prop is undefined)
+  const availableCompanies = useMemo(() => {
+    const companyMap = new Map<string | number, Company>();
+
+    branches.forEach((branch) => {
+      if (branch.company) {
+        const companyId = branch.company.company_id;
+        if (!companyMap.has(companyId)) {
+          companyMap.set(companyId, branch.company);
+        }
+      }
+    });
+
+    return Array.from(companyMap.values());
+  }, [branches]);
+
+  // Filter branches by selected company - convert to string for comparison
+  const availableBranches = useMemo(() => {
+    if (!selectedCompanyId) return [];
+
+    return branches.filter((b) => {
+      // Convert both to strings for comparison since IDs might be numbers
+      const branchCompanyId = String(b.company?.company_id);
+      return branchCompanyId === selectedCompanyId;
+    });
+  }, [branches, selectedCompanyId]);
 
   // Filter departments based on search
   const filteredDepartments = useMemo(() => {
@@ -97,71 +133,146 @@ export default function DepartmentSettingsDialog({
     setDepartments((prev) => prev.filter((d) => d.department_id !== id));
   }, []);
 
+  const resetForm = useCallback(() => {
+    setName("");
+    setSelectedCompanyId("");
+    setSelectedBranchId("");
+  }, []);
+
   const handleOpenCreate = useCallback(() => {
     setEditingDepartment(null);
-    setName("");
-    setSelectedBranchId("");
+    resetForm();
     setIsFormOpen(true);
-  }, []);
+  }, [resetForm]);
 
   const handleOpenEdit = useCallback((dept: Department) => {
     setEditingDepartment(dept);
     setName(dept.name);
-    setSelectedBranchId(dept.branch_id || "");
+    // Convert to string since Select component uses strings
+    setSelectedCompanyId(dept.company_id ? String(dept.company_id) : "");
+    setSelectedBranchId(dept.branch_id ? String(dept.branch_id) : "");
     setIsFormOpen(true);
   }, []);
 
   const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
     setEditingDepartment(null);
-    setName("");
-    setSelectedBranchId("");
+    resetForm();
+  }, [resetForm]);
+
+  // When company changes, reset branch selection
+  const handleCompanyChange = useCallback((value: string) => {
+    setSelectedCompanyId(value);
+    setSelectedBranchId(""); // Reset branch when company changes
   }, []);
 
+  async function createDepartment(name: string, branch_id: string) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("departments")
+      .insert([{ name, branch_id }])
+      .select()
+      .single(); // important: return single object
+
+    if (error) throw error;
+
+    return data;
+  }
+
+  async function updateDepartment(
+    department_id: string,
+    name: string,
+    branch_id: string,
+  ) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("departments")
+      .update({ name, branch_id })
+      .eq("department_id", department_id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  }
+
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!name.trim()) return;
+      if (!name.trim() || !selectedBranchId) return;
 
       const selectedBranch = branches.find(
-        (b) => b.branch_id === selectedBranchId,
+        (b) => String(b.branch_id) === selectedBranchId,
       );
 
-      if (editingDepartment) {
-        setDepartments((prev) =>
-          prev.map((d) =>
-            d.department_id === editingDepartment.department_id
-              ? {
-                  ...d,
-                  name,
-                  branch_id: selectedBranchId,
-                  branch_location: selectedBranch?.location,
-                  company_id: selectedBranch?.company?.company_id,
-                  company_name: selectedBranch?.company?.name || "",
-                }
-              : d,
-          ),
-        );
-      } else {
-        const newDepartment: Department = {
-          department_id: Math.random().toString(36).substr(2, 9),
-          name,
-          branch_id: selectedBranchId,
-          branch_location: selectedBranch?.location,
-          company_id: selectedBranch?.company?.company_id,
-          company_name: selectedBranch?.company?.name || "",
-        };
-        setDepartments((prev) => [...prev, newDepartment]);
-      }
+      const selectedCompany = availableCompanies.find(
+        (c) => String(c.company_id) === selectedCompanyId,
+      );
 
-      handleCloseForm();
+      try {
+        if (editingDepartment) {
+          // ── UPDATE EXISTING ───────────────────────────────────────
+          const updated = await updateDepartment(
+            editingDepartment.department_id,
+            name.trim(),
+            selectedBranchId,
+          );
+
+          // Update local state with real data from database
+          setDepartments((prev) =>
+            prev.map((d) =>
+              d.department_id === editingDepartment.department_id
+                ? {
+                    ...d,
+                    ...updated, // take all fields returned by DB
+                    branch_location:
+                      selectedBranch?.location ?? d.branch_location,
+                    company_id: selectedCompanyId,
+                    company_name: selectedCompany?.name || d.company_name || "",
+                  }
+                : d,
+            ),
+          );
+        } else {
+          // ── CREATE NEW ────────────────────────────────────────────
+          const created = await createDepartment(name.trim(), selectedBranchId);
+
+          const newDepartment: Department = {
+            ...created, // use real DB data
+            branch_location: selectedBranch?.location,
+            company_id: selectedCompanyId,
+            company_name: selectedCompany?.name || "",
+          };
+
+          setDepartments((prev) => [...prev, newDepartment]);
+        }
+
+        handleCloseForm();
+      } catch (err) {
+        console.error("Department save failed:", err);
+        // ← TODO: show toast / alert to user in real app
+        alert("Failed to save department. Check console for details.");
+      }
     },
-    [editingDepartment, name, selectedBranchId, branches, handleCloseForm],
+    [
+      editingDepartment,
+      name,
+      selectedBranchId,
+      selectedCompanyId,
+      branches,
+      availableCompanies,
+      handleCloseForm,
+    ],
   );
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
   }, []);
+
+  const isFormValid = name.trim().length > 0 && selectedBranchId.length > 0;
 
   return (
     <>
@@ -338,9 +449,15 @@ export default function DepartmentSettingsDialog({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-slate-700">
-                              {dept.company_name || "Unknown"}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <Building
+                                className="w-4 h-4"
+                                style={{ color: THEME_COLOR }}
+                              />
+                              <span className="text-slate-700">
+                                {dept.company_name || "Unknown"}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
@@ -442,11 +559,100 @@ export default function DepartmentSettingsDialog({
             <DialogDescription className="text-slate-500">
               {editingDepartment
                 ? "Update the department details below."
-                : "Fill in the details to create a new department."}
+                : "Select a company and branch, then enter the department name."}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {/* Company Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="company" className="text-slate-700">
+                Company <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                <Select
+                  value={selectedCompanyId}
+                  onValueChange={handleCompanyChange}
+                  disabled={availableCompanies.length === 0}
+                >
+                  <SelectTrigger
+                    className={`pl-10 border-slate-200 ${availableCompanies.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <SelectValue
+                      placeholder={
+                        availableCompanies.length === 0
+                          ? "No companies available"
+                          : "Select a company"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCompanies.map((company) => (
+                      <SelectItem
+                        key={company.company_id}
+                        value={String(company.company_id)}
+                      >
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {availableCompanies.length === 0 && (
+                <p className="text-xs text-red-600">
+                  No companies found. Please add companies first.
+                </p>
+              )}
+            </div>
+
+            {/* Branch Selection (filtered by company) */}
+            <div className="space-y-2">
+              <Label htmlFor="branch" className="text-slate-700">
+                Branch Location <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                <Select
+                  value={selectedBranchId}
+                  onValueChange={setSelectedBranchId}
+                  disabled={
+                    !selectedCompanyId || availableBranches.length === 0
+                  }
+                >
+                  <SelectTrigger
+                    className={`pl-10 border-slate-200 ${!selectedCompanyId || availableBranches.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <SelectValue
+                      placeholder={
+                        !selectedCompanyId
+                          ? "Select a company first"
+                          : availableBranches.length === 0
+                            ? "No branches available"
+                            : "Select a branch"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBranches.map((branch) => (
+                      <SelectItem
+                        key={branch.branch_id}
+                        value={String(branch.branch_id)}
+                      >
+                        {branch.location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedCompanyId && availableBranches.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No branches found for this company.
+                </p>
+              )}
+            </div>
+
+            {/* Department Name */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-slate-700">
                 Department Name <span className="text-red-500">*</span>
@@ -461,33 +667,6 @@ export default function DepartmentSettingsDialog({
                   className="pl-10 border-slate-200"
                   required
                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="branch" className="text-slate-700">
-                Branch Location
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-                <Select
-                  value={selectedBranchId}
-                  onValueChange={setSelectedBranchId}
-                >
-                  <SelectTrigger className="pl-10 border-slate-200">
-                    <SelectValue placeholder="Select a branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem
-                        key={branch.branch_id}
-                        value={branch.branch_id}
-                      >
-                        {branch.location}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
@@ -514,7 +693,7 @@ export default function DepartmentSettingsDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={!name.trim()}
+                disabled={!isFormValid}
                 className="text-white hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: THEME_COLOR }}
               >
