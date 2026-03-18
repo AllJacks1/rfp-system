@@ -149,7 +149,7 @@ export default function BranchSettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
+        <DialogContent className="sm:max-w-150 lg:max-w-200 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-[#2B3A9F]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-[#2B3A9F]">
               <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
