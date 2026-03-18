@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import React, { useState, useEffect } from "react";
 import { Company, CompanySettingsDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CompanySettingsDialog({
   open,
@@ -57,7 +58,7 @@ export default function CompanySettingsDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-  
+
   // Form state - only name since that's what the database stores
   const [companyName, setCompanyName] = useState("");
 
@@ -70,8 +71,40 @@ export default function CompanySettingsDialog({
   const filteredCompanies = companies.filter(
     (c) =>
       c.name.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.company_id.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      c.company_id.toString().toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  async function createCompany(companyName: string): Promise<Company> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("companies")
+      .insert([{ name: companyName }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  }
+
+  async function updateCompany(
+    companyId: string,
+    companyName: string,
+  ): Promise<Company> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("companies")
+      .update({ name: companyName })
+      .eq("company_id", companyId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  }
 
   const handleRemove = (id: string) => {
     setCompanies((prev) => prev.filter((c) => c.company_id !== id));
@@ -94,26 +127,36 @@ export default function CompanySettingsDialog({
     setCompanyName("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingCompany) {
-      // Update existing
-      setCompanies((prev) =>
-        prev.map((c) =>
-          c.company_id === editingCompany.company_id ? { ...c, name: companyName } : c
-        )
-      );
-    } else {
-      // Create new
-      const newCompany: Company = {
-        company_id: Math.random().toString(36).substr(2, 9),
-        name: companyName,
-      };
-      setCompanies((prev) => [...prev, newCompany]);
-    }
+    try {
+      let updatedCompany: Company;
 
-    handleCloseForm();
+      if (editingCompany) {
+        // 🔄 Update in DB (you should have this function)
+        updatedCompany = await updateCompany(
+          editingCompany.company_id,
+          companyName,
+        );
+
+        // 🧠 Sync local state
+        setCompanies((prev) =>
+          prev.map((c) =>
+            c.company_id === updatedCompany.company_id ? updatedCompany : c,
+          ),
+        );
+      } else {
+        updatedCompany = await createCompany(companyName);
+
+        // 🧠 Sync local state
+        setCompanies((prev) => [...prev, updatedCompany]);
+      }
+
+      handleCloseForm();
+    } catch (err) {
+      console.error("Failed to save company:", err);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -257,7 +300,9 @@ export default function CompanySettingsDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(company.company_id)}
+                                  onClick={() =>
+                                    handleRemove(company.company_id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -278,7 +323,7 @@ export default function CompanySettingsDialog({
 
       {/* Add/Edit Company Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[450px] p-6 border-t-4 border-t-[#2B3A9F]">
+        <DialogContent className="sm:max-w-112.5 p-6 border-t-4 border-t-[#2B3A9F]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-[#2B3A9F]">
               <div className="p-2 rounded-lg bg-[#2B3A9F]/10">
