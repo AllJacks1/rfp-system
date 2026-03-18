@@ -77,9 +77,12 @@ export interface Branch {
 }
 
 export interface Department {
-  id: string;
+  department_id: string;
   name: string;
-  branch_id?: Branch;
+  branch_id?: string;
+  branch_location?: string;
+  company_id?: string;
+  company_name: string;
 }
 
 export interface Role {
@@ -91,7 +94,7 @@ export interface SettingsPageProps {
   user?: User[];
   companies: Company[];
   branches: Branch[];
-  department?: Department[];
+  department: Department[];
   roles?: Role[];
 }
 
@@ -107,4 +110,11 @@ export interface BranchSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   branches: Branch[];
   companies: Company[];
+}
+
+export interface DepartmentSettingsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  departments: Department[];
+  branches: Branch[];
 }

@@ -160,6 +160,8 @@ const Settings = ({
         onOpenChange={setBranchDialogOpen}
       />
       <DepartmentSettingsDialog
+        departments={department}
+        branches={branches}
         open={departmentDialogOpen}
         onOpenChange={setDepartmentDialogOpen}
       />
