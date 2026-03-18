@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { Branch, Company } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 interface BranchSettingsDialogProps {
   open: boolean;
@@ -81,8 +82,44 @@ export default function BranchSettingsDialog({
   const filteredBranches = branches.filter(
     (b) =>
       b.location.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.branch_id.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      b.branch_id.toString().toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  async function createBranch(
+    location: string,
+    company_id: string,
+  ): Promise<Branch> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("branches")
+      .insert([{ location, company_id }])
+      .select()
+      .single(); // important: return single object
+
+    if (error) throw error;
+
+    return data;
+  }
+
+  async function updateBranch(
+    branch_id: string,
+    location: string,
+    company_id: string,
+  ): Promise<Branch> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("branches")
+      .update({ location, company_id })
+      .eq("branch_id", branch_id)
+      .select()
+      .single(); // important: return single object
+
+    if (error) throw error;
+
+    return data;
+  }
 
   // Get company name for display
   const getCompanyName = (companies?: Company) => {
@@ -113,37 +150,35 @@ export default function BranchSettingsDialog({
     setSelectedCompanyId("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedCompany = companies.find(
-      (c) => c.company_id === selectedCompanyId
-    );
+    if (!location.trim() || !selectedCompanyId) return;
 
-    if (editingBranch) {
-      // Update existing
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.branch_id === editingBranch.branch_id
-            ? {
-                ...b,
-                location,
-                company: selectedCompany,
-              }
-            : b
-        )
-      );
-    } else {
-      // Create new
-      const newBranch: Branch = {
-        branch_id: Math.random().toString(36).substr(2, 9),
-        location,
-        company: selectedCompany,
-      };
-      setBranches((prev) => [...prev, newBranch]);
+    try {
+      let updatedBranch: Branch;
+
+      if (editingBranch) {
+        updatedBranch = await updateBranch(
+          editingBranch.branch_id,
+          location,
+          selectedCompanyId,
+        );
+
+        setBranches((prev) =>
+          prev.map((b) =>
+            b.branch_id === updatedBranch.branch_id ? updatedBranch : b,
+          ),
+        );
+      } else {
+        updatedBranch = await createBranch(location, selectedCompanyId);
+        setBranches((prev) => [...prev, updatedBranch]);
+      }
+
+      handleCloseForm();
+    } catch (err) {
+      console.error("Failed to save branch:", err);
     }
-
-    handleCloseForm();
   };
 
   return (
@@ -360,7 +395,10 @@ export default function BranchSettingsDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {companies.map((company) => (
-                      <SelectItem key={company.company_id} value={company.company_id}>
+                      <SelectItem
+                        key={company.company_id}
+                        value={company.company_id}
+                      >
                         {company.name}
                       </SelectItem>
                     ))}
