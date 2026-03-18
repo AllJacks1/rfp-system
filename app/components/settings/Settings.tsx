@@ -166,6 +166,7 @@ const Settings = ({
         onOpenChange={setDepartmentDialogOpen}
       />
       <RolesSettingsDialog
+        roles={roles}
         open={rolesDialogOpen}
         onOpenChange={setRolesDialogOpen}
       />

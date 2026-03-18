@@ -114,10 +114,27 @@ async function getDepartments(): Promise<Department[]> {
   return flattened;
 }
 
+async function getRoles() {
+  const supabase = await createClient();
+
+  const { data: roles, error } = await supabase
+    .from("roles")
+    .select("role_id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching roles:", error);
+    return [];
+  }
+
+  return roles || [];
+}
+
 export default async function SettingsPage() {
   const companies = await getCompanies();
   const branches = await getBranches();
   const departments = await getDepartments();
+  const roles = await getRoles();
 
   return (
     <div>
@@ -125,6 +142,7 @@ export default async function SettingsPage() {
         companies={companies}
         branches={branches}
         department={departments}
+        roles={roles}
       />
     </div>
   );

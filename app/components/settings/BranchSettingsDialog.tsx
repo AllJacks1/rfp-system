@@ -80,8 +80,8 @@ export default function BranchSettingsDialog({
   // Filter branches based on search
   const filteredBranches = branches.filter(
     (b) =>
-      b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.branch_id.toLowerCase().includes(searchQuery.toLowerCase())
+      b.location.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.branch_id.toString().toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Get company name for display

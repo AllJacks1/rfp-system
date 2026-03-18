@@ -65,10 +65,13 @@ export default function DepartmentSettingsDialog({
   departments: initialDepartments,
   branches,
 }: DepartmentSettingsDialogProps) {
-  const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const [departments, setDepartments] =
+    useState<Department[]>(initialDepartments);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(
+    null,
+  );
   const [name, setName] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
 
@@ -80,11 +83,11 @@ export default function DepartmentSettingsDialog({
 
     return departments.filter(
       (d) =>
-        d.name?.toLowerCase().includes(query) ||
-        (d.branch_location || "").toLowerCase().includes(query) ||
-        (d.branch_id || "").toLowerCase().includes(query) ||
-        (d.company_id || "").toLowerCase().includes(query) ||
-        (d.company_name || "").toLowerCase().includes(query)
+        d.name?.toString().toLowerCase().includes(query) ||
+        (d.branch_location || "").toString().toLowerCase().includes(query) ||
+        (d.branch_id || "").toString().toLowerCase().includes(query) ||
+        (d.company_id || "").toString().toLowerCase().includes(query) ||
+        (d.company_name || "").toString().toLowerCase().includes(query),
     );
   }, [departments, searchQuery]);
 
@@ -120,7 +123,9 @@ export default function DepartmentSettingsDialog({
       e.preventDefault();
       if (!name.trim()) return;
 
-      const selectedBranch = branches.find((b) => b.branch_id === selectedBranchId);
+      const selectedBranch = branches.find(
+        (b) => b.branch_id === selectedBranchId,
+      );
 
       if (editingDepartment) {
         setDepartments((prev) =>
@@ -134,8 +139,8 @@ export default function DepartmentSettingsDialog({
                   company_id: selectedBranch?.company?.company_id,
                   company_name: selectedBranch?.company?.name || "",
                 }
-              : d
-          )
+              : d,
+          ),
         );
       } else {
         const newDepartment: Department = {
@@ -151,7 +156,7 @@ export default function DepartmentSettingsDialog({
 
       handleCloseForm();
     },
-    [editingDepartment, name, selectedBranchId, branches, handleCloseForm]
+    [editingDepartment, name, selectedBranchId, branches, handleCloseForm],
   );
 
   const clearSearch = useCallback(() => {
@@ -387,7 +392,9 @@ export default function DepartmentSettingsDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(dept.department_id)}
+                                  onClick={() =>
+                                    handleRemove(dept.department_id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
