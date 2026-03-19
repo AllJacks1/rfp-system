@@ -355,7 +355,7 @@ export default function DepartmentSettingsDialog({
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead
-                        className="font-semibold w-[280px]"
+                        className="font-semibold w-70"
                         style={{ color: THEME_COLOR }}
                       >
                         Department
@@ -373,7 +373,7 @@ export default function DepartmentSettingsDialog({
                         Company
                       </TableHead>
                       <TableHead
-                        className="font-semibold w-[80px] text-right"
+                        className="font-semibold w-20 text-right"
                         style={{ color: THEME_COLOR }}
                       >
                         Actions
@@ -431,7 +431,7 @@ export default function DepartmentSettingsDialog({
                                 <span className="font-medium text-slate-900 truncate">
                                   {dept.name}
                                 </span>
-                                <span className="text-xs text-slate-500 truncate max-w-[200px]">
+                                <span className="text-xs text-slate-500 truncate max-w-50">
                                   ID: {dept.department_id}
                                 </span>
                               </div>
@@ -533,7 +533,7 @@ export default function DepartmentSettingsDialog({
       {/* Create/Edit Department Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent
-          className="sm:max-w-[500px] p-6 border-t-4"
+          className="sm:max-w-125 p-6 border-t-4"
           style={{ borderTopColor: THEME_COLOR }}
         >
           <DialogHeader className="space-y-2">

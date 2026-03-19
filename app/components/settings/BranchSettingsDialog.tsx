@@ -246,7 +246,7 @@ export default function BranchSettingsDialog({
                       <TableHead className="text-[#2B3A9F] font-semibold">
                         Company
                       </TableHead>
-                      <TableHead className="w-[100px] text-[#2B3A9F] font-semibold text-right">
+                      <TableHead className="w-25 text-[#2B3A9F] font-semibold text-right">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -341,7 +341,7 @@ export default function BranchSettingsDialog({
 
       {/* Add/Edit Branch Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[450px] p-6 border-t-4 border-t-[#2B3A9F]">
+        <DialogContent className="sm:max-w-112.5 p-6 border-t-4 border-t-[#2B3A9F]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-[#2B3A9F]">
               <div className="p-2 rounded-lg bg-[#2B3A9F]/10">

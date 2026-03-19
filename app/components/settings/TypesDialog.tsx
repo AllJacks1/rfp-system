@@ -206,7 +206,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] lg:max-w-[1100px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-blue-600">
+        <DialogContent className="sm:max-w-225 lg:max-w-275 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-blue-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-blue-600">
               <div className="p-2 rounded-lg bg-blue-50">
@@ -274,7 +274,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                       <TableHead className="text-blue-600 font-semibold">
                         Usage
                       </TableHead>
-                      <TableHead className="w-[100px] text-blue-600 font-semibold">
+                      <TableHead className="w-25 text-blue-600 font-semibold">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -375,7 +375,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
 
       {/* Add/Edit Type Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[500px] p-6 border-t-4 border-t-blue-600">
+        <DialogContent className="sm:max-w-125 p-6 border-t-4 border-t-blue-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-blue-600">
               <div className="p-2 rounded-lg bg-blue-50">

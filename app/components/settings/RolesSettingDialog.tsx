@@ -242,13 +242,13 @@ export default function RolesSettingsDialog({
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead
-                        className="font-semibold w-[280px]"
+                        className="font-semibold w-70"
                         style={{ color: THEME_COLOR }}
                       >
                         Role Name
                       </TableHead>
                       <TableHead
-                        className="font-semibold w-[80px] text-right"
+                        className="font-semibold w-20 text-right"
                         style={{ color: THEME_COLOR }}
                       >
                         Actions
@@ -384,7 +384,7 @@ export default function RolesSettingsDialog({
       {/* Create/Edit Role Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent
-          className="sm:max-w-[500px] p-6 border-t-4"
+          className="sm:max-w-125 p-6 border-t-4"
           style={{ borderTopColor: THEME_COLOR }}
         >
           <DialogHeader className="space-y-2">
