@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import React, { useState, useMemo, useCallback } from "react";
 import { Role, RolesSettingsDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 const THEME_COLOR = "#2B3A9F";
 
@@ -70,7 +71,7 @@ export default function RolesSettingsDialog({
     return roles.filter(
       (r) =>
         r.name?.toString().toLowerCase().includes(query) ||
-        r.role_id?.toString().toLowerCase().includes(query)
+        r.role_id?.toString().toLowerCase().includes(query),
     );
   }, [roles, searchQuery]);
 
@@ -98,30 +99,59 @@ export default function RolesSettingsDialog({
     setName("");
   }, []);
 
+  async function createRole(name: string) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("roles")
+      .insert([{ name }])
+      .select()
+      .single(); // important: return single object
+
+    if (error) throw error;
+
+    return data;
+  }
+
+  async function updateRole(role_id: string, name: string) {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("roles")
+      .update({ name })
+      .eq("role_id", role_id)
+      .select()
+      .single(); // return updated row
+
+    if (error) throw error;
+
+    return data;
+  }
+
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       if (!name.trim()) return;
 
-      if (editingRole) {
-        setRoles((prev) =>
-          prev.map((r) =>
-            r.role_id === editingRole.role_id
-              ? { ...r, name }
-              : r
-          )
-        );
-      } else {
-        const newRole: Role = {
-          role_id: Math.random().toString(36).substr(2, 9),
-          name,
-        };
-        setRoles((prev) => [...prev, newRole]);
-      }
+      try {
+        if (editingRole) {
+          const updated = await updateRole(editingRole.role_id, name);
 
-      handleCloseForm();
+          setRoles((prev) =>
+            prev.map((r) => (r.role_id === editingRole.role_id ? updated : r)),
+          );
+        } else {
+          const created = await createRole(name);
+
+          setRoles((prev) => [...prev, created]);
+        }
+
+        handleCloseForm();
+      } catch (err) {
+        console.error(err);
+      }
     },
-    [editingRole, name, handleCloseForm]
+    [editingRole, name, handleCloseForm],
   );
 
   const clearSearch = useCallback(() => {
@@ -144,7 +174,10 @@ export default function RolesSettingsDialog({
                 className="p-2 rounded-lg"
                 style={{ backgroundColor: `${THEME_COLOR}15` }}
               >
-                <ShieldCheck className="w-6 h-6" style={{ color: THEME_COLOR }} />
+                <ShieldCheck
+                  className="w-6 h-6"
+                  style={{ color: THEME_COLOR }}
+                />
               </div>
               Roles Settings
             </DialogTitle>
@@ -262,12 +295,17 @@ export default function RolesSettingsDialog({
                             <div className="flex items-center gap-3">
                               <div
                                 className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: `${THEME_COLOR}15`, color: THEME_COLOR }}
+                                style={{
+                                  backgroundColor: `${THEME_COLOR}15`,
+                                  color: THEME_COLOR,
+                                }}
                               >
                                 <ShieldCheck className="w-5 h-5" />
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-medium text-slate-900">{role.name}</span>
+                                <span className="font-medium text-slate-900">
+                                  {role.name}
+                                </span>
                                 <span className="text-xs text-slate-500">
                                   ID: {role.role_id}
                                 </span>
@@ -301,7 +339,10 @@ export default function RolesSettingsDialog({
                                     ["--hover-color" as string]: THEME_COLOR,
                                   }}
                                 >
-                                  <Eye className="w-4 h-4 mr-2" style={{ color: THEME_COLOR }} />
+                                  <Eye
+                                    className="w-4 h-4 mr-2"
+                                    style={{ color: THEME_COLOR }}
+                                  />
                                   View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -312,7 +353,10 @@ export default function RolesSettingsDialog({
                                     ["--hover-color" as string]: THEME_COLOR,
                                   }}
                                 >
-                                  <Pencil className="w-4 h-4 mr-2" style={{ color: THEME_COLOR }} />
+                                  <Pencil
+                                    className="w-4 h-4 mr-2"
+                                    style={{ color: THEME_COLOR }}
+                                  />
                                   Edit Role
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -355,7 +399,10 @@ export default function RolesSettingsDialog({
                 {editingRole ? (
                   <Pencil className="w-5 h-5" style={{ color: THEME_COLOR }} />
                 ) : (
-                  <ShieldCheck className="w-5 h-5" style={{ color: THEME_COLOR }} />
+                  <ShieldCheck
+                    className="w-5 h-5"
+                    style={{ color: THEME_COLOR }}
+                  />
                 )}
               </div>
               {editingRole ? "Edit Role" : "Create New Role"}
