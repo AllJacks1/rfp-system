@@ -34,11 +34,12 @@ interface SettingsCardProps {
 }
 
 const Settings = ({
-  user,
+  users,
   companies,
   branches,
   department,
   roles,
+  designations,
 }: SettingsPageProps) => {
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
@@ -145,6 +146,12 @@ const Settings = ({
       </div>
 
       <UserAccountDialog
+        users={users}
+        companies={companies}
+        branches={branches}
+        departments={department}
+        designations={designations}
+        roles={roles}
         open={accountDialogOpen}
         onOpenChange={setAccountDialogOpen}
       />

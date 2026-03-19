@@ -91,11 +91,12 @@ export interface Role {
 }
 
 export interface SettingsPageProps {
-  user?: User[];
+  users: FlattendUser[];
   companies: Company[];
   branches: Branch[];
   department: Department[];
   roles: Role[];
+  designations: Designation[];
 }
 
 export interface CompanySettingsDialogProps {
@@ -103,7 +104,6 @@ export interface CompanySettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   companies: Company[];
 }
-
 
 export interface BranchSettingsDialogProps {
   open: boolean;
@@ -122,5 +122,63 @@ export interface DepartmentSettingsDialogProps {
 export interface RolesSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  roles: Role[];
+}
+
+export interface FlattendUser {
+  user_id: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  email: string;
+  mobile_number: string | null;
+  address: string | null;
+  birthday: string | null;
+  sex: string | null;
+  role_id: string;
+  role_name: string;
+  designation_id: string;
+  designation_name: string;
+  company_id: string;
+  company_name: string;
+  branch_id: string;
+  branch_location: string;
+  department_id: string;
+  department_name: string;
+}
+
+export type UserAssignmentRow = {
+  users: {
+    user_id: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    email: string | null;
+    mobile_number: string | null;
+    address: string | null;
+    birthday: string | null;
+    sex: string | null;
+  };
+  roles: { role_id: string; name: string };
+  designations: { designation_id: string; name: string };
+  companies: { company_id: string; name: string };
+  branches: { branch_id: string; location: string; company_id: string };
+  departments: { department_id: string; name: string; branch_id: string };
+};
+
+export interface Designation {
+  designation_id: number;
+  name: string;
+  scope: string;
+}
+
+export interface UserAccountDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  users: FlattendUser[];
+  companies: Company[];
+  branches: Branch[];
+  departments: Department[];
+  designations: Designation[];
   roles: Role[];
 }
