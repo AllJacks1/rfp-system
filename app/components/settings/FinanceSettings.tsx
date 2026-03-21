@@ -31,6 +31,7 @@ export default function FinanceSettings({
   units,
   vehicles,
   vendors,
+  banks,
 }: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
@@ -98,7 +99,7 @@ export default function FinanceSettings({
       icon: Landmark,
       color: "text-cyan-600",
       bgColor: "bg-cyan-50",
-      count: "3 banks",
+      count: `${banks.length} banks`,
       onClick: () => setBanksOpen(true),
     },
     {
@@ -185,7 +186,7 @@ export default function FinanceSettings({
         <Card className="border-0 shadow-sm bg-white">
           <CardContent className="p-4">
             <p className="text-sm text-slate-500 mb-1">Bank Accounts</p>
-            <p className="text-2xl font-bold text-cyan-600">3</p>
+            <p className="text-2xl font-bold text-cyan-600">{banks.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -205,7 +206,7 @@ export default function FinanceSettings({
       <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} units={units} />
       <AssetVehiclesDialog open={vehiclesOpen} onOpenChange={setVehiclesOpen} vehicles={vehicles} />
       <SuppliersDialog open={suppliersOpen} onOpenChange={setSuppliersOpen} vendors={vendors}/>
-      <BanksDialog open={banksOpen} onOpenChange={setBanksOpen} />
+      <BanksDialog open={banksOpen} onOpenChange={setBanksOpen} banks={banks}/>
       <PaymentMethodsDialog
         open={paymentMethodsOpen}
         onOpenChange={setPaymentMethodsOpen}

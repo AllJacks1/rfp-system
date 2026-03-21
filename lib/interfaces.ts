@@ -201,6 +201,7 @@ export interface FinanceSettingsProps {
   units: Unit[];
   vehicles: Vehicle[];
   vendors: Vendor[];
+  banks: Bank[];
 }
 
 export interface FinanceCardProps {
@@ -264,4 +265,16 @@ export interface SuppliersDialogProps {
   onOpenChange: (open: boolean) => void;
   vendors: Vendor[];
   onVendorsChange?: (vendors: Vendor[]) => void;
+}
+
+export interface Bank{
+  bank_id: string;
+  name: string;
+}
+
+export interface BanksDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  banks: Bank[];
+  onBanksChange?: (banks: Bank[]) => void;
 }
