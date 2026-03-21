@@ -27,24 +27,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   MoreHorizontal,
   Plus,
   Search,
   Car,
   Trash2,
-  Eye,
   Pencil,
-  Gauge,
-  Calendar,
-  X,
   User,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,104 +44,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
-
-interface Vehicle {
-  id: string;
-  name: string;
-  plateNumber: string;
-  type: "Company" | "Partner" | "Rental";
-  model: string;
-  year: number;
-  mileage: number;
-  status: "active" | "maintenance" | "inactive";
-  assignedTo: string;
-}
-
-const mockVehicles: Vehicle[] = [
-  {
-    id: "1",
-    name: "Toyota Hilux",
-    plateNumber: "ABC-1234",
-    type: "Company",
-    model: "Hilux 4x4",
-    year: 2022,
-    mileage: 45000,
-    status: "active",
-    assignedTo: "John Driver",
-  },
-  {
-    id: "2",
-    name: "Ford Ranger",
-    plateNumber: "XYZ-5678",
-    type: "Company",
-    model: "Ranger XLT",
-    year: 2023,
-    mileage: 23000,
-    status: "active",
-    assignedTo: "Mike Smith",
-  },
-  {
-    id: "3",
-    name: "Mitsubishi L300",
-    plateNumber: "DEF-9012",
-    type: "Partner",
-    model: "L300 Van",
-    year: 2021,
-    mileage: 78000,
-    status: "maintenance",
-    assignedTo: "Partner A",
-  },
-  {
-    id: "4",
-    name: "Isuzu D-Max",
-    plateNumber: "GHI-3456",
-    type: "Rental",
-    model: "D-Max LS",
-    year: 2023,
-    mileage: 12000,
-    status: "active",
-    assignedTo: "Rental Co.",
-  },
-];
-
-interface AssetVehiclesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import React, { useState, useEffect } from "react";
+import { AssetVehiclesDialogProps, Vehicle } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AssetVehiclesDialog({
   open,
   onOpenChange,
+  vehicles: initialVehicles = [],
+  onVehiclesChange,
 }: AssetVehiclesDialogProps) {
+  const supabase = createClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [formOpen, setFormOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
+  // Sync with external vehicles prop
+  useEffect(() => {
+    setVehicles(initialVehicles);
+  }, [initialVehicles]);
+
   // Form state
   const [formData, setFormData] = useState<Partial<Vehicle>>({
-    name: "",
-    plateNumber: "",
-    type: "Company",
-    model: "",
-    year: new Date().getFullYear(),
-    mileage: 0,
-    status: "active",
-    assignedTo: "",
+    plate_number: "",
+    car_type: "",
+    owners_first_name: "",
+    owners_last_name: "",
   });
 
-  const activeVehicles = vehicles.filter((v) => v.status !== "inactive");
-  const filteredVehicles = activeVehicles.filter(
+  const filteredVehicles = vehicles.filter(
     (v) =>
-      v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.assignedTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.model.toLowerCase().includes(searchQuery.toLowerCase())
+      v.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.car_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.owners_first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.owners_last_name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const handleRemove = (id: string) => {
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
+  const updateVehicles = (newVehicles: Vehicle[]) => {
+    setVehicles(newVehicles);
+    onVehiclesChange?.(newVehicles);
+  };
+
+  const handleRemove = async (vehicle_id: string) => {
+    const { error } = await supabase
+      .from("vehicles")
+      .delete()
+      .eq("vehicle_id", vehicle_id);
+
+    if (error) {
+      console.error("Error deleting vehicle:", error);
+      return;
+    }
+
+    const newVehicles = vehicles.filter((v) => v.vehicle_id !== vehicle_id);
+    updateVehicles(newVehicles);
   };
 
   const handleOpenForm = (vehicle?: Vehicle) => {
@@ -161,14 +108,10 @@ export default function AssetVehiclesDialog({
     } else {
       setEditingVehicle(null);
       setFormData({
-        name: "",
-        plateNumber: "",
-        type: "Company",
-        model: "",
-        year: new Date().getFullYear(),
-        mileage: 0,
-        status: "active",
-        assignedTo: "",
+        plate_number: "",
+        car_type: "",
+        owners_first_name: "",
+        owners_last_name: "",
       });
     }
     setFormOpen(true);
@@ -178,48 +121,93 @@ export default function AssetVehiclesDialog({
     setFormOpen(false);
     setEditingVehicle(null);
     setFormData({
-      name: "",
-      plateNumber: "",
-      type: "Company",
-      model: "",
-      year: new Date().getFullYear(),
-      mileage: 0,
-      status: "active",
-      assignedTo: "",
+      plate_number: "",
+      car_type: "",
+      owners_first_name: "",
+      owners_last_name: "",
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function createAssetVehicle({
+    plate_number,
+    car_type,
+    owners_first_name,
+    owners_last_name,
+  }: Vehicle) {
+    const { data, error } = await supabase
+      .from("vehicles")
+      .insert({
+        plate_number,
+        car_type,
+        owners_first_name,
+        owners_last_name,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating vehicle:", error);
+      return;
+    }
+
+    const newVehicles = [...vehicles, data];
+    updateVehicles(newVehicles);
+  }
+
+  async function updateAssetVehicle({
+    plate_number,
+    car_type,
+    owners_first_name,
+    owners_last_name,
+  }: Vehicle) {
+    if (!editingVehicle) return;
+
+    const { data, error } = await supabase
+      .from("vehicles")
+      .update({
+        plate_number,
+        car_type,
+        owners_first_name,
+        owners_last_name,
+      })
+      .eq("vehicle_id", editingVehicle.vehicle_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating vehicle:", error);
+      return;
+    }
+
+    const newVehicles = vehicles.map((v) =>
+      v.vehicle_id === editingVehicle.vehicle_id ? data : v,
+    );
+
+    updateVehicles(newVehicles);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (
+      !formData.plate_number ||
+      !formData.car_type ||
+      !formData.owners_first_name ||
+      !formData.owners_last_name
+    )
+      return;
+
     if (editingVehicle) {
-      // Update existing
-      setVehicles((prev) =>
-        prev.map((v) =>
-          v.id === editingVehicle.id ? { ...v, ...(formData as Vehicle) } : v
-        )
-      );
+      await updateAssetVehicle(formData as Vehicle);
     } else {
-      // Create new
-      const newVehicle: Vehicle = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || "",
-        plateNumber: formData.plateNumber || "",
-        type: (formData.type as Vehicle["type"]) || "Company",
-        model: formData.model || "",
-        year: formData.year || new Date().getFullYear(),
-        mileage: formData.mileage || 0,
-        status: (formData.status as Vehicle["status"]) || "active",
-        assignedTo: formData.assignedTo || "",
-      };
-      setVehicles((prev) => [...prev, newVehicle]);
+      await createAssetVehicle(formData as Vehicle);
     }
 
     handleCloseForm();
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
+  const getTypeColor = (car_type: string) => {
+    switch (car_type) {
       case "Company":
         return "bg-amber-100 text-amber-700 border-amber-200";
       case "Partner":
@@ -231,23 +219,14 @@ export default function AssetVehiclesDialog({
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-emerald-100 text-emerald-700 border-0";
-      case "maintenance":
-        return "bg-amber-100 text-amber-700 border-0";
-      case "inactive":
-        return "bg-slate-100 text-slate-600 border-0";
-      default:
-        return "bg-slate-100 text-slate-700";
-    }
+  const getOwnerFullName = (vehicle: Vehicle) => {
+    return `${vehicle.owners_first_name} ${vehicle.owners_last_name}`.trim();
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-amber-600">
+        <DialogContent className="sm:max-w-[900px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-amber-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-amber-600">
               <div className="p-2 rounded-lg bg-amber-50">
@@ -289,7 +268,7 @@ export default function AssetVehiclesDialog({
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Vehicle Assets
                       <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200">
-                        {activeVehicles.length}
+                        {vehicles.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
@@ -304,22 +283,16 @@ export default function AssetVehiclesDialog({
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead className="text-amber-600 font-semibold">
-                        Vehicle
+                        Vehicle ID
                       </TableHead>
                       <TableHead className="text-amber-600 font-semibold">
                         Plate Number
                       </TableHead>
                       <TableHead className="text-amber-600 font-semibold">
-                        Type
+                        Car Type
                       </TableHead>
                       <TableHead className="text-amber-600 font-semibold">
-                        Year/Model
-                      </TableHead>
-                      <TableHead className="text-amber-600 font-semibold">
-                        Mileage
-                      </TableHead>
-                      <TableHead className="text-amber-600 font-semibold">
-                        Status
+                        Owner
                       </TableHead>
                       <TableHead className="w-[100px] text-amber-600 font-semibold">
                         Actions
@@ -330,7 +303,7 @@ export default function AssetVehiclesDialog({
                     {filteredVehicles.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={5}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -342,56 +315,39 @@ export default function AssetVehiclesDialog({
                     ) : (
                       filteredVehicles.map((vehicle) => (
                         <TableRow
-                          key={vehicle.id}
+                          key={vehicle.vehicle_id}
                           className="hover:bg-amber-50/50 transition-colors"
                         >
                           <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                                <Car className="w-5 h-5" />
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-medium text-slate-900">
-                                  {vehicle.name}
-                                </span>
-                                <span className="text-xs text-slate-500">
-                                  Assigned: {vehicle.assignedTo}
-                                </span>
-                              </div>
-                            </div>
+                            <span className="font-mono font-medium text-amber-600">
+                              {vehicle.vehicle_id}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
                               className="font-mono text-amber-600 border-amber-300"
                             >
-                              {vehicle.plateNumber}
+                              {vehicle.plate_number}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={getTypeColor(vehicle.type)}
+                              className={getTypeColor(vehicle.car_type)}
                             >
-                              {vehicle.type}
+                              {vehicle.car_type}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-slate-400" />
-                              {vehicle.year} • {vehicle.model}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            <div className="flex items-center gap-1">
-                              <Gauge className="w-3 h-3 text-slate-400" />
-                              {vehicle.mileage.toLocaleString()} km
-                            </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(vehicle.status)}>
-                              {vehicle.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+                                <User className="w-4 h-4" />
+                              </div>
+                              <span className="text-slate-900">
+                                {getOwnerFullName(vehicle)}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -409,10 +365,6 @@ export default function AssetVehiclesDialog({
                                   Actions
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-amber-50 hover:text-amber-600">
-                                  <Eye className="w-4 h-4 mr-2 text-amber-600" />
-                                  View Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-slate-700 cursor-pointer hover:bg-amber-50 hover:text-amber-600"
                                   onClick={() => handleOpenForm(vehicle)}
@@ -423,7 +375,9 @@ export default function AssetVehiclesDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(vehicle.id)}
+                                  onClick={() =>
+                                    handleRemove(vehicle.vehicle_id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -444,7 +398,7 @@ export default function AssetVehiclesDialog({
 
       {/* Add/Edit Vehicle Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[600px] p-6 border-t-4 border-t-amber-600">
+        <DialogContent className="sm:max-w-[500px] p-6 border-t-4 border-t-amber-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-amber-600">
               <div className="p-2 rounded-lg bg-amber-50">
@@ -464,104 +418,58 @@ export default function AssetVehiclesDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-700">
-                  Vehicle Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Toyota Hilux"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="plate_number" className="text-slate-700">
+                Plate Number
+              </Label>
+              <Input
+                id="plate_number"
+                placeholder="e.g., ABC-1234"
+                value={formData.plate_number}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    plate_number: e.target.value,
+                  }))
+                }
+                className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20 font-mono uppercase"
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="plateNumber" className="text-slate-700">
-                  Plate Number
-                </Label>
-                <Input
-                  id="plateNumber"
-                  placeholder="e.g., ABC-1234"
-                  value={formData.plateNumber}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      plateNumber: e.target.value,
-                    }))
-                  }
-                  className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20 font-mono uppercase"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="car_type" className="text-slate-700">
+                Car Type
+              </Label>
+              <Input
+                id="car_type"
+                placeholder="e.g., Company, Partner, Rental"
+                value={formData.car_type}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    car_type: e.target.value,
+                  }))
+                }
+                className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
+                required
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="type" className="text-slate-700">
-                  Vehicle Type
-                </Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      type: value as Vehicle["type"],
-                    }))
-                  }
-                >
-                  <SelectTrigger className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Company">Company</SelectItem>
-                    <SelectItem value="Partner">Partner</SelectItem>
-                    <SelectItem value="Rental">Rental</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-slate-700">
-                  Status
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      status: value as Vehicle["status"],
-                    }))
-                  }
-                >
-                  <SelectTrigger className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="model" className="text-slate-700">
-                  Model
+                <Label htmlFor="owners_first_name" className="text-slate-700">
+                  Owner's First Name
                 </Label>
                 <Input
-                  id="model"
-                  placeholder="e.g., Hilux 4x4"
-                  value={formData.model}
+                  id="owners_first_name"
+                  placeholder="e.g., John"
+                  value={formData.owners_first_name}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, model: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      owners_first_name: e.target.value,
+                    }))
                   }
                   className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
                   required
@@ -569,69 +477,22 @@ export default function AssetVehiclesDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="year" className="text-slate-700">
-                  Year
+                <Label htmlFor="owners_last_name" className="text-slate-700">
+                  Owner's Last Name
                 </Label>
                 <Input
-                  id="year"
-                  type="number"
-                  placeholder="2024"
-                  value={formData.year}
+                  id="owners_last_name"
+                  placeholder="e.g., Doe"
+                  value={formData.owners_last_name}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      year: parseInt(e.target.value) || new Date().getFullYear(),
+                      owners_last_name: e.target.value,
                     }))
                   }
                   className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
-                  min="1900"
-                  max={new Date().getFullYear() + 1}
                   required
                 />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mileage" className="text-slate-700">
-                  Mileage (km)
-                </Label>
-                <Input
-                  id="mileage"
-                  type="number"
-                  placeholder="0"
-                  value={formData.mileage}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      mileage: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  className="border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
-                  min="0"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assignedTo" className="text-slate-700">
-                  Assigned To
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    id="assignedTo"
-                    placeholder="Driver or company name"
-                    value={formData.assignedTo}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        assignedTo: e.target.value,
-                      }))
-                    }
-                    className="pl-10 border-slate-200 focus:border-amber-600 focus:ring-amber-600/20"
-                    required
-                  />
-                </div>
               </div>
             </div>
 

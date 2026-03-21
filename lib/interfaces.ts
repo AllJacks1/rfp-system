@@ -199,6 +199,7 @@ export interface FinanceSettingsProps {
   accounts: Account[];
   types: Type[];
   units: Unit[];
+  vehicles: Vehicle[];
 }
 
 export interface FinanceCardProps {
@@ -233,4 +234,19 @@ export interface UnitsDialogProps {
   onOpenChange: (open: boolean) => void;
   units: Unit[];
   onUnitsChange?: (units: Unit[]) => void;
+}
+
+export interface Vehicle {
+  vehicle_id: string;
+  plate_number: string;
+  car_type: string;
+  owners_first_name: string;
+  owners_last_name: string;
+}
+
+export interface AssetVehiclesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  vehicles: Vehicle[];
+  onVehiclesChange?: (vehicles: Vehicle[]) => void;
 }
