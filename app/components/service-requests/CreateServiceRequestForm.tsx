@@ -43,18 +43,25 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import {
+  Company,
+  CreateServiceRequestFormProps,
+  Department,
+  PaymentMethod,
+  ServiceItem,
+  Type,
+  Vehicle,
+  Vendor,
+} from "@/lib/interfaces";
 
-interface ServiceItem {
-  id: number;
-  name: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
-
-export default function CreateServiceRequestForm() {
+export default function CreateServiceRequestForm({
+  types,
+  companies,
+  departments,
+  vehicles,
+  vendors,
+  paymentMethods,
+}: CreateServiceRequestFormProps) {
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [priority, setPriority] = useState<string>("");
   const [category, setCategory] = useState<string>("");
@@ -62,6 +69,7 @@ export default function CreateServiceRequestForm() {
   const [department, setDepartment] = useState<string>("");
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const selectedType = types?.find((t) => t.type_id === category);
 
   // Form state for new item
   const [newItem, setNewItem] = useState({
@@ -218,26 +226,22 @@ export default function CreateServiceRequestForm() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${category ? "text-slate-900" : "text-slate-500"}`}
+                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${
+                          category ? "text-slate-900" : "text-slate-500"
+                        }`}
                       >
-                        {category || "Select category"}
+                        {selectedType?.name || "Select category"}
                         <ChevronDown className="h-4 w-4 text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Maintenance",
-                        "Repair",
-                        "Installation",
-                        "Consultation",
-                        "Training",
-                      ].map((cat) => (
+                      {(types ?? []).map((type) => (
                         <DropdownMenuItem
-                          key={cat}
+                          key={type.type_id}
                           className="cursor-pointer"
-                          onClick={() => setCategory(cat)}
+                          onClick={() => setCategory(type.type_id)}
                         >
-                          {cat}
+                          {type.name}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>

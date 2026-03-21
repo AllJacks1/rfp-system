@@ -291,3 +291,22 @@ export interface PaymentMethodsDialogProps {
   paymentMethods: PaymentMethod[];
   onPaymentMethodsChange?: (paymentMethods: PaymentMethod[]) => void;
 }
+
+export interface ServiceItem {
+  id: number;
+  name: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface CreateServiceRequestFormProps {
+  types: Type[],
+  companies?: Company[],
+  departments?: Department[],
+  vehicles?: Vehicle[],
+  vendors?: Vendor[],
+  paymentMethods?: PaymentMethod[],
+}
