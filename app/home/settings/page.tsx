@@ -1,14 +1,14 @@
 import Settings from "@/app/components/settings/Settings";
 import { Department, FlattendUser, UserAssignmentRow } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-async function getUsers(): Promise<FlattendUser[]> {
-  const supabase = await createClient();
+/* ================================
+   USERS
+================================ */
 
-  const { data, error } = await supabase
-    .from("user_assignments")
-    .select(
-      `
+async function getUsers(supabase: SupabaseClient): Promise<FlattendUser[]> {
+  const { data, error } = await supabase.from("user_assignments").select(`
       users(
         user_id,
         first_name,
@@ -25,9 +25,7 @@ async function getUsers(): Promise<FlattendUser[]> {
       companies(company_id, name),
       branches(branch_id, location, company_id),
       departments(department_id, name, branch_id)
-    `,
-    )
-    .order("first_name", { foreignTable: "users", ascending: true });
+    `);
 
   if (error) {
     console.error("Error fetching users:", error);
@@ -36,41 +34,40 @@ async function getUsers(): Promise<FlattendUser[]> {
 
   const rows = (data || []) as unknown as UserAssignmentRow[];
 
-  const flattendData: FlattendUser[] = rows.map((row) => ({
-    user_id: row.users.user_id,
-    first_name: row.users.first_name,
-    middle_name: row.users.middle_name,
-    last_name: row.users.last_name,
-    email: row.users.email ?? "",
-    mobile_number: row.users.mobile_number,
-    address: row.users.address,
-    birthday: row.users.birthday,
-    sex: row.users.sex,
+  return rows.map((row) => ({
+    user_id: row.users?.user_id ?? "",
+    first_name: row.users?.first_name ?? "",
+    middle_name: row.users?.middle_name ?? "",
+    last_name: row.users?.last_name ?? "",
+    email: row.users?.email ?? "",
+    mobile_number: row.users?.mobile_number ?? "",
+    address: row.users?.address ?? "",
+    birthday: row.users?.birthday ?? "",
+    sex: row.users?.sex ?? "",
 
-    role_id: row.roles.role_id,
-    role_name: row.roles.name,
+    role_id: row.roles?.role_id,
+    role_name: row.roles?.name ?? "",
 
-    designation_id: row.designations.designation_id,
-    designation_name: row.designations.name,
+    designation_id: row.designations?.designation_id,
+    designation_name: row.designations?.name ?? "",
 
-    company_id: row.companies.company_id,
-    company_name: row.companies.name,
+    company_id: row.companies?.company_id,
+    company_name: row.companies?.name ?? "",
 
-    branch_id: row.branches.branch_id,
-    branch_location: row.branches.location,
+    branch_id: row.branches?.branch_id,
+    branch_location: row.branches?.location ?? "",
 
-    department_id: row.departments.department_id,
-    department_name: row.departments.name,
+    department_id: row.departments?.department_id,
+    department_name: row.departments?.name ?? "",
   }));
-
-  console.log(JSON.stringify(flattendData));
-  return flattendData;
 }
 
-async function getCompanies() {
-  const supabase = await createClient();
+/* ================================
+   COMPANIES
+================================ */
 
-  const { data: companies, error } = await supabase
+async function getCompanies(supabase: SupabaseClient) {
+  const { data, error } = await supabase
     .from("companies")
     .select("company_id, name")
     .order("name", { ascending: true });
@@ -80,18 +77,20 @@ async function getCompanies() {
     return [];
   }
 
-  return companies || [];
+  return data || [];
 }
 
-async function getBranches() {
-  const supabase = await createClient();
+/* ================================
+   BRANCHES
+================================ */
 
-  const { data: branches, error } = await supabase
+async function getBranches(supabase: SupabaseClient) {
+  const { data, error } = await supabase
     .from("branches")
     .select(
       `
-      branch_id, 
-      location, 
+      branch_id,
+      location,
       companies:companies(company_id, name)
     `,
     )
@@ -102,31 +101,31 @@ async function getBranches() {
     return [];
   }
 
-  // Flatten the nested companies array into a single company object
-  const flattenedBranches =
-    branches?.map((branch) => ({
+  return (
+    data?.map((branch) => ({
       branch_id: branch.branch_id,
       location: branch.location,
       company: Array.isArray(branch.companies)
         ? branch.companies[0]
         : branch.companies,
-    })) || [];
-
-  return flattenedBranches;
+    })) || []
+  );
 }
 
-async function getDepartments(): Promise<Department[]> {
-  const supabase = await createClient();
+/* ================================
+   DEPARTMENTS
+================================ */
 
-  const { data: departments, error } = await supabase
+async function getDepartments(supabase: SupabaseClient): Promise<Department[]> {
+  const { data, error } = await supabase
     .from("departments")
     .select(
       `
-      department_id, 
-      name, 
+      department_id,
+      name,
       branches:branches(
-        branch_id, 
-        location, 
+        branch_id,
+        location,
         companies:companies(company_id, name)
       )
     `,
@@ -138,15 +137,14 @@ async function getDepartments(): Promise<Department[]> {
     return [];
   }
 
-  const flattened: Department[] =
-    departments?.flatMap((department) => {
+  return (
+    data?.flatMap((department) => {
       const branches = Array.isArray(department.branches)
         ? department.branches
         : department.branches
           ? [department.branches]
           : [];
 
-      // ✅ Always return same structure
       if (branches.length === 0) {
         return [
           {
@@ -171,18 +169,19 @@ async function getDepartments(): Promise<Department[]> {
           branch_id: branch?.branch_id,
           branch_location: branch?.location,
           company_id: company?.company_id,
-          company_name: company?.name || "",
+          company_name: company?.name ?? "",
         };
       });
-    }) || [];
-
-  return flattened;
+    }) || []
+  );
 }
 
-async function getRoles() {
-  const supabase = await createClient();
+/* ================================
+   ROLES
+================================ */
 
-  const { data: roles, error } = await supabase
+async function getRoles(supabase: SupabaseClient) {
+  const { data, error } = await supabase
     .from("roles")
     .select("role_id, name")
     .order("name", { ascending: true });
@@ -192,13 +191,15 @@ async function getRoles() {
     return [];
   }
 
-  return roles || [];
+  return data || [];
 }
 
-async function getDesignations() {
-  const supabase = await createClient();
+/* ================================
+   DESIGNATIONS
+================================ */
 
-  const { data: designations, error } = await supabase
+async function getDesignations(supabase: SupabaseClient) {
+  const { data, error } = await supabase
     .from("designations")
     .select("designation_id, name, scope")
     .order("name", { ascending: true });
@@ -208,16 +209,25 @@ async function getDesignations() {
     return [];
   }
 
-  return designations || [];
+  return data || [];
 }
 
+/* ================================
+   PAGE
+================================ */
+
 export default async function SettingsPage() {
-  const users = await getUsers();
-  const companies = await getCompanies();
-  const branches = await getBranches();
-  const departments = await getDepartments();
-  const roles = await getRoles();
-  const designations = await getDesignations();
+  const supabase = await createClient();
+
+  const [users, companies, branches, departments, roles, designations] =
+    await Promise.all([
+      getUsers(supabase),
+      getCompanies(supabase),
+      getBranches(supabase),
+      getDepartments(supabase),
+      getRoles(supabase),
+      getDesignations(supabase),
+    ]);
 
   return (
     <div>

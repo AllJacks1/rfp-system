@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/client";
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,16 +14,35 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Authentication() {
+  const supabase = createClient();
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const router = useRouter();
 
-  async function handleSubmit() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error("Login error:", error.message);
+      alert(error.message);
+      setIsLoading(false);
+      return;
+    }
+
     router.push("/home");
+    router.refresh();
   }
 
   return (
@@ -31,7 +52,6 @@ export default function Authentication() {
       <div className="pointer-events-none absolute -bottom-40 -left-40 h-105 w-105 rounded-full bg-blue-400/20 blur-3xl" />
 
       <Card className="w-95 border-0 bg-white shadow-2xl backdrop-blur-xl">
-        {/* HEADER */}
         <CardHeader className="space-y-6 pb-6">
           <div className="flex justify-center mt-4">
             <Image
@@ -54,102 +74,103 @@ export default function Authentication() {
         </CardHeader>
 
         {/* FORM */}
-        <CardContent className="space-y-5">
-          {/* EMAIL */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="email"
-              className="flex items-center gap-2 text-sm font-medium"
-            >
-              <Mail className="h-4 w-4 text-slate-400" />
-              Email Address
-            </Label>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* EMAIL */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="email"
+                className="flex items-center gap-2 text-sm font-medium"
+              >
+                <Mail className="h-4 w-4 text-slate-400" />
+                Email Address
+              </Label>
 
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              placeholder="name@company.com"
-              autoComplete="username"
-              className="h-11 bg-slate-50/70"
-            />
-          </div>
-
-          {/* PASSWORD */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="password"
-              className="flex items-center gap-2 text-sm font-medium"
-            >
-              <Lock className="h-4 w-4 text-slate-400" />
-              Password
-            </Label>
-
-            <div className="relative">
               <Input
-                id="password"
-                name="password"
+                id="email"
+                type="email"
                 required
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="h-11 pr-10 bg-slate-50/70"
+                placeholder="name@company.com"
+                autoComplete="username"
+                className="h-11 bg-slate-50/70"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            {/* PASSWORD */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="password"
+                className="flex items-center gap-2 text-sm font-medium"
+              >
+                <Lock className="h-4 w-4 text-slate-400" />
+                Password
+              </Label>
+
+              <div className="relative">
+                <Input
+                  id="password"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="h-11 pr-10 bg-slate-50/70"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+
+                <button
+                  type="button"
+                  aria-label="Toggle password visibility"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* REMEMBER */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(v) => setRememberMe(!!v)}
+                className="data-checked:bg-[#2B3A9F]"
               />
 
-              <button
-                type="button"
-                aria-label="Toggle password visibility"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              <Label
+                htmlFor="remember"
+                className="text-sm font-normal text-slate-600 cursor-pointer"
               >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
+                Remember me for 30 days
+              </Label>
             </div>
-          </div>
 
-          {/* REMEMBER */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="remember"
-              checked={rememberMe}
-              onCheckedChange={(v) => setRememberMe(!!v)}
-              className="data-checked:bg-[#2B3A9F]"
-            />
-
-            <Label
-              htmlFor="remember"
-              className="text-sm font-normal text-slate-600 cursor-pointer"
+            {/* BUTTON */}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="group h-11 w-full bg-[#2B3A9F] font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800"
             >
-              Remember me for 30 days
-            </Label>
-          </div>
-
-          {/* BUTTON */}
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="group h-11 w-full bg-[#2B3A9F] font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800"
-            onClick={() => {
-              handleSubmit();
-            }}
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Signing in...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                Sign In
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </div>
-            )}
-          </Button>
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Signing in...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  Sign In
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              )}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

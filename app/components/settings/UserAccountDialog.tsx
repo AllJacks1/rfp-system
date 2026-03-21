@@ -75,12 +75,6 @@ export default function UserAccountDialog({
   designations,
   roles,
 }: UserAccountDialogProps) {
-  console.log(JSON.stringify(users));
-  console.log(JSON.stringify(companies));
-  console.log(JSON.stringify(branches));
-  console.log(JSON.stringify(departments));
-  console.log(JSON.stringify(designations));
-  console.log(JSON.stringify(roles));
   const [searchQuery, setSearchQuery] = useState("");
   const [accounts, setAccounts] = useState(users);
   const [viewingAccount, setViewingAccount] = useState<FlattendUser | null>(
