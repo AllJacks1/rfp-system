@@ -39,9 +39,7 @@ import {
   Search,
   BookOpen,
   Trash2,
-  Eye,
   Pencil,
-  Hash,
   X,
 } from "lucide-react";
 import {
@@ -52,99 +50,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
-
-interface Account {
-  id: string;
-  code: string;
-  name: string;
-  type: "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
-  category: string;
-  balance: string;
-  status: "active" | "inactive";
-}
-
-const mockAccounts: Account[] = [
-  {
-    id: "1",
-    code: "1000",
-    name: "Cash and Cash Equivalents",
-    type: "Asset",
-    category: "Current Assets",
-    balance: "$125,000.00",
-    status: "active",
-  },
-  {
-    id: "2",
-    code: "1100",
-    name: "Accounts Receivable",
-    type: "Asset",
-    category: "Current Assets",
-    balance: "$45,500.00",
-    status: "active",
-  },
-  {
-    id: "3",
-    code: "1200",
-    name: "Inventory",
-    type: "Asset",
-    category: "Current Assets",
-    balance: "$78,200.00",
-    status: "active",
-  },
-  {
-    id: "4",
-    code: "2000",
-    name: "Accounts Payable",
-    type: "Liability",
-    category: "Current Liabilities",
-    balance: "$32,100.00",
-    status: "active",
-  },
-  {
-    id: "5",
-    code: "3000",
-    name: "Owner Equity",
-    type: "Equity",
-    category: "Equity",
-    balance: "$216,600.00",
-    status: "active",
-  },
-];
-
-interface ChartOfAccountsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import React, { useState, useEffect } from "react";
+import { Account, ChartOfAccountsDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ChartOfAccountsDialog({
   open,
   onOpenChange,
-}: ChartOfAccountsDialogProps) {
+  accounts: initialAccounts = [],
+  onAccountsChange,
+}: ChartOfAccountsDialogProps & {
+  onAccountsChange?: (accounts: Account[]) => void;
+}) {
+  const supabase = createClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [accounts, setAccounts] = useState<Account[]>(mockAccounts);
+  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
   const [formOpen, setFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
+  // Sync with external accounts prop
+  useEffect(() => {
+    setAccounts(initialAccounts);
+  }, [initialAccounts]);
+
   // Form state
   const [formData, setFormData] = useState<Partial<Account>>({
-    code: "",
+    account_id: "",
+    account_type: "Asset",
     name: "",
-    type: "Asset",
-    category: "",
-    balance: "$0.00",
   });
 
-  const activeAccounts = accounts.filter((a) => a.status === "active");
-  const filteredAccounts = activeAccounts.filter(
+  const filteredAccounts = accounts.filter(
     (a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.code.includes(searchQuery) ||
-      a.category.toLowerCase().includes(searchQuery.toLowerCase())
+      a.account_id.includes(searchQuery) ||
+      a.account_type.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const handleRemove = (id: string) => {
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
+  const updateAccounts = (newAccounts: Account[]) => {
+    setAccounts(newAccounts);
+    onAccountsChange?.(newAccounts);
+  };
+
+  const handleRemove = async (account_id: string) => {
+    const { error } = await supabase
+      .from("chart_of_accounts")
+      .delete()
+      .eq("account_id", account_id);
+
+    if (error) {
+      console.error("Error deleting account:", error);
+      return;
+    }
+
+    const newAccounts = accounts.filter((a) => a.account_id !== account_id);
+    updateAccounts(newAccounts);
   };
 
   const handleOpenForm = (account?: Account) => {
@@ -154,11 +114,9 @@ export default function ChartOfAccountsDialog({
     } else {
       setEditingAccount(null);
       setFormData({
-        code: "",
+        account_id: "",
+        account_type: "Asset",
         name: "",
-        type: "Asset",
-        category: "",
-        balance: "$0.00",
       });
     }
     setFormOpen(true);
@@ -168,45 +126,72 @@ export default function ChartOfAccountsDialog({
     setFormOpen(false);
     setEditingAccount(null);
     setFormData({
-      code: "",
+      account_id: "",
+      account_type: "Asset",
       name: "",
-      type: "Asset",
-      category: "",
-      balance: "$0.00",
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingAccount) {
-      // Update existing
-      setAccounts((prev) =>
-        prev.map((a) =>
-          a.id === editingAccount.id
-            ? { ...a, ...(formData as Account) }
-            : a
-        )
-      );
-    } else {
-      // Create new
-      const newAccount: Account = {
-        id: Math.random().toString(36).substr(2, 9),
-        code: formData.code || "",
-        name: formData.name || "",
-        type: (formData.type as Account["type"]) || "Asset",
-        category: formData.category || "",
-        balance: formData.balance || "$0.00",
-        status: "active",
-      };
-      setAccounts((prev) => [...prev, newAccount]);
+  async function createAccount(account_type: string, name: string) {
+    const { data, error } = await supabase
+      .from("chart_of_accounts")
+      .insert({
+        account_type,
+        name,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating account:", error);
+      return;
     }
-    
+
+    const newAccounts = [...accounts, data];
+    updateAccounts(newAccounts);
+  }
+
+  async function editAccount(account_type: string, name: string) {
+    if (!editingAccount) return;
+
+    const { data, error } = await supabase
+      .from("chart_of_accounts")
+      .update({
+        account_type,
+        name,
+      })
+      .eq("account_id", editingAccount.account_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating account:", error);
+      return;
+    }
+
+    const newAccounts = accounts.map((account) =>
+      account.account_id === editingAccount.account_id ? data : account,
+    );
+
+    updateAccounts(newAccounts);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.account_type) return;
+
+    if (editingAccount) {
+      await editAccount(formData.account_type, formData.name);
+    } else {
+      await createAccount(formData.account_type, formData.name);
+    }
+
     handleCloseForm();
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
+  const getTypeColor = (account_type: string) => {
+    switch (account_type) {
       case "Asset":
         return "bg-emerald-100 text-emerald-700 border-emerald-200";
       case "Liability":
@@ -225,7 +210,7 @@ export default function ChartOfAccountsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-indigo-600">
+        <DialogContent className="sm:max-w-[800px] lg:max-w-[900px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-indigo-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-indigo-600">
               <div className="p-2 rounded-lg bg-indigo-50">
@@ -234,7 +219,7 @@ export default function ChartOfAccountsDialog({
               Chart of Accounts
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Manage account titles, categories, and financial classifications.
+              Manage account titles, types, and classifications.
             </DialogDescription>
           </DialogHeader>
 
@@ -267,7 +252,7 @@ export default function ChartOfAccountsDialog({
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Accounts
                       <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200">
-                        {activeAccounts.length}
+                        {accounts.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
@@ -282,19 +267,13 @@ export default function ChartOfAccountsDialog({
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead className="text-indigo-600 font-semibold">
-                        Code
+                        Account ID
                       </TableHead>
                       <TableHead className="text-indigo-600 font-semibold">
                         Account Name
                       </TableHead>
                       <TableHead className="text-indigo-600 font-semibold">
-                        Type
-                      </TableHead>
-                      <TableHead className="text-indigo-600 font-semibold">
-                        Category
-                      </TableHead>
-                      <TableHead className="text-indigo-600 font-semibold">
-                        Balance
+                        Account Type
                       </TableHead>
                       <TableHead className="w-[100px] text-indigo-600 font-semibold">
                         Actions
@@ -305,7 +284,7 @@ export default function ChartOfAccountsDialog({
                     {filteredAccounts.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={4}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -317,16 +296,13 @@ export default function ChartOfAccountsDialog({
                     ) : (
                       filteredAccounts.map((account) => (
                         <TableRow
-                          key={account.id}
+                          key={account.account_id}
                           className="hover:bg-indigo-50/50 transition-colors"
                         >
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Hash className="w-4 h-4 text-indigo-600" />
-                              <span className="font-mono font-medium text-indigo-600">
-                                {account.code}
-                              </span>
-                            </div>
+                            <span className="font-mono font-medium text-indigo-600">
+                              {account.account_id}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <span className="font-medium text-slate-900">
@@ -336,16 +312,10 @@ export default function ChartOfAccountsDialog({
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={getTypeColor(account.type)}
+                              className={getTypeColor(account.account_type)}
                             >
-                              {account.type}
+                              {account.account_type}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {account.category}
-                          </TableCell>
-                          <TableCell className="font-medium text-slate-900">
-                            {account.balance}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -363,10 +333,6 @@ export default function ChartOfAccountsDialog({
                                   Actions
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600">
-                                  <Eye className="w-4 h-4 mr-2 text-indigo-600" />
-                                  View Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-slate-700 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600"
                                   onClick={() => handleOpenForm(account)}
@@ -377,7 +343,9 @@ export default function ChartOfAccountsDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(account.id)}
+                                  onClick={() =>
+                                    handleRemove(account.account_id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -418,50 +386,6 @@ export default function ChartOfAccountsDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="code" className="text-slate-700">
-                  Account Code
-                </Label>
-                <Input
-                  id="code"
-                  placeholder="e.g., 1000"
-                  value={formData.code}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, code: e.target.value }))
-                  }
-                  className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20 font-mono"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type" className="text-slate-700">
-                  Account Type
-                </Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      type: value as Account["type"],
-                    }))
-                  }
-                >
-                  <SelectTrigger className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Asset">Asset</SelectItem>
-                    <SelectItem value="Liability">Liability</SelectItem>
-                    <SelectItem value="Equity">Equity</SelectItem>
-                    <SelectItem value="Revenue">Revenue</SelectItem>
-                    <SelectItem value="Expense">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="name" className="text-slate-700">
                 Account Name
@@ -479,34 +403,28 @@ export default function ChartOfAccountsDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category" className="text-slate-700">
-                Category
+              <Label htmlFor="account_type" className="text-slate-700">
+                Account Type
               </Label>
-              <Input
-                id="category"
-                placeholder="e.g., Current Assets"
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, category: e.target.value }))
+              <Select
+                value={formData.account_type}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    account_type: value,
+                  }))
                 }
-                className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="balance" className="text-slate-700">
-                Opening Balance
-              </Label>
-              <Input
-                id="balance"
-                placeholder="$0.00"
-                value={formData.balance}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, balance: e.target.value }))
-                }
-                className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20 font-mono"
-              />
+              >
+                <SelectTrigger className="border-slate-200 focus:border-indigo-600 focus:ring-indigo-600/20">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DOE">Direct Operating Expense</SelectItem>
+                  <SelectItem value="GAE">
+                    General Administrative Expenses
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <DialogFooter className="gap-2 mt-6">

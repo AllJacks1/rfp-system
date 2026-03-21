@@ -23,18 +23,9 @@ import SuppliersDialog from "./SuppliersDialog";
 import BanksDialog from "./BanksDialog";
 import PaymentMethodsDialog from "./PaymentMethodsDialog";
 import { useState } from "react";
+import { FinanceCardProps, FinanceSettingsProps } from "@/lib/interfaces";
 
-interface FinanceCardProps {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  count?: string;
-  onClick?: () => void;
-}
-
-export default function FinanceSettings() {
+export default function FinanceSettings({ accounts }: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
@@ -51,7 +42,7 @@ export default function FinanceSettings() {
       icon: BookOpen,
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
-      count: "24 accounts",
+      count: `${accounts.length} accounts`,
       onClick: () => setChartOfAccountsOpen(true),
     },
     {
@@ -168,7 +159,7 @@ export default function FinanceSettings() {
         <Card className="border-0 shadow-sm bg-white">
           <CardContent className="p-4">
             <p className="text-sm text-slate-500 mb-1">Total Accounts</p>
-            <p className="text-2xl font-bold text-[#2B3A9F]">156</p>
+            <p className="text-2xl font-bold text-[#2B3A9F]">{accounts.length}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm bg-white">
@@ -200,6 +191,7 @@ export default function FinanceSettings() {
       <ChartOfAccountsDialog
         open={chartOfAccountsOpen}
         onOpenChange={setChartOfAccountsOpen}
+        accounts={accounts}
       />
       <TypesDialog open={typesOpen} onOpenChange={setTypesOpen} />
       <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} />

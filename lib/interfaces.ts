@@ -182,3 +182,29 @@ export interface UserAccountDialogProps {
   designations: Designation[];
   roles: Role[];
 }
+
+export interface Account {
+  account_id: string;
+  account_type: string;
+  name: string;
+}
+
+export interface ChartOfAccountsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  accounts: Account[];
+}
+
+export interface FinanceSettingsProps {
+  accounts: Account[];
+}
+
+export interface FinanceCardProps {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  bgColor: string;
+  count?: string;
+  onClick?: () => void;
+}
