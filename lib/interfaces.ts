@@ -304,7 +304,7 @@ export interface ServiceItem {
 
 export interface CreateServiceRequestFormProps {
   types: Type[],
-  companies?: Company[],
+  companies: Company[],
   departments?: Department[],
   vehicles?: Vehicle[],
   vendors?: Vendor[],

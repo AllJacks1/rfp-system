@@ -12,7 +12,19 @@ async function getTypes(supabase: any) {
     return [];
   }
 
-  console.log("DATA:", data);
+  return data || [];
+}
+
+async function getCompanies(supabase: any) {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("company_id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching types:", error);
+    return [];
+  }
 
   return data || [];
 }
@@ -21,12 +33,11 @@ export default async function CreateServiceRequestPage() {
   const supabase = await createClient();
 
   const types = await getTypes(supabase);
-
-  console.log(types);
+  const companies = await getCompanies(supabase);
 
   return (
     <div>
-      <CreateServiceRequestForm types={types} />
+      <CreateServiceRequestForm types={types} companies={companies}/>
     </div>
   );
 }
