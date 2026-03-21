@@ -32,6 +32,7 @@ export default function FinanceSettings({
   vehicles,
   vendors,
   banks,
+  methods,
 }: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
@@ -109,7 +110,7 @@ export default function FinanceSettings({
       icon: CreditCard,
       color: "text-rose-600",
       bgColor: "bg-rose-50",
-      count: "6 methods",
+      count: `${methods.length} methods`,
       onClick: () => setPaymentMethodsOpen(true),
     },
   ];
@@ -210,6 +211,7 @@ export default function FinanceSettings({
       <PaymentMethodsDialog
         open={paymentMethodsOpen}
         onOpenChange={setPaymentMethodsOpen}
+        paymentMethods={methods}
       />
     </div>
   );

@@ -202,6 +202,7 @@ export interface FinanceSettingsProps {
   vehicles: Vehicle[];
   vendors: Vendor[];
   banks: Bank[];
+  methods: PaymentMethod[];
 }
 
 export interface FinanceCardProps {
@@ -267,7 +268,7 @@ export interface SuppliersDialogProps {
   onVendorsChange?: (vendors: Vendor[]) => void;
 }
 
-export interface Bank{
+export interface Bank {
   bank_id: string;
   name: string;
 }
@@ -277,4 +278,16 @@ export interface BanksDialogProps {
   onOpenChange: (open: boolean) => void;
   banks: Bank[];
   onBanksChange?: (banks: Bank[]) => void;
+}
+
+export interface PaymentMethod {
+  payment_method_id: string;
+  name: string;
+}
+
+export interface PaymentMethodsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  paymentMethods: PaymentMethod[];
+  onPaymentMethodsChange?: (paymentMethods: PaymentMethod[]) => void;
 }

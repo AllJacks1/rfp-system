@@ -27,25 +27,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
   MoreHorizontal,
   Plus,
   Search,
   CreditCard,
   Trash2,
-  Eye,
   Pencil,
   Wallet,
-  Smartphone,
-  Banknote,
-  Check,
   X,
 } from "lucide-react";
 import {
@@ -56,138 +44,72 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
-
-interface PaymentMethod {
-  id: string;
-  name: string;
-  type: "Credit Card" | "Digital Wallet" | "Bank Transfer" | "Cash" | "Check";
-  provider: string;
-  lastFour: string;
-  expiryDate?: string;
-  isDefault: boolean;
-  status: "active" | "inactive";
-}
-
-const mockMethods: PaymentMethod[] = [
-  {
-    id: "1",
-    name: "Corporate Visa",
-    type: "Credit Card",
-    provider: "Visa",
-    lastFour: "4242",
-    expiryDate: "12/25",
-    isDefault: true,
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Business Mastercard",
-    type: "Credit Card",
-    provider: "Mastercard",
-    lastFour: "8888",
-    expiryDate: "08/26",
-    isDefault: false,
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "PayPal Business",
-    type: "Digital Wallet",
-    provider: "PayPal",
-    lastFour: "N/A",
-    isDefault: false,
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Stripe Account",
-    type: "Digital Wallet",
-    provider: "Stripe",
-    lastFour: "N/A",
-    isDefault: false,
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Wire Transfer",
-    type: "Bank Transfer",
-    provider: "ACH",
-    lastFour: "N/A",
-    isDefault: false,
-    status: "active",
-  },
-  {
-    id: "6",
-    name: "Petty Cash",
-    type: "Cash",
-    provider: "Internal",
-    lastFour: "N/A",
-    isDefault: false,
-    status: "inactive",
-  },
-];
-
-const providerOptions: Record<PaymentMethod["type"], string[]> = {
-  "Credit Card": ["Visa", "Mastercard", "American Express", "Discover", "JCB"],
-  "Digital Wallet": ["PayPal", "Stripe", "Square", "Apple Pay", "Google Pay"],
-  "Bank Transfer": ["ACH", "Wire", "SEPA", "SWIFT"],
-  Cash: ["Internal", "Petty Cash", "Register"],
-  Check: ["Paper Check", "eCheck", "Certified Check"],
-};
-
-interface PaymentMethodsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+import React, { useState, useEffect } from "react";
+import { PaymentMethod, PaymentMethodsDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
 export default function PaymentMethodsDialog({
   open,
   onOpenChange,
+  paymentMethods: initialPaymentMethods = [],
+  onPaymentMethodsChange,
 }: PaymentMethodsDialogProps) {
+  const supabase = createClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [methods, setMethods] = useState<PaymentMethod[]>(mockMethods);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
+    initialPaymentMethods,
+  );
   const [formOpen, setFormOpen] = useState(false);
-  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState<Partial<PaymentMethod>>({
-    name: "",
-    type: "Credit Card",
-    provider: "Visa",
-    lastFour: "",
-    expiryDate: "",
-    isDefault: false,
-    status: "active",
-  });
-
-  const activeMethods = methods.filter((m) => m.status === "active");
-  const filteredMethods = activeMethods.filter(
-    (m) =>
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.provider.toLowerCase().includes(searchQuery.toLowerCase())
+  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(
+    null,
   );
 
-  const handleRemove = (id: string) => {
-    setMethods((prev) => prev.filter((m) => m.id !== id));
+  // Sync with external paymentMethods prop
+  useEffect(() => {
+    setPaymentMethods(initialPaymentMethods);
+  }, [initialPaymentMethods]);
+
+  // Form state - only name, no ID input
+  const [formData, setFormData] = useState<Partial<PaymentMethod>>({
+    name: "",
+  });
+
+  const filteredMethods = paymentMethods.filter(
+    (m) =>
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.payment_method_id.includes(searchQuery),
+  );
+
+  const updatePaymentMethods = (newPaymentMethods: PaymentMethod[]) => {
+    setPaymentMethods(newPaymentMethods);
+    onPaymentMethodsChange?.(newPaymentMethods);
+  };
+
+  const handleRemove = async (payment_method_id: string) => {
+    const { error } = await supabase
+      .from("payment_methods")
+      .delete()
+      .eq("payment_method_id", payment_method_id);
+
+    if (error) {
+      console.error("Error deleting payment method:", error);
+      return;
+    }
+
+    const newMethods = paymentMethods.filter(
+      (m) => m.payment_method_id !== payment_method_id,
+    );
+
+    updatePaymentMethods(newMethods);
   };
 
   const handleOpenForm = (method?: PaymentMethod) => {
     if (method) {
       setEditingMethod(method);
-      setFormData(method);
+      setFormData({ name: method.name });
     } else {
       setEditingMethod(null);
-      setFormData({
-        name: "",
-        type: "Credit Card",
-        provider: "Visa",
-        lastFour: "",
-        expiryDate: "",
-        isDefault: false,
-        status: "active",
-      });
+      setFormData({ name: "" });
     }
     setFormOpen(true);
   };
@@ -195,96 +117,65 @@ export default function PaymentMethodsDialog({
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingMethod(null);
-    setFormData({
-      name: "",
-      type: "Credit Card",
-      provider: "Visa",
-      lastFour: "",
-      expiryDate: "",
-      isDefault: false,
-      status: "active",
-    });
+    setFormData({ name: "" });
   };
 
-  const handleTypeChange = (type: PaymentMethod["type"]) => {
-    const providers = providerOptions[type];
-    setFormData((prev) => ({
-      ...prev,
-      type,
-      provider: providers[0],
-      lastFour: type === "Credit Card" ? prev.lastFour : "N/A",
-      expiryDate: type === "Credit Card" ? prev.expiryDate : "",
-    }));
-  };
+  async function createPaymentMethod(name: string) {
+    const { data, error } = await supabase
+      .from("payment_methods")
+      .insert({ name })
+      .select()
+      .single();
 
-  const handleSubmit = (e: React.FormEvent) => {
+    if (error) {
+      console.error("Error creating payment method:", error);
+      return;
+    }
+
+    const newMethods = [...paymentMethods, data];
+    updatePaymentMethods(newMethods);
+  }
+
+  async function updatePaymentMethod(name: string) {
+    if (!editingMethod) return;
+
+    const { data, error } = await supabase
+      .from("payment_methods")
+      .update({ name })
+      .eq("payment_method_id", editingMethod.payment_method_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating payment method:", error);
+      return;
+    }
+
+    const newMethods = paymentMethods.map((m) =>
+      m.payment_method_id === editingMethod.payment_method_id ? data : m,
+    );
+
+    updatePaymentMethods(newMethods);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.name) return;
+
     if (editingMethod) {
-      // Update existing
-      setMethods((prev) =>
-        prev.map((m) =>
-          m.id === editingMethod.id ? { ...m, ...(formData as PaymentMethod) } : m
-        )
-      );
+      await updatePaymentMethod(formData.name);
     } else {
-      // Create new
-      const newMethod: PaymentMethod = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || "",
-        type: (formData.type as PaymentMethod["type"]) || "Credit Card",
-        provider: formData.provider || "Visa",
-        lastFour:
-          formData.type === "Credit Card"
-            ? formData.lastFour || "0000"
-            : "N/A",
-        expiryDate:
-          formData.type === "Credit Card" ? formData.expiryDate : undefined,
-        isDefault: formData.isDefault || false,
-        status: "active",
-      };
-      setMethods((prev) => [...prev, newMethod]);
+      await createPaymentMethod(formData.name);
     }
 
     handleCloseForm();
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "Credit Card":
-        return <CreditCard className="w-4 h-4" />;
-      case "Digital Wallet":
-        return <Smartphone className="w-4 h-4" />;
-      case "Cash":
-        return <Banknote className="w-4 h-4" />;
-      default:
-        return <Wallet className="w-4 h-4" />;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "Credit Card":
-        return "bg-rose-100 text-rose-700 border-rose-200";
-      case "Digital Wallet":
-        return "bg-purple-100 text-purple-700 border-purple-200";
-      case "Bank Transfer":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Cash":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case "Check":
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      default:
-        return "bg-slate-100 text-slate-700";
-    }
-  };
-
-  const isCreditCard = formData.type === "Credit Card";
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-rose-600">
+        <DialogContent className="sm:max-w-[700px] lg:max-w-[800px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-rose-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-rose-600">
               <div className="p-2 rounded-lg bg-rose-50">
@@ -293,7 +184,7 @@ export default function PaymentMethodsDialog({
               Payment Methods
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Set up credit cards, digital wallets, and other payment methods.
+              Manage payment methods for transactions.
             </DialogDescription>
           </DialogHeader>
 
@@ -326,11 +217,11 @@ export default function PaymentMethodsDialog({
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Payment Methods
                       <Badge className="bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200">
-                        {activeMethods.length}
+                        {paymentMethods.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
-                      Active payment options for transactions
+                      Available payment options for transactions
                     </CardDescription>
                   </div>
                 </div>
@@ -341,19 +232,10 @@ export default function PaymentMethodsDialog({
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead className="text-rose-600 font-semibold">
+                        Method ID
+                      </TableHead>
+                      <TableHead className="text-rose-600 font-semibold">
                         Method Name
-                      </TableHead>
-                      <TableHead className="text-rose-600 font-semibold">
-                        Type
-                      </TableHead>
-                      <TableHead className="text-rose-600 font-semibold">
-                        Provider
-                      </TableHead>
-                      <TableHead className="text-rose-600 font-semibold">
-                        Details
-                      </TableHead>
-                      <TableHead className="text-rose-600 font-semibold">
-                        Default
                       </TableHead>
                       <TableHead className="w-[100px] text-rose-600 font-semibold">
                         Actions
@@ -364,7 +246,7 @@ export default function PaymentMethodsDialog({
                     {filteredMethods.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={3}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -376,53 +258,23 @@ export default function PaymentMethodsDialog({
                     ) : (
                       filteredMethods.map((method) => (
                         <TableRow
-                          key={method.id}
+                          key={method.payment_method_id}
                           className="hover:bg-rose-50/50 transition-colors"
                         >
                           <TableCell>
+                            <span className="font-mono font-medium text-rose-600">
+                              {method.payment_method_id}
+                            </span>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
-                                {getTypeIcon(method.type)}
+                                <Wallet className="w-4 h-4" />
                               </div>
                               <span className="font-medium text-slate-900">
                                 {method.name}
                               </span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={getTypeColor(method.type)}
-                            >
-                              {method.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {method.provider}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {method.type === "Credit Card" ? (
-                              <div className="flex flex-col">
-                                <span className="font-mono text-sm">
-                                  **** {method.lastFour}
-                                </span>
-                                <span className="text-xs text-slate-500">
-                                  Exp: {method.expiryDate}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {method.isDefault ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 border-0">
-                                <Check className="w-3 h-3 mr-1" />
-                                Default
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-400 text-sm">—</span>
-                            )}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -440,10 +292,6 @@ export default function PaymentMethodsDialog({
                                   Actions
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-rose-50 hover:text-rose-600">
-                                  <Eye className="w-4 h-4 mr-2 text-rose-600" />
-                                  View Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-slate-700 cursor-pointer hover:bg-rose-50 hover:text-rose-600"
                                   onClick={() => handleOpenForm(method)}
@@ -454,7 +302,9 @@ export default function PaymentMethodsDialog({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(method.id)}
+                                  onClick={() =>
+                                    handleRemove(method.payment_method_id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -473,9 +323,9 @@ export default function PaymentMethodsDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Payment Method Form Dialog */}
+      {/* Add/Edit Payment Method Form Dialog - Only Name Input */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-[500px] p-6 border-t-4 border-t-rose-600">
+        <DialogContent className="sm:max-w-[400px] p-6 border-t-4 border-t-rose-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-rose-600">
               <div className="p-2 rounded-lg bg-rose-50">
@@ -489,8 +339,8 @@ export default function PaymentMethodsDialog({
             </DialogTitle>
             <DialogDescription className="text-slate-500">
               {editingMethod
-                ? "Update the payment method details below."
-                : "Fill in the details to add a new payment option."}
+                ? "Update the payment method name."
+                : "Enter a name for the new payment method."}
             </DialogDescription>
           </DialogHeader>
 
@@ -501,127 +351,13 @@ export default function PaymentMethodsDialog({
               </Label>
               <Input
                 id="name"
-                placeholder="e.g., Corporate Visa"
+                placeholder="e.g., Credit Card, Cash, Bank Transfer"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => setFormData({ name: e.target.value })}
                 className="border-slate-200 focus:border-rose-600 focus:ring-rose-600/20"
                 required
+                autoFocus
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="type" className="text-slate-700">
-                  Payment Type
-                </Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) =>
-                    handleTypeChange(value as PaymentMethod["type"])
-                  }
-                >
-                  <SelectTrigger className="border-slate-200 focus:border-rose-600 focus:ring-rose-600/20">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Credit Card">Credit Card</SelectItem>
-                    <SelectItem value="Digital Wallet">Digital Wallet</SelectItem>
-                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Check">Check</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="provider" className="text-slate-700">
-                  Provider
-                </Label>
-                <Select
-                  value={formData.provider}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, provider: value }))
-                  }
-                >
-                  <SelectTrigger className="border-slate-200 focus:border-rose-600 focus:ring-rose-600/20">
-                    <SelectValue placeholder="Select provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.type &&
-                      providerOptions[formData.type].map((provider) => (
-                        <SelectItem key={provider} value={provider}>
-                          {provider}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {isCreditCard && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="lastFour" className="text-slate-700">
-                    Last 4 Digits
-                  </Label>
-                  <Input
-                    id="lastFour"
-                    placeholder="4242"
-                    maxLength={4}
-                    value={formData.lastFour}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        lastFour: e.target.value.replace(/\D/g, ""),
-                      }))
-                    }
-                    className="border-slate-200 focus:border-rose-600 focus:ring-rose-600/20 font-mono"
-                    required={isCreditCard}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate" className="text-slate-700">
-                    Expiry Date (MM/YY)
-                  </Label>
-                  <Input
-                    id="expiryDate"
-                    placeholder="12/25"
-                    maxLength={5}
-                    value={formData.expiryDate}
-                    onChange={(e) => {
-                      let value = e.target.value.replace(/\D/g, "");
-                      if (value.length >= 2) {
-                        value = value.slice(0, 2) + "/" + value.slice(2, 4);
-                      }
-                      setFormData((prev) => ({ ...prev, expiryDate: value }));
-                    }}
-                    className="border-slate-200 focus:border-rose-600 focus:ring-rose-600/20 font-mono"
-                    required={isCreditCard}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="isDefault"
-                checked={formData.isDefault}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isDefault: checked as boolean,
-                  }))
-                }
-              />
-              <Label
-                htmlFor="isDefault"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Set as default payment method
-              </Label>
             </div>
 
             <DialogFooter className="gap-2 mt-6">
