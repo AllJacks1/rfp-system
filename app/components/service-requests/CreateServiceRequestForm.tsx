@@ -71,6 +71,7 @@ export default function CreateServiceRequestForm({
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const selectedType = types?.find((t) => t.type_id === category);
   const selectedCompany = companies?.find((c) => c.company_id === company);
+  const selectedDepartment = departments?.find((d) => d.department_id === department);
 
   // Form state for new item
   const [newItem, setNewItem] = useState({
@@ -340,24 +341,18 @@ export default function CreateServiceRequestForm({
                         variant="outline"
                         className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${department ? "text-slate-900" : "text-slate-500"}`}
                       >
-                        {department || "Select department"}
+                        {selectedDepartment?.name || "Select department"}
                         <ChevronDown className="h-4 w-4 text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Operations",
-                        "Administration",
-                        "Development",
-                        "Marketing",
-                        "Facilities",
-                      ].map((dept) => (
+                      {(departments ?? []).map((dept) => (
                         <DropdownMenuItem
-                          key={dept}
+                          key={dept.department_id}
                           className="cursor-pointer"
-                          onClick={() => setDepartment(dept)}
+                          onClick={() => setDepartment(dept.department_id)}
                         >
-                          {dept}
+                          {dept.name}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
