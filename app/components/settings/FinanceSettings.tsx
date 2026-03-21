@@ -25,7 +25,10 @@ import PaymentMethodsDialog from "./PaymentMethodsDialog";
 import { useState } from "react";
 import { FinanceCardProps, FinanceSettingsProps } from "@/lib/interfaces";
 
-export default function FinanceSettings({ accounts }: FinanceSettingsProps) {
+export default function FinanceSettings({
+  accounts,
+  types,
+}: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
@@ -46,13 +49,13 @@ export default function FinanceSettings({ accounts }: FinanceSettingsProps) {
       onClick: () => setChartOfAccountsOpen(true),
     },
     {
-      title: "Types",
+      title: "Types and Categories",
       description:
         "Manage service categories and purchase types used in transactions.",
       icon: Shapes,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      count: "24 types",
+      count: `${types.length} types or categories`,
       onClick: () => setTypesOpen(true),
     },
     {
@@ -159,7 +162,9 @@ export default function FinanceSettings({ accounts }: FinanceSettingsProps) {
         <Card className="border-0 shadow-sm bg-white">
           <CardContent className="p-4">
             <p className="text-sm text-slate-500 mb-1">Total Accounts</p>
-            <p className="text-2xl font-bold text-[#2B3A9F]">{accounts.length}</p>
+            <p className="text-2xl font-bold text-[#2B3A9F]">
+              {accounts.length}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm bg-white">
@@ -193,7 +198,7 @@ export default function FinanceSettings({ accounts }: FinanceSettingsProps) {
         onOpenChange={setChartOfAccountsOpen}
         accounts={accounts}
       />
-      <TypesDialog open={typesOpen} onOpenChange={setTypesOpen} />
+      <TypesDialog open={typesOpen} onOpenChange={setTypesOpen} types={types} />
       <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} />
       <AssetVehiclesDialog open={vehiclesOpen} onOpenChange={setVehiclesOpen} />
       <SuppliersDialog open={suppliersOpen} onOpenChange={setSuppliersOpen} />

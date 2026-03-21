@@ -197,6 +197,7 @@ export interface ChartOfAccountsDialogProps {
 
 export interface FinanceSettingsProps {
   accounts: Account[];
+  types: Type[];
 }
 
 export interface FinanceCardProps {
@@ -207,4 +208,16 @@ export interface FinanceCardProps {
   bgColor: string;
   count?: string;
   onClick?: () => void;
+}
+
+export interface Type {
+  type_id: string;
+  name: string;
+}
+
+export interface TypesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  types: Type[];
+  onTypesChange?: (types: Type[]) => void;
 }

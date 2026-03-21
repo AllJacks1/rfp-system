@@ -16,14 +16,31 @@ async function getAccounts(supabase: SupabaseClient) {
   return data || [];
 }
 
+async function getTypes(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("types")
+    .select("type_id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching types:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export default async function FinanceSettingsPage() {
   const supabase = await createClient();
 
-  const [accounts] = await Promise.all([getAccounts(supabase)]);
+  const [accounts, types] = await Promise.all([
+    getAccounts(supabase),
+    getTypes(supabase),
+  ]);
 
   return (
     <div>
-      <FinanceSettings accounts={accounts}/>
+      <FinanceSettings accounts={accounts} types={types} />
     </div>
   );
 }

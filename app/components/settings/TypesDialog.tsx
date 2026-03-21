@@ -27,19 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   MoreHorizontal,
   Plus,
   Search,
   Shapes,
   Trash2,
-  Eye,
   Pencil,
   Tag,
   X,
@@ -52,103 +44,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Type, TypesDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
-interface Type {
-  id: string;
-  name: string;
-  category: "Service" | "Purchase" | "Product";
-  description: string;
-  usage: number;
-  status: "active" | "inactive";
-}
-
-const mockTypes: Type[] = [
-  {
-    id: "1",
-    name: "Consulting",
-    category: "Service",
-    description: "Professional consulting services",
-    usage: 156,
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Software License",
-    category: "Purchase",
-    description: "Software and digital licenses",
-    usage: 89,
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Hardware",
-    category: "Product",
-    description: "Physical equipment and devices",
-    usage: 234,
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Maintenance",
-    category: "Service",
-    description: "Repair and maintenance services",
-    usage: 67,
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Training",
-    category: "Service",
-    description: "Employee training programs",
-    usage: 45,
-    status: "inactive",
-  },
-];
-
-interface TypesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
+export default function TypesDialog({
+  open,
+  onOpenChange,
+  types: initialTypes = [],
+  onTypesChange,
+}: TypesDialogProps) {
+  const supabase = createClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [types, setTypes] = useState<Type[]>(mockTypes);
+  const [types, setTypes] = useState<Type[]>(initialTypes);
   const [formOpen, setFormOpen] = useState(false);
   const [editingType, setEditingType] = useState<Type | null>(null);
+  const [typeName, setTypeName] = useState("");
 
-  // Form state
-  const [formData, setFormData] = useState<Partial<Type>>({
-    name: "",
-    category: "Service",
-    description: "",
-    usage: 0,
-  });
+  // Sync with external types prop
+  useEffect(() => {
+    setTypes(initialTypes);
+  }, [initialTypes]);
 
-  const activeTypes = types.filter((t) => t.status === "active");
-  const filteredTypes = activeTypes.filter(
+  const filteredTypes = types.filter(
     (t) =>
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase())
+      t.type_id.includes(searchQuery),
   );
 
-  const handleRemove = (id: string) => {
-    setTypes((prev) => prev.filter((t) => t.id !== id));
+  const updateTypes = (newTypes: Type[]) => {
+    setTypes(newTypes);
+    onTypesChange?.(newTypes);
+  };
+
+  const handleRemove = async (type_id: string) => {
+    const { error } = await supabase
+      .from("types")
+      .delete()
+      .eq("type_id", type_id);
+
+    if (error) {
+      console.error("Error deleting type:", error);
+      return;
+    }
+
+    const newTypes = types.filter((t) => t.type_id !== type_id);
+    updateTypes(newTypes);
   };
 
   const handleOpenForm = (type?: Type) => {
     if (type) {
       setEditingType(type);
-      setFormData(type);
+      setTypeName(type.name);
     } else {
       setEditingType(null);
-      setFormData({
-        name: "",
-        category: "Service",
-        description: "",
-        usage: 0,
-      });
+      setTypeName("");
     }
     setFormOpen(true);
   };
@@ -156,57 +106,67 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingType(null);
-    setFormData({
-      name: "",
-      category: "Service",
-      description: "",
-      usage: 0,
-    });
+    setTypeName("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function createType(name: string) {
+    const { data, error } = await supabase
+      .from("types")
+      .insert({
+        name,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating type:", error);
+      return;
+    }
+
+    const newTypes = [...types, data];
+    updateTypes(newTypes);
+  }
+
+  async function editType(name: string) {
+    if (!editingType) return;
+
+    const { data, error } = await supabase
+      .from("types")
+      .update({ name })
+      .eq("type_id", editingType.type_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating type:", error);
+      return;
+    }
+
+    const newTypes = types.map((t) =>
+      t.type_id === editingType.type_id ? data : t,
+    );
+
+    updateTypes(newTypes);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!typeName) return;
+
     if (editingType) {
-      // Update existing
-      setTypes((prev) =>
-        prev.map((t) =>
-          t.id === editingType.id ? { ...t, ...(formData as Type) } : t
-        )
-      );
+      await editType(typeName);
     } else {
-      // Create new
-      const newType: Type = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || "",
-        category: (formData.category as Type["category"]) || "Service",
-        description: formData.description || "",
-        usage: formData.usage || 0,
-        status: "active",
-      };
-      setTypes((prev) => [...prev, newType]);
+      await createType(typeName);
     }
 
     handleCloseForm();
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "Service":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "Purchase":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case "Product":
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      default:
-        return "bg-slate-100 text-slate-700";
-    }
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-225 lg:max-w-275 w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-blue-600">
+        <DialogContent className="sm:max-w-[700px] lg:max-w-[800px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-blue-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-blue-600">
               <div className="p-2 rounded-lg bg-blue-50">
@@ -215,7 +175,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
               Types
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Manage service categories and purchase types used in transactions.
+              Manage transaction types and categories.
             </DialogDescription>
           </DialogHeader>
 
@@ -248,11 +208,11 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Transaction Types
                       <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200">
-                        {activeTypes.length}
+                        {types.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
-                      Service categories and purchase classifications
+                      Available transaction type classifications
                     </CardDescription>
                   </div>
                 </div>
@@ -263,18 +223,12 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead className="text-blue-600 font-semibold">
+                        Type ID
+                      </TableHead>
+                      <TableHead className="text-blue-600 font-semibold">
                         Type Name
                       </TableHead>
-                      <TableHead className="text-blue-600 font-semibold">
-                        Category
-                      </TableHead>
-                      <TableHead className="text-blue-600 font-semibold">
-                        Description
-                      </TableHead>
-                      <TableHead className="text-blue-600 font-semibold">
-                        Usage
-                      </TableHead>
-                      <TableHead className="w-25 text-blue-600 font-semibold">
+                      <TableHead className="w-[100px] text-blue-600 font-semibold">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -283,7 +237,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                     {filteredTypes.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={3}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -295,9 +249,14 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                     ) : (
                       filteredTypes.map((type) => (
                         <TableRow
-                          key={type.id}
+                          key={type.type_id}
                           className="hover:bg-blue-50/50 transition-colors"
                         >
+                          <TableCell>
+                            <span className="font-mono font-medium text-blue-600">
+                              {type.type_id}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
@@ -307,22 +266,6 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                                 {type.name}
                               </span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={getCategoryColor(type.category)}
-                            >
-                              {type.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600 max-w-xs truncate">
-                            {type.description}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-slate-100 text-slate-700 border-0">
-                              {type.usage} transactions
-                            </Badge>
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -340,10 +283,6 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                                   Actions
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-blue-50 hover:text-blue-600">
-                                  <Eye className="w-4 h-4 mr-2 text-blue-600" />
-                                  View Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-slate-700 cursor-pointer hover:bg-blue-50 hover:text-blue-600"
                                   onClick={() => handleOpenForm(type)}
@@ -354,7 +293,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(type.id)}
+                                  onClick={() => handleRemove(type.type_id)}
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -375,7 +314,7 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
 
       {/* Add/Edit Type Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-125 p-6 border-t-4 border-t-blue-600">
+        <DialogContent className="sm:max-w-[500px] p-6 border-t-4 border-t-blue-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl flex items-center gap-2 text-blue-600">
               <div className="p-2 rounded-lg bg-blue-50">
@@ -402,81 +341,12 @@ export default function TypesDialog({ open, onOpenChange }: TypesDialogProps) {
               <Input
                 id="name"
                 placeholder="e.g., Consulting"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
+                value={typeName}
+                onChange={(e) => setTypeName(e.target.value)}
                 className="border-slate-200 focus:border-blue-600 focus:ring-blue-600/20"
                 required
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="category" className="text-slate-700">
-                Category
-              </Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    category: value as Type["category"],
-                  }))
-                }
-              >
-                <SelectTrigger className="border-slate-200 focus:border-blue-600 focus:ring-blue-600/20">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Service">Service</SelectItem>
-                  <SelectItem value="Purchase">Purchase</SelectItem>
-                  <SelectItem value="Product">Product</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-700">
-                Description
-              </Label>
-              <Input
-                id="description"
-                placeholder="Brief description of this type..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                className="border-slate-200 focus:border-blue-600 focus:ring-blue-600/20"
-                required
-              />
-            </div>
-
-            {editingType && (
-              <div className="space-y-2">
-                <Label htmlFor="usage" className="text-slate-700">
-                  Usage Count
-                </Label>
-                <Input
-                  id="usage"
-                  type="number"
-                  placeholder="0"
-                  value={formData.usage}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      usage: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  className="border-slate-200 focus:border-blue-600 focus:ring-blue-600/20"
-                />
-                <p className="text-xs text-slate-500">
-                  Number of transactions using this type
-                </p>
-              </div>
-            )}
 
             <DialogFooter className="gap-2 mt-6">
               <Button
