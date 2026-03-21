@@ -198,6 +198,7 @@ export interface ChartOfAccountsDialogProps {
 export interface FinanceSettingsProps {
   accounts: Account[];
   types: Type[];
+  units: Unit[];
 }
 
 export interface FinanceCardProps {
@@ -220,4 +221,16 @@ export interface TypesDialogProps {
   onOpenChange: (open: boolean) => void;
   types: Type[];
   onTypesChange?: (types: Type[]) => void;
+}
+
+export interface Unit {
+  unit_id: string;
+  name: string;
+}
+
+export interface UnitsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  units: Unit[];
+  onUnitsChange?: (units: Unit[]) => void;
 }

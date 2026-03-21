@@ -27,19 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   MoreHorizontal,
   Plus,
   Search,
   Shapes,
   Trash2,
-  Eye,
   Pencil,
   Ruler,
   X,
@@ -52,111 +44,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Unit, UnitsDialogProps } from "@/lib/interfaces";
+import { createClient } from "@/lib/supabase/client";
 
-interface Unit {
-  id: string;
-  name: string;
-  symbol: string;
-  category: "Weight" | "Volume" | "Length" | "Area" | "Quantity" | "Time";
-  description: string;
-  status: "active" | "inactive";
-}
-
-const mockUnits: Unit[] = [
-  {
-    id: "1",
-    name: "Kilogram",
-    symbol: "kg",
-    category: "Weight",
-    description: "Metric unit of mass",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Piece",
-    symbol: "pc",
-    category: "Quantity",
-    description: "Individual item count",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Liter",
-    symbol: "L",
-    category: "Volume",
-    description: "Metric unit of volume",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Meter",
-    symbol: "m",
-    category: "Length",
-    description: "Metric unit of length",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Square Meter",
-    symbol: "m²",
-    category: "Area",
-    description: "Metric unit of area",
-    status: "active",
-  },
-  {
-    id: "6",
-    name: "Hour",
-    symbol: "hr",
-    category: "Time",
-    description: "Unit of time",
-    status: "inactive",
-  },
-];
-
-interface UnitsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
+export default function UnitsDialog({
+  open,
+  onOpenChange,
+  units: initialUnits = [],
+  onUnitsChange,
+}: UnitsDialogProps) {
+  const supabase = createClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [units, setUnits] = useState<Unit[]>(mockUnits);
+  const [units, setUnits] = useState<Unit[]>(initialUnits);
   const [formOpen, setFormOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [unitName, setUnitName] = useState("");
 
-  // Form state
-  const [formData, setFormData] = useState<Partial<Unit>>({
-    name: "",
-    symbol: "",
-    category: "Weight",
-    description: "",
-  });
+  // Sync with external units prop
+  useEffect(() => {
+    setUnits(initialUnits);
+  }, [initialUnits]);
 
-  const activeUnits = units.filter((u) => u.status === "active");
-  const filteredUnits = activeUnits.filter(
+  const filteredUnits = units.filter(
     (u) =>
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.category.toLowerCase().includes(searchQuery.toLowerCase())
+      u.unit_id.includes(searchQuery),
   );
 
-  const handleRemove = (id: string) => {
-    setUnits((prev) => prev.filter((u) => u.id !== id));
+  const updateUnits = (newUnits: Unit[]) => {
+    setUnits(newUnits);
+    onUnitsChange?.(newUnits);
+  };
+
+  const handleRemove = async (unit_id: string) => {
+    const { error } = await supabase
+      .from("units")
+      .delete()
+      .eq("unit_id", unit_id);
+
+    if (error) {
+      console.error("Error deleting unit:", error);
+      return;
+    }
+
+    const newUnits = units.filter((u) => u.unit_id !== unit_id);
+    updateUnits(newUnits);
   };
 
   const handleOpenForm = (unit?: Unit) => {
     if (unit) {
       setEditingUnit(unit);
-      setFormData(unit);
+      setUnitName(unit.name);
     } else {
       setEditingUnit(null);
-      setFormData({
-        name: "",
-        symbol: "",
-        category: "Weight",
-        description: "",
-      });
+      setUnitName("");
     }
     setFormOpen(true);
   };
@@ -164,56 +106,67 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingUnit(null);
-    setFormData({
-      name: "",
-      symbol: "",
-      category: "Weight",
-      description: "",
-    });
+    setUnitName("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function createUnit(name: string) {
+    const { data, error } = await supabase
+      .from("units")
+      .insert({
+        name,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating unit:", error);
+      return;
+    }
+
+    const newUnits = [...units, data];
+    updateUnits(newUnits);
+  }
+
+  async function updateUnit(name: string) {
+    if (!editingUnit) return;
+
+    const { data, error } = await supabase
+      .from("units")
+      .update({ name })
+      .eq("unit_id", editingUnit.unit_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating unit:", error);
+      return;
+    }
+
+    const newUnits = units.map((u) =>
+      u.unit_id === editingUnit.unit_id ? data : u,
+    );
+
+    updateUnits(newUnits);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!unitName) return;
+
     if (editingUnit) {
-      // Update existing
-      setUnits((prev) =>
-        prev.map((u) =>
-          u.id === editingUnit.id ? { ...u, ...(formData as Unit) } : u
-        )
-      );
+      await updateUnit(unitName);
     } else {
-      // Create new
-      const newUnit: Unit = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || "",
-        symbol: formData.symbol || "",
-        category: (formData.category as Unit["category"]) || "Weight",
-        description: formData.description || "",
-        status: "active",
-      };
-      setUnits((prev) => [...prev, newUnit]);
+      await createUnit(unitName);
     }
 
     handleCloseForm();
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Weight: "bg-sky-100 text-sky-700 border-sky-200",
-      Volume: "bg-blue-100 text-blue-700 border-blue-200",
-      Length: "bg-indigo-100 text-indigo-700 border-indigo-200",
-      Area: "bg-violet-100 text-violet-700 border-violet-200",
-      Quantity: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      Time: "bg-amber-100 text-amber-700 border-amber-200",
-    };
-    return colors[category] || "bg-slate-100 text-slate-700";
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[850px] lg:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-sky-600">
+        <DialogContent className="sm:max-w-[700px] lg:max-w-[800px] w-full max-h-[90vh] overflow-y-auto p-6 border-t-4 border-t-sky-600">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl flex items-center gap-2 text-sky-600">
               <div className="p-2 rounded-lg bg-sky-50">
@@ -256,7 +209,7 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                     <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
                       Measurement Units
                       <Badge className="bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-200">
-                        {activeUnits.length}
+                        {units.length}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="text-slate-500 mt-1">
@@ -271,16 +224,10 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                       <TableHead className="text-sky-600 font-semibold">
+                        Unit ID
+                      </TableHead>
+                      <TableHead className="text-sky-600 font-semibold">
                         Unit Name
-                      </TableHead>
-                      <TableHead className="text-sky-600 font-semibold">
-                        Symbol
-                      </TableHead>
-                      <TableHead className="text-sky-600 font-semibold">
-                        Category
-                      </TableHead>
-                      <TableHead className="text-sky-600 font-semibold">
-                        Description
                       </TableHead>
                       <TableHead className="w-[100px] text-sky-600 font-semibold">
                         Actions
@@ -291,7 +238,7 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                     {filteredUnits.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={3}
                           className="text-center text-slate-400 py-12"
                         >
                           <div className="flex flex-col items-center gap-2">
@@ -303,9 +250,14 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                     ) : (
                       filteredUnits.map((unit) => (
                         <TableRow
-                          key={unit.id}
+                          key={unit.unit_id}
                           className="hover:bg-sky-50/50 transition-colors"
                         >
+                          <TableCell>
+                            <span className="font-mono font-medium text-sky-600">
+                              {unit.unit_id}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600">
@@ -315,25 +267,6 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                                 {unit.name}
                               </span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className="font-mono text-sky-600 border-sky-300"
-                            >
-                              {unit.symbol}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={getCategoryColor(unit.category)}
-                            >
-                              {unit.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {unit.description}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -351,10 +284,6 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                                   Actions
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-sky-50 hover:text-sky-600">
-                                  <Eye className="w-4 h-4 mr-2 text-sky-600" />
-                                  View Details
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-slate-700 cursor-pointer hover:bg-sky-50 hover:text-sky-600"
                                   onClick={() => handleOpenForm(unit)}
@@ -365,7 +294,7 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600 cursor-pointer hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleRemove(unit.id)}
+                                  onClick={() => handleRemove(unit.unit_id)}
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove
@@ -406,81 +335,15 @@ export default function UnitsDialog({ open, onOpenChange }: UnitsDialogProps) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-700">
-                  Unit Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Kilogram"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="border-slate-200 focus:border-sky-600 focus:ring-sky-600/20"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="symbol" className="text-slate-700">
-                  Symbol
-                </Label>
-                <Input
-                  id="symbol"
-                  placeholder="e.g., kg"
-                  value={formData.symbol}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, symbol: e.target.value }))
-                  }
-                  className="border-slate-200 focus:border-sky-600 focus:ring-sky-600/20 font-mono"
-                  required
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label htmlFor="category" className="text-slate-700">
-                Category
-              </Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    category: value as Unit["category"],
-                  }))
-                }
-              >
-                <SelectTrigger className="border-slate-200 focus:border-sky-600 focus:ring-sky-600/20">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Weight">Weight</SelectItem>
-                  <SelectItem value="Volume">Volume</SelectItem>
-                  <SelectItem value="Length">Length</SelectItem>
-                  <SelectItem value="Area">Area</SelectItem>
-                  <SelectItem value="Quantity">Quantity</SelectItem>
-                  <SelectItem value="Time">Time</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-700">
-                Description
+              <Label htmlFor="name" className="text-slate-700">
+                Unit Name
               </Label>
               <Input
-                id="description"
-                placeholder="Brief description of this unit..."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
+                id="name"
+                placeholder="e.g., Kilogram"
+                value={unitName}
+                onChange={(e) => setUnitName(e.target.value)}
                 className="border-slate-200 focus:border-sky-600 focus:ring-sky-600/20"
                 required
               />

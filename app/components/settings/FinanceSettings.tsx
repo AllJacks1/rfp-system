@@ -28,6 +28,7 @@ import { FinanceCardProps, FinanceSettingsProps } from "@/lib/interfaces";
 export default function FinanceSettings({
   accounts,
   types,
+  units,
 }: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
@@ -65,7 +66,7 @@ export default function FinanceSettings({
       icon: Shapes,
       color: "text-sky-600",
       bgColor: "bg-sky-50",
-      count: "12 units",
+      count: `${units.length} units`,
       onClick: () => setUnitsOpen(true),
     },
     {
@@ -199,7 +200,7 @@ export default function FinanceSettings({
         accounts={accounts}
       />
       <TypesDialog open={typesOpen} onOpenChange={setTypesOpen} types={types} />
-      <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} />
+      <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} units={units} />
       <AssetVehiclesDialog open={vehiclesOpen} onOpenChange={setVehiclesOpen} />
       <SuppliersDialog open={suppliersOpen} onOpenChange={setSuppliersOpen} />
       <BanksDialog open={banksOpen} onOpenChange={setBanksOpen} />
