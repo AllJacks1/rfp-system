@@ -200,6 +200,7 @@ export interface FinanceSettingsProps {
   types: Type[];
   units: Unit[];
   vehicles: Vehicle[];
+  vendors: Vendor[];
 }
 
 export interface FinanceCardProps {
@@ -249,4 +250,18 @@ export interface AssetVehiclesDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicles: Vehicle[];
   onVehiclesChange?: (vehicles: Vehicle[]) => void;
+}
+
+export interface Vendor {
+  vendor_id: string;
+  name: string;
+  contact_person?: string;
+  payment_terms?: string;
+}
+
+export interface SuppliersDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  vendors: Vendor[];
+  onVendorsChange?: (vendors: Vendor[]) => void;
 }

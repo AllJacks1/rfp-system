@@ -60,14 +60,29 @@ async function getVehicles(supabase: SupabaseClient) {
   return data || [];
 }
 
+async function getVendors(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select("vendor_id, name, contact_person, payment_terms")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching vendors:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export default async function FinanceSettingsPage() {
   const supabase = await createClient();
 
-  const [accounts, types, units, vehicles] = await Promise.all([
+  const [accounts, types, units, vehicles, vendors] = await Promise.all([
     getAccounts(supabase),
     getTypes(supabase),
     getUnits(supabase),
     getVehicles(supabase),
+    getVendors(supabase),
   ]);
 
   return (
@@ -77,6 +92,7 @@ export default async function FinanceSettingsPage() {
         types={types}
         units={units}
         vehicles={vehicles}
+        vendors={vendors}
       />
     </div>
   );

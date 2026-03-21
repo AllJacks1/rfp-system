@@ -30,6 +30,7 @@ export default function FinanceSettings({
   types,
   units,
   vehicles,
+  vendors,
 }: FinanceSettingsProps) {
   const [chartOfAccountsOpen, setChartOfAccountsOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
@@ -57,7 +58,7 @@ export default function FinanceSettings({
       icon: Shapes,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      count: `${types.length} types or categories`,
+      count: `${types.length} types and or categories`,
       onClick: () => setTypesOpen(true),
     },
     {
@@ -87,7 +88,7 @@ export default function FinanceSettings({
       icon: Store,
       color: "text-violet-600",
       bgColor: "bg-violet-50",
-      count: "45 suppliers",
+      count: `${vendors.length} vendors and or suppliers`,
       onClick: () => setSuppliersOpen(true),
     },
     {
@@ -172,7 +173,7 @@ export default function FinanceSettings({
         <Card className="border-0 shadow-sm bg-white">
           <CardContent className="p-4">
             <p className="text-sm text-slate-500 mb-1">Active Vendors</p>
-            <p className="text-2xl font-bold text-emerald-600">45</p>
+            <p className="text-2xl font-bold text-emerald-600">{vendors.length}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm bg-white">
@@ -203,7 +204,7 @@ export default function FinanceSettings({
       <TypesDialog open={typesOpen} onOpenChange={setTypesOpen} types={types} />
       <UnitsDialog open={unitsOpen} onOpenChange={setUnitsOpen} units={units} />
       <AssetVehiclesDialog open={vehiclesOpen} onOpenChange={setVehiclesOpen} vehicles={vehicles} />
-      <SuppliersDialog open={suppliersOpen} onOpenChange={setSuppliersOpen} />
+      <SuppliersDialog open={suppliersOpen} onOpenChange={setSuppliersOpen} vendors={vendors}/>
       <BanksDialog open={banksOpen} onOpenChange={setBanksOpen} />
       <PaymentMethodsDialog
         open={paymentMethodsOpen}
