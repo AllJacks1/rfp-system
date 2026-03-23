@@ -70,6 +70,126 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+// Reusable Combobox Component
+function SearchableCombobox({
+  value,
+  onSelect,
+  options,
+  placeholder = "Search...",
+  emptyMessage = "No results found.",
+  searchPlaceholder = "Search...",
+  displayKey = "name",
+  valueKey = "id",
+  optional = false,
+  optionalLabel,
+  align = "start",
+  disabled = false,
+}: {
+  value: string;
+  onSelect: (value: string, item: any) => void;
+  options: any[];
+  placeholder?: string;
+  emptyMessage?: string;
+  searchPlaceholder?: string;
+  displayKey?: string;
+  valueKey?: string;
+  optional?: boolean;
+  optionalLabel?: string;
+  align?: "start" | "center" | "end";
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const selectedItem = options?.find((opt) => opt?.[valueKey] === value);
+  const displayValue = selectedItem?.[displayKey] || value;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn(
+            "w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-normal transition-colors",
+            !value && "text-slate-500",
+            value && "text-slate-900",
+          )}
+        >
+          <span className="truncate">{displayValue || placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align={align}
+      >
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {optional && (
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    onSelect("", null);
+                    setOpen(false);
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4 shrink-0",
+                      !value ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="text-slate-500 italic">
+                    {optionalLabel || "None"}
+                  </span>
+                </CommandItem>
+              )}
+              {Array.isArray(options) &&
+                options.map((option) => {
+                  if (!option?.[valueKey]) return null;
+                  const isSelected = value === option[valueKey];
+
+                  return (
+                    <CommandItem
+                      key={option[valueKey]}
+                      value={option[displayKey]}
+                      onSelect={() => {
+                        onSelect(option[valueKey], option);
+                        setOpen(false);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4 shrink-0",
+                          isSelected ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate">{option[displayKey]}</span>
+                        {option.subtitle && (
+                          <span className="text-xs text-slate-400 truncate">
+                            {option.subtitle}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function CreateServiceRequestForm({
   types,
   companies,
@@ -85,22 +205,17 @@ export default function CreateServiceRequestForm({
   const [department, setDepartment] = useState<string>("");
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [openPopover, setOpenPopover] = useState(false);
+
+  // Popover states (managed internally by SearchableCombobox now)
   const [selectedVendor, setSelectedVendor] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [contactTouched, setContactTouched] = useState(false);
-  const selectedType = types?.find((t) => t.type_id === category);
-  const selectedCompany = companies?.find((c) => c.company_id === company);
-  const selectedDepartment = departments?.find(
-    (d) => d.department_id === department,
-  );
+  const [openPopover, setOpenPopover] = useState(false);
+
   const selectedPlateNumber = vehicles?.find(
     (p) => p.vehicle_id === plateNumber,
-  );
-  const selectedPaymentMethod = paymentMethods?.find(
-    (p) => p.payment_method_id === paymentMethod,
   );
 
   // Form state for new item
@@ -239,23 +354,77 @@ export default function CreateServiceRequestForm({
   );
 
   // --- Safe Contact Change Handler ---
-  const handleContactChange = useCallback((e: any) => {
-    const value = e.target?.value ?? "";
-    setContactPerson(value);
-    setContactTouched(true);
-    setIsContactAutoFilled(false);
-  }, []);
+  const handleContactChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target?.value ?? "";
+      setContactPerson(value);
+      setContactTouched(true);
+      setIsContactAutoFilled(false);
+    },
+    [],
+  );
 
   // --- Clear auto-fill visual on focus ---
   const handleContactFocus = useCallback(
-    (e: any) => {
+    (e: React.FocusEvent<HTMLInputElement>) => {
       if (isContactAutoFilled) {
-        // Optional: select all text for easy replacement
         e.target?.select?.();
       }
     },
     [isContactAutoFilled],
   );
+
+  // Prepare options with subtitles for better UX
+  const vehicleOptions = useMemo(() => {
+    return (
+      vehicles?.map((v) => ({
+        ...v,
+        id: v.vehicle_id,
+        name: v.plate_number,
+        subtitle: `${v.car_type} • ${v.owners_first_name} ${v.owners_last_name}`,
+      })) || []
+    );
+  }, [vehicles]);
+
+  const companyOptions = useMemo(() => {
+    return (
+      companies?.map((c) => ({
+        ...c,
+        id: c.company_id,
+        name: c.name,
+      })) || []
+    );
+  }, [companies]);
+
+  const departmentOptions = useMemo(() => {
+    return (
+      departments?.map((d) => ({
+        ...d,
+        id: d.department_id,
+        name: d.name,
+      })) || []
+    );
+  }, [departments]);
+
+  const typeOptions = useMemo(() => {
+    return (
+      types?.map((t) => ({
+        ...t,
+        id: t.type_id,
+        name: t.name,
+      })) || []
+    );
+  }, [types]);
+
+  const paymentMethodOptions = useMemo(() => {
+    return (
+      paymentMethods?.map((p) => ({
+        ...p,
+        id: p.payment_method_id,
+        name: p.name,
+      })) || []
+    );
+  }, [paymentMethods]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -313,39 +482,27 @@ export default function CreateServiceRequestForm({
                 />
               </div>
 
-              {/* Grid Layout */}
+              {/* Grid Layout - All Searchable */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* Service Category - Now Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-slate-400" />
                     Service Category
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${
-                          category ? "text-slate-900" : "text-slate-500"
-                        }`}
-                      >
-                        {selectedType?.name || "Select category"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {(types ?? []).map((type) => (
-                        <DropdownMenuItem
-                          key={type.type_id}
-                          className="cursor-pointer"
-                          onClick={() => setCategory(type.type_id)}
-                        >
-                          {type.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={category}
+                    onSelect={(id) => setCategory(id)}
+                    options={typeOptions}
+                    placeholder="Search or select category..."
+                    searchPlaceholder="Search categories..."
+                    emptyMessage="No categories found."
+                    valueKey="type_id"
+                    displayKey="name"
+                  />
                 </div>
 
+                {/* Priority - Kept as Dropdown for quick selection */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <div
@@ -398,87 +555,69 @@ export default function CreateServiceRequestForm({
                   </DropdownMenu>
                 </div>
 
+                {/* Company - Now Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-slate-400" />
                     Company
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${company ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {selectedCompany?.name || "Select company"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {(companies ?? []).map((comp) => (
-                        <DropdownMenuItem
-                          key={comp.company_id}
-                          className="cursor-pointer"
-                          onClick={() => setCompany(comp.company_id)}
-                        >
-                          {comp.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={company}
+                    onSelect={(id) => setCompany(id)}
+                    options={companyOptions}
+                    placeholder="Search or select company..."
+                    searchPlaceholder="Search companies..."
+                    emptyMessage="No companies found."
+                    valueKey="company_id"
+                    displayKey="name"
+                  />
                 </div>
 
+                {/* Department - Now Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Department
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${department ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {selectedDepartment?.name || "Select department"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {(departments ?? []).map((dept) => (
-                        <DropdownMenuItem
-                          key={dept.department_id}
-                          className="cursor-pointer"
-                          onClick={() => setDepartment(dept.department_id)}
-                        >
-                          {dept.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={department}
+                    onSelect={(id) => setDepartment(id)}
+                    options={departmentOptions}
+                    placeholder="Search or select department..."
+                    searchPlaceholder="Search departments..."
+                    emptyMessage="No departments found."
+                    valueKey="department_id"
+                    displayKey="name"
+                    optional
+                    optionalLabel="No Department"
+                  />
                 </div>
 
+                {/* Preferred Date */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-slate-400" />
                     Preferred Date
                   </Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       type="date"
-                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
                 </div>
 
+                {/* Expected Completion */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-slate-400" />
                     Expected Completion
                   </Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       type="date"
-                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
                 </div>
@@ -532,67 +671,62 @@ export default function CreateServiceRequestForm({
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Plate Number - Now Searchable with rich info */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     Plate Number
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {selectedPlateNumber?.plate_number ||
-                          "Select plate number"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {vehicles.map((vehicle) => (
-                        <DropdownMenuItem
-                          key={vehicle.vehicle_id}
-                          className="cursor-pointer"
-                          onClick={() => setPlateNumber(vehicle.vehicle_id)}
-                        >
-                          {vehicle.plate_number}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={plateNumber}
+                    onSelect={(id, vehicle) => setPlateNumber(id)}
+                    options={vehicleOptions}
+                    placeholder="Search or select plate..."
+                    searchPlaceholder="Search by plate, type, or owner..."
+                    emptyMessage="No vehicles found."
+                    valueKey="vehicle_id"
+                    displayKey="plate_number"
+                    optional
+                    optionalLabel="No Vehicle"
+                  />
                 </div>
 
+                {/* Car Type - Read only display */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Car Type
                   </Label>
                   <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
                     {selectedPlateNumber?.car_type || (
-                      <span className="text-slate-400">Partner's car type</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Owner&apos;s first name
-                  </Label>
-                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
-                    {selectedPlateNumber?.owners_first_name || (
                       <span className="text-slate-400">
-                        Car owner's first name
+                        Select vehicle first
                       </span>
                     )}
                   </div>
                 </div>
 
+                {/* Owner's First Name - Read only */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner&apos;s last name
+                    Owner&apos;s First Name
+                  </Label>
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.owners_first_name || (
+                      <span className="text-slate-400">
+                        Select vehicle first
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Owner's Last Name - Read only */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Owner&apos;s Last Name
                   </Label>
                   <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
                     {selectedPlateNumber?.owners_last_name || (
                       <span className="text-slate-400">
-                        Car owner's last name
+                        Select vehicle first
                       </span>
                     )}
                   </div>
@@ -647,9 +781,29 @@ export default function CreateServiceRequestForm({
                         <CommandList>
                           <CommandEmpty>No vendors found.</CommandEmpty>
                           <CommandGroup>
+                            <CommandItem
+                              value=""
+                              onSelect={() => {
+                                setSelectedVendor("");
+                                setSelectedVendorId("");
+                                setContactPerson("");
+                                setIsContactAutoFilled(false);
+                                setOpenPopover(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4 shrink-0",
+                                  !selectedVendor ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <span className="text-slate-500 italic">
+                                None
+                              </span>
+                            </CommandItem>
                             {Array.isArray(vendors) &&
                               vendors.map((vendor) => {
-                                // Defensive: skip invalid vendor objects
                                 if (!vendor?.vendor_id || !vendor?.name)
                                   return null;
 
@@ -747,38 +901,22 @@ export default function CreateServiceRequestForm({
                   </div>
                 </div>
 
-                {/* Payment Method */}
+                {/* Payment Method - Now Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-slate-400" />
                     Payment Method
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-between h-11 border-slate-200",
-                          "hover:border-slate-300 hover:bg-slate-50 transition-colors",
-                          paymentMethod ? "text-slate-900" : "text-slate-500",
-                        )}
-                      >
-                        {selectedPaymentMethod?.name || "Select method"}
-                        <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {paymentMethods.map((method) => (
-                        <DropdownMenuItem
-                          key={method.payment_method_id}
-                          className="cursor-pointer"
-                          onClick={() => setPaymentMethod(method.payment_method_id)}
-                        >
-                          {method.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={paymentMethod}
+                    onSelect={(id) => setPaymentMethod(id)}
+                    options={paymentMethodOptions}
+                    placeholder="Search or select payment..."
+                    searchPlaceholder="Search payment methods..."
+                    emptyMessage="No payment methods found."
+                    valueKey="payment_method_id"
+                    displayKey="name"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -1064,7 +1202,7 @@ export default function CreateServiceRequestForm({
                       <span className="text-base font-semibold text-slate-900">
                         Total Estimated Cost
                       </span>
-                      <span className="text-2xl font-bold text-violet-600 font-mono">
+                      <span className="text-2xl font-bold text-[#2B3A9F] font-mono">
                         {formatCurrency(grandTotal)}
                       </span>
                     </div>
