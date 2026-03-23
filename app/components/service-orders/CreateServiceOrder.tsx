@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useReactToPrint } from "react-to-print";
@@ -36,7 +36,6 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
-  Download,
   Printer,
   Plus,
   ArrowLeftRight,
@@ -55,34 +54,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { PrintServiceOrder } from "./PrintServiceOrderPage";
-import { Request } from "@/lib/interfaces";
-
-export interface Item {
-  name: string;
-  description: string;
-  unit: string;
-  quantity: string;
-  unitPrice: string;
-}
-
-export interface Vehicle {
-  vehicle_id: string;
-  plate_number: string;
-  car_type: string;
-  owners_first_name: string;
-  owners_last_name: string;
-}
-
-interface JournalEntry {
-  id: number;
-  accountTitle: string;
-  amount: number;
-  entryType: "debit" | "credit";
-}
-
-interface RequestDetailsPageProps {
-  request: Request;
-}
+import { createClient } from "@/lib/supabase/client";
+import { Item, JournalEntry, RequestDetailsPageProps } from "@/lib/interfaces";
 
 const statusConfig: Record<
   string,
@@ -169,6 +142,7 @@ function DetailItem({
 
 export default function RequestDetailsPage({
   request,
+  accounts,
 }: RequestDetailsPageProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [accountTitle, setAccountTitle] = useState("");
@@ -177,6 +151,19 @@ export default function RequestDetailsPage({
 
   const searchParams = useSearchParams();
   const requestId = searchParams.get("id");
+
+  useEffect(() => {
+  if (request?.journal_entries) {
+    setEntries(
+      request.journal_entries.map((j) => ({
+        id: j.id,
+        accountTitle: j.accountTitle,
+        amount: j.amount,
+        entryType: j.entryType,
+      }))
+    );
+  }
+}, [request]);
 
   // react-to-print setup
   const contentRef = useRef<HTMLDivElement>(null);
@@ -198,8 +185,12 @@ export default function RequestDetailsPage({
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) return;
 
+    // Use incrementing number (1, 2, 3...) instead of timestamp
+    const newId =
+      entries.length > 0 ? Math.max(...entries.map((e) => e.id)) + 1 : 1;
+
     const newEntry: JournalEntry = {
-      id: Date.now(),
+      id: newId,
       accountTitle,
       amount: parsedAmount,
       entryType,
@@ -229,6 +220,38 @@ export default function RequestDetailsPage({
     () => calculateTotal(request.items),
     [request.items],
   );
+
+  async function handleUpdateJournalEntries() {
+    // Use request.id from props instead of searchParams
+    if (!request?.id) return;
+
+    if (entries.length === 0 || totalDebits !== totalCredits) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+
+      // Clean payload for JSONB - convert id to number (already is)
+      const payload = entries.map((e) => ({
+        id: e.id, // Simple incrementing number
+        accountTitle: e.accountTitle,
+        amount: e.amount,
+        entryType: e.entryType,
+      }));
+
+      const { data, error } = await supabase
+        .from("service_requests")
+        .update({ journal_entries: payload }) // JSONB column
+        .eq("id", request.id);
+
+      if (error) throw error;
+
+      console.log("Saved to journal_entries (JSONB):", payload);
+    } catch (err) {
+      console.error("Save failed:", err);
+    }
+  }
 
   if (!request) {
     return (
@@ -611,17 +634,11 @@ export default function RequestDetailsPage({
                     <SelectValue placeholder="Select account..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="accounts-receivable">
-                      Accounts Receivable
-                    </SelectItem>
-                    <SelectItem value="inventory">Inventory</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                    <SelectItem value="accounts-payable">
-                      Accounts Payable
-                    </SelectItem>
-                    <SelectItem value="expenses">Expenses</SelectItem>
-                    <SelectItem value="revenue">Revenue</SelectItem>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.account_id} value={account.name}>
+                        {account.account_type} - {account.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -840,7 +857,10 @@ export default function RequestDetailsPage({
               <Button variant="outline" onClick={() => setEntries([])}>
                 Clear All
               </Button>
-              <Button disabled={!isBalanced || entries.length === 0}>
+              <Button
+                onClick={handleUpdateJournalEntries}
+                disabled={!isBalanced || entries.length === 0}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 Save Journal Entry
               </Button>

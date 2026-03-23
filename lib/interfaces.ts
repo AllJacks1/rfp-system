@@ -320,7 +320,7 @@ export interface Request {
   items: Item[];
   status: string;
   requested_by: string;
-  journal_entries?: string;
+  journal_entries?: JournalEntry[];
 }
 
 export interface Item {
@@ -346,4 +346,12 @@ export interface ServiceOrderProps {
 
 export interface RequestDetailsPageProps {
   request: Request;
+  accounts: Account[];
+}
+
+export interface JournalEntry {
+  id: number;
+  accountTitle: string;
+  amount: number;
+  entryType: "debit" | "credit";
 }

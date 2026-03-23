@@ -75,7 +75,27 @@ async function getRequest(supabase: any, id: string): Promise<Request | null> {
     requested_by: data.requested_by
       ? `${data.requested_by.first_name} ${data.requested_by.last_name}`
       : "",
+    journal_entries: (data.journal_entries || []).map((j: any) => ({
+      id: j.id,
+      accountTitle: j.accountTitle,
+      amount: j.amount,
+      entryType: j.entryType,
+    })),
   };
+}
+
+async function getChartOfAccounts(supabase: any) {
+  const { data, error } = await supabase
+    .from("chart_of_accounts")
+    .select("account_id, account_type, name")
+    .order("account_type", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching chart of accounts:", error);
+    return [];
+  }
+
+  return data || [];
 }
 
 export default async function CreateServiceOrderPage({ params }: PageProps) {
@@ -83,6 +103,7 @@ export default async function CreateServiceOrderPage({ params }: PageProps) {
   const supabase = await createClient();
 
   const request = await getRequest(supabase, requestId);
+  const accounts = await getChartOfAccounts(supabase);
 
   if (!request) {
     notFound();
@@ -90,7 +111,7 @@ export default async function CreateServiceOrderPage({ params }: PageProps) {
 
   return (
     <div>
-      <CreateServiceOrder request={request} />
+      <CreateServiceOrder request={request} accounts={accounts} />
     </div>
   );
 }
