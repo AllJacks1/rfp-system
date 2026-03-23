@@ -90,16 +90,38 @@ async function getDepartments(supabase: any): Promise<Department[]> {
   );
 }
 
+async function getVehicles(supabase: any) {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select(
+      "vehicle_id, plate_number, car_type, owners_first_name, owners_last_name",
+    )
+    .order("plate_number", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching types:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export default async function CreateServiceRequestPage() {
   const supabase = await createClient();
 
   const types = await getTypes(supabase);
   const companies = await getCompanies(supabase);
   const departments = await getDepartments(supabase);
+  const vehicles = await getVehicles(supabase);
 
   return (
     <div>
-      <CreateServiceRequestForm types={types} companies={companies} departments={departments}/>
+      <CreateServiceRequestForm
+        types={types}
+        companies={companies}
+        departments={departments}
+        vehicles={vehicles}
+      />
     </div>
   );
 }

@@ -71,7 +71,12 @@ export default function CreateServiceRequestForm({
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const selectedType = types?.find((t) => t.type_id === category);
   const selectedCompany = companies?.find((c) => c.company_id === company);
-  const selectedDepartment = departments?.find((d) => d.department_id === department);
+  const selectedDepartment = departments?.find(
+    (d) => d.department_id === department,
+  );
+  const selectedPlateNumber = vehicles?.find(
+    (p) => p.vehicle_id === plateNumber,
+  );
 
   // Form state for new item
   const [newItem, setNewItem] = useState({
@@ -446,24 +451,19 @@ export default function CreateServiceRequestForm({
                         variant="outline"
                         className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
                       >
-                        {plateNumber || "Select plate number"}
+                        {selectedPlateNumber?.plate_number ||
+                          "Select plate number"}
                         <ChevronDown className="h-4 w-4 text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "NAA 1234",
-                        "CAB 5678",
-                        "FAG 9012",
-                        "LDT 3456",
-                        "NHV 7890",
-                      ].map((number) => (
+                      {vehicles.map((vehicle) => (
                         <DropdownMenuItem
-                          key={number}
+                          key={vehicle.vehicle_id}
                           className="cursor-pointer"
-                          onClick={() => setPlateNumber(number)}
+                          onClick={() => setPlateNumber(vehicle.vehicle_id)}
                         >
-                          {number}
+                          {vehicle.plate_number}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -474,30 +474,37 @@ export default function CreateServiceRequestForm({
                   <Label className="text-sm font-medium text-slate-700">
                     Car Type
                   </Label>
-                  <Input
-                    placeholder="Partner's car type"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.car_type || (
+                      <span className="text-slate-400">Partner's car type</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner&rsquo;s first name
+                    Owner&apos;s first name
                   </Label>
-                  <Input
-                    placeholder="Car owner's first name"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.owners_first_name || (
+                      <span className="text-slate-400">
+                        Car owner's first name
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner&rsquo;s last name
+                    Owner&apos;s last name
                   </Label>
-                  <Input
-                    placeholder="Car owner's last name"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.owners_last_name || (
+                      <span className="text-slate-400">
+                        Car owner's last name
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
