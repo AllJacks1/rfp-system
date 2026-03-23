@@ -85,6 +85,12 @@ export default function CreateServiceRequestForm({
   const [department, setDepartment] = useState<string>("");
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [openPopover, setOpenPopover] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [contactTouched, setContactTouched] = useState(false);
   const selectedType = types?.find((t) => t.type_id === category);
   const selectedCompany = companies?.find((c) => c.company_id === company);
   const selectedDepartment = departments?.find(
@@ -93,8 +99,9 @@ export default function CreateServiceRequestForm({
   const selectedPlateNumber = vehicles?.find(
     (p) => p.vehicle_id === plateNumber,
   );
-  const [openPopover, setOpenPopover] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState("");
+  const selectedPaymentMethod = paymentMethods?.find(
+    (p) => p.payment_method_id === paymentMethod,
+  );
 
   // Form state for new item
   const [newItem, setNewItem] = useState({
@@ -104,10 +111,6 @@ export default function CreateServiceRequestForm({
     quantity: 0,
     unitPrice: 0,
   });
-  const [contactPerson, setContactPerson] = useState("");
-  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [contactTouched, setContactTouched] = useState(false);
 
   // Calculate item total
   const itemTotal = useMemo(() => {
@@ -760,24 +763,18 @@ export default function CreateServiceRequestForm({
                           paymentMethod ? "text-slate-900" : "text-slate-500",
                         )}
                       >
-                        {paymentMethod || "Select method"}
+                        {selectedPaymentMethod?.name || "Select method"}
                         <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Cash",
-                        "Check",
-                        "Bank Transfer",
-                        "Credit Card",
-                        "Charge to Account",
-                      ].map((method) => (
+                      {paymentMethods.map((method) => (
                         <DropdownMenuItem
-                          key={method}
+                          key={method.payment_method_id}
                           className="cursor-pointer"
-                          onClick={() => setPaymentMethod(method)}
+                          onClick={() => setPaymentMethod(method.payment_method_id)}
                         >
-                          {method}
+                          {method.name}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
