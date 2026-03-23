@@ -33,18 +33,6 @@ export interface SelectedRequest {
   description: string;
 }
 
-export interface Request {
-  id: string;
-  title: string;
-  purchaseType: string;
-  requestor: string;
-  department: string;
-  amount: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  description: string;
-}
-
 export interface InfoItemProps {
   label: string;
   value: React.ReactNode;
@@ -310,4 +298,33 @@ export interface CreateServiceRequestFormProps {
   vendors: Vendor[],
   paymentMethods: PaymentMethod[],
   units: Unit[],
+}
+
+export interface Request {
+  id: string;
+  request_number: string;
+  title: string;
+  description: string;
+  service_category: string;
+  priority_level: string;
+  company: string;
+  department: string;
+  preferred_date: string;
+  expected_completion: string;
+  supporting_documents: string[];
+  vehicle: Vehicle;
+  preferred_vendor: string;
+  contact_person: string;
+  required_by: string;
+  payment_method: string;
+  items: Item[];
+  status: string;
+}
+
+export interface Item {
+  name: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  unitPrice: string;
 }

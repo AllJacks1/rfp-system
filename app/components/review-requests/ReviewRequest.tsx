@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,359 +30,96 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { InfoItemProps } from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
-// Types
-interface Request {
+export interface Request {
   id: string;
+  request_number: string;
   title: string;
-  type: string;
-  priority: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
+  description: string;
+  service_category: string;
+  priority_level: string;
   company: string;
   department: string;
-  amount: string;
-  description: string;
-  preferredDate: string;
-  expectedCompletion: string;
-  attachment: string[];
-  plateNumber: string;
-  carType: string;
-  ownerFirstname: string;
-  ownerLastname: string;
-  preferredVendor: string;
-  vendorContactPerson: string;
-  requiredBy: string;
-  paymentMethod: string;
-  items: {
-    item: string;
-    description: string;
-    unit: string;
-    quantity: string;
-    estimatedUnitPrice: string;
-  }[];
-  totalEstimatedCost: string;
+  preferred_date: string;
+  expected_completion: string;
+  supporting_documents: string[];
+  vehicle: Vehicle;
+  preferred_vendor: string;
+  contact_person: string;
+  required_by: string;
+  payment_method: string;
+  items: Item[];
+  status: string;
 }
 
-const mockRequests: Request[] = [
-  {
-    id: "REQ-2024-001",
-    title: "Laptop Upgrades for Dev Team",
-    type: "IT Equipment",
-    priority: "High",
-    status: "submitted",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    company: "TechNova Solutions",
-    department: "Engineering",
-    amount: "$12,500",
-    description:
-      "Upgrade laptops for development team to handle heavier workloads.",
-    preferredDate: "2024-03-18",
-    expectedCompletion: "2024-03-25",
-    attachment: ["laptop-specs.pdf", "laptop-specs.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Dell Technologies",
-    vendorContactPerson: "Michael Reyes",
-    requiredBy: "2024-03-25",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Dell XPS 15",
-        description: "Intel i7, 32GB RAM, 1TB SSD",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$2,300",
-      },
-      {
-        item: "Laptop Docking Station",
-        description: "USB-C docking station",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$12,250",
-  },
+export interface Item {
+  name: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  unitPrice: string;
+}
 
-  {
-    id: "REQ-2024-002",
-    title: "Q1 Office Supplies",
-    type: "Office Supplies",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    company: "TechNova Solutions",
-    department: "Administration",
-    amount: "$850",
-    description: "Quarterly restocking of office supplies.",
-    preferredDate: "2024-03-12",
-    expectedCompletion: "2024-03-14",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Office Warehouse",
-    vendorContactPerson: "Ana Santos",
-    requiredBy: "2024-03-15",
-    paymentMethod: "Company Credit Card",
-    items: [
-      {
-        item: "Printer Paper",
-        description: "A4 80gsm",
-        unit: "ream",
-        quantity: "20",
-        estimatedUnitPrice: "$5",
-      },
-      {
-        item: "Ballpoint Pens",
-        description: "Blue ink",
-        unit: "box",
-        quantity: "10",
-        estimatedUnitPrice: "$8",
-      },
-      {
-        item: "Staplers",
-        description: "Standard office stapler",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$12",
-      },
-    ],
-    totalEstimatedCost: "$850",
-  },
+export interface Vehicle {
+  vehicle_id: string;
+  plate_number: string;
+  car_type: string;
+  owners_first_name: string;
+  owners_last_name: string;
+}
 
-  {
-    id: "REQ-2024-003",
-    title: "Vehicle Tire Replacement",
-    type: "Vehicle Maintenance",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-07",
-    requestor: "Carlos Mendoza",
-    company: "TechNova Logistics",
-    department: "Operations",
-    amount: "$1,200",
-    description: "Replace worn-out tires for delivery vehicle.",
-    preferredDate: "2024-03-11",
-    expectedCompletion: "2024-03-11",
-    attachment: ["vehicle-inspection.jpg", "vehicle-inspection.jpg"],
-    plateNumber: "ABC-1234",
-    carType: "Toyota Hilux",
-    ownerFirstname: "Carlos",
-    ownerLastname: "Mendoza",
-    preferredVendor: "Goodyear Service Center",
-    vendorContactPerson: "Luis Ramirez",
-    requiredBy: "2024-03-11",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "All-Terrain Tire",
-        description: "265/65R17 Goodyear Wrangler",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$250",
-      },
-      {
-        item: "Chrome Valve Stems",
-        description: "Heavy-duty chrome valve stems",
-        unit: "set",
-        quantity: "4",
-        estimatedUnitPrice: "$12",
-      },
-      {
-        item: "Tire Pressure Sensors",
-        description: "TPMS sensors for Toyota Hilux",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$45",
-      },
-      {
-        item: "Wheel Balancing",
-        description: "Computer wheel balancing",
-        unit: "wheel",
-        quantity: "4",
-        estimatedUnitPrice: "$15",
-      },
-      {
-        item: "Wheel Alignment",
-        description: "Full alignment service",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$100",
-      },
-      {
-        item: "Tire Rotation Service",
-        description: "Professional tire rotation",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$35",
-      },
-      {
-        item: "Nitrogen Tire Inflation",
-        description: "Nitrogen fill for all tires",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$25",
-      },
-      {
-        item: "Tire Shine Treatment",
-        description: "Premium tire dressing",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$18",
-      },
-      {
-        item: "Road Hazard Warranty",
-        description: "2-year road hazard protection",
-        unit: "set",
-        quantity: "1",
-        estimatedUnitPrice: "$80",
-      },
-      {
-        item: "Tire Storage Bag",
-        description: "Heavy-duty tire storage covers",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$8",
-      },
-      {
-        item: "Lug Nut Set",
-        description: "Chrome lug nuts M12x1.5",
-        unit: "set",
-        quantity: "1",
-        estimatedUnitPrice: "$35",
-      },
-      {
-        item: "Wheel Spacers",
-        description: "25mm hub-centric spacers",
-        unit: "pair",
-        quantity: "2",
-        estimatedUnitPrice: "$65",
-      },
-    ],
-    totalEstimatedCost: "$1,663",
-  },
+interface InfoItemProps {
+  label: string;
+  value: string | React.ReactNode;
+  className?: string;
+}
 
-  {
-    id: "REQ-2024-004",
-    title: "Marketing Campaign Printing",
-    type: "Marketing Materials",
-    priority: "Medium",
-    status: "submitted",
-    dateSubmitted: "2024-03-11",
-    requestor: "Emily Garcia",
-    company: "TechNova Solutions",
-    department: "Marketing",
-    amount: "$2,000",
-    description: "Printing brochures and flyers for Q2 campaign.",
-    preferredDate: "2024-03-20",
-    expectedCompletion: "2024-03-22",
-    attachment: ["campaign-design.pdf", "campaign-design.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "PrintHub Davao",
-    vendorContactPerson: "Kevin Tan",
-    requiredBy: "2024-03-22",
-    paymentMethod: "Credit Card",
-    items: [
-      {
-        item: "Tri-Fold Brochures",
-        description: "Full color glossy",
-        unit: "pcs",
-        quantity: "2000",
-        estimatedUnitPrice: "$0.60",
-      },
-      {
-        item: "Flyers",
-        description: "A5 promotional flyers",
-        unit: "pcs",
-        quantity: "1500",
-        estimatedUnitPrice: "$0.40",
-      },
-    ],
-    totalEstimatedCost: "$1,800",
-  },
+interface ReviewRequestProps {
+  requests: Request[];
+}
 
-  {
-    id: "REQ-2024-005",
-    title: "Aircon Maintenance Service",
-    type: "Facility Maintenance",
-    priority: "Low",
-    status: "rejected",
-    dateSubmitted: "2024-03-05",
-    requestor: "David Lee",
-    company: "TechNova Solutions",
-    department: "Facilities",
-    amount: "$600",
-    description:
-      "Routine cleaning and maintenance of office air conditioning units.",
-    preferredDate: "2024-03-15",
-    expectedCompletion: "2024-03-15",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "CoolAir Services",
-    vendorContactPerson: "Mark Lopez",
-    requiredBy: "2024-03-16",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Aircon Cleaning",
-        description: "Split-type AC cleaning",
-        unit: "unit",
-        quantity: "6",
-        estimatedUnitPrice: "$70",
-      },
-      {
-        item: "Freon Refill",
-        description: "R410 refrigerant refill",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$570",
-  },
-];
+// Helper to calculate total from items
+const calculateTotal = (items: Item[]): string => {
+  const total = items.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.unitPrice) || 0;
+    return sum + qty * price;
+  }, 0);
+  return `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
-export default function ReviewRequest() {
-  const [requests, setRequests] = useState<Request[]>(mockRequests);
+// Helper to format currency
+const formatCurrency = (value: string): string => {
+  const num = parseFloat(value);
+  if (isNaN(num)) return value;
+  return `$${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export default function ReviewRequest({ requests }: ReviewRequestProps) {
+  const [requestList, setRequestList] = useState<Request[]>(requests);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<"approved" | "rejected" | null>(
     null,
   );
+  const supabase = createClient();
 
   const getStatusBadge = (status: Request["status"]) => {
-    const styles = {
-      submitted: "bg-amber-100 text-amber-700",
+    const styles: Record<string, string> = {
+      "for review": "bg-amber-100 text-amber-700",
       approved: "bg-emerald-100 text-emerald-700",
       rejected: "bg-rose-100 text-rose-700",
     };
     return (
-      <Badge className={styles[status]} variant="secondary">
+      <Badge
+        className={styles[status] || "bg-slate-100 text-slate-700"}
+        variant="secondary"
+      >
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
-    );
-  };
-
-  const handleAction = (request: Request, action: "approved" | "rejected") => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === request.id ? { ...r, status: action } : r)),
     );
   };
 
@@ -400,68 +137,102 @@ export default function ReviewRequest() {
     setActionDialogOpen(true);
   };
 
-  const handleConfirmAction = () => {
-    if (selectedRequest && actionType) {
-      handleAction(selectedRequest, actionType);
-      setActionDialogOpen(false);
-      setSelectedRequest(null);
-      setActionType(null);
+  const handleConfirmAction = async () => {
+  if (!selectedRequest || !actionType) return;
+
+  await handleUpdateStatus(selectedRequest.id, actionType);
+
+  setActionDialogOpen(false);
+  setSelectedRequest(null);
+  setActionType(null);
+};
+
+  async function handleUpdateStatus(
+    requestId: string,
+    status: "approved" | "rejected",
+  ) {
+    try {
+      const { error } = await supabase
+        .from("service_requests")
+        .update({ status })
+        .eq("id", requestId);
+
+      if (error) {
+        console.error("Error updating status:", error);
+        return;
+      }
+
+      // Update local UI
+      setRequestList((prev) =>
+        prev.map((req) => (req.id === requestId ? { ...req, status } : req)),
+      );
+    } catch (err) {
+      console.error("Unexpected error:", err);
     }
-  };
+  }
 
   // Stats calculation
-  const stats = [
-    {
-      title: "Total Requests",
-      value: requests.length,
-      icon: FileText,
-      color: "text-[#2B3A9F]",
-      bgColor: "bg-[#2B3A9F]/10",
-    },
-    {
-      title: "For Review",
-      value: requests.filter((r) => r.status === "submitted").length,
-      icon: Clock,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
-    },
-    {
-      title: "Approved",
-      value: requests.filter((r) => r.status === "approved").length,
-      icon: CheckCircle,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-    },
-    {
-      title: "Rejected",
-      value: requests.filter((r) => r.status === "rejected").length,
-      icon: XCircle,
-      color: "text-rose-600",
-      bgColor: "bg-rose-50",
-    },
-  ];
+  const stats = useMemo(
+    () => [
+      {
+        title: "Total Requests",
+        value: requests.length,
+        icon: FileText,
+        color: "text-[#2B3A9F]",
+        bgColor: "bg-[#2B3A9F]/10",
+      },
+      {
+        title: "for review",
+        value: requests.filter((r) => r.status === "for review").length,
+        icon: Clock,
+        color: "text-amber-600",
+        bgColor: "bg-amber-50",
+      },
+      {
+        title: "Approved",
+        value: requests.filter((r) => r.status === "approved").length,
+        icon: CheckCircle,
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-50",
+      },
+      {
+        title: "Rejected",
+        value: requests.filter((r) => r.status === "rejected").length,
+        icon: XCircle,
+        color: "text-rose-600",
+        bgColor: "bg-rose-50",
+      },
+    ],
+    [requestList],
+  );
 
   // Define columns with custom widths and renderers
   const columns: Column<Request>[] = [
-    { key: "id", header: "Request ID", width: "w-[140px]" },
-    { key: "title", header: "Request Title", width: "min-w-[200px]" },
     {
-      key: "type",
-      header: "Service Category / Purchase Type",
+      key: "request_number",
+      header: "Request ID",
+      width: "w-[140px]",
+    },
+    {
+      key: "title",
+      header: "Request Title",
+      width: "min-w-[200px]",
+    },
+    {
+      key: "service_category",
+      header: "Service Category",
       width: "w-[180px]",
     },
     {
-      key: "requestor",
-      header: "Requestor",
+      key: "department",
+      header: "Department",
       width: "w-[140px]",
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row.requestor}</span>
-          <span className="text-xs text-slate-500">{row.department}</span>
-        </div>
-      ),
     },
-    { key: "amount", header: "Amount", width: "w-[100px]" },
+    {
+      key: "priority_level",
+      header: "Priority",
+      width: "w-[100px]",
+    },
     {
       key: "status",
       header: "Status",
@@ -469,11 +240,11 @@ export default function ReviewRequest() {
       render: (row) => getStatusBadge(row.status),
     },
     {
-      key: "dateSubmitted",
-      header: "Date Submitted",
+      key: "preferred_date",
+      header: "Preferred Date",
       width: "w-[130px]",
       render: (row) =>
-        new Date(row.dateSubmitted).toLocaleDateString("en-US", {
+        new Date(row.preferred_date).toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",
@@ -482,7 +253,7 @@ export default function ReviewRequest() {
   ];
 
   const filterOptions = [
-    { value: "submitted", label: "Submitted" },
+    { value: "for review", label: "For Review" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
   ];
@@ -558,14 +329,19 @@ export default function ReviewRequest() {
 
       {/* Data Table */}
       <DataTableCard
-        data={requests}
+        data={requestList}
         columns={columns}
         keyExtractor={(row) => row.id}
         title="All Service and Purchase Requests"
         subtitle="Manage and track all incoming service and purchase requests"
         searchPlaceholder="Search requests..."
         searchable
-        searchKeys={["id", "title", "type", "requestor", "department"]}
+        searchKeys={[
+          "request_number",
+          "title",
+          "service_category",
+          "department",
+        ]}
         filterable
         filterKey="status"
         filterOptions={filterOptions}
@@ -582,7 +358,7 @@ export default function ReviewRequest() {
               <Eye className="h-3.5 w-3.5 mr-1.5" />
               View
             </Button>
-            {row.status === "submitted" && (
+            {row.status === "for review" && (
               <>
                 <Button
                   variant="outline"
@@ -619,7 +395,7 @@ export default function ReviewRequest() {
                   Request Details
                 </DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground mt-1">
-                  {selectedRequest?.id}
+                  {selectedRequest?.request_number}
                 </DialogDescription>
               </div>
               {selectedRequest && getStatusBadge(selectedRequest.status)}
@@ -640,10 +416,13 @@ export default function ReviewRequest() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
                     <InfoItem label="Title" value={selectedRequest.title} />
-                    <InfoItem label="Type" value={selectedRequest.type} />
+                    <InfoItem
+                      label="Service Category"
+                      value={selectedRequest.service_category}
+                    />
                     <InfoItem
                       label="Priority"
-                      value={selectedRequest.priority}
+                      value={selectedRequest.priority_level}
                     />
                     <InfoItem
                       label="Department"
@@ -651,12 +430,8 @@ export default function ReviewRequest() {
                     />
                     <InfoItem label="Company" value={selectedRequest.company} />
                     <InfoItem
-                      label="Requestor"
-                      value={selectedRequest.requestor}
-                    />
-                    <InfoItem
                       label="Payment Method"
-                      value={selectedRequest.paymentMethod}
+                      value={selectedRequest.payment_method}
                       className="md:col-span-2"
                     />
                   </div>
@@ -673,20 +448,16 @@ export default function ReviewRequest() {
                   <div className="bg-[#2B3A9F]/5 rounded-xl p-6 border border-[#2B3A9F]/10">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       <TimelineItem
-                        label="Submitted"
-                        value={selectedRequest.dateSubmitted}
-                      />
-                      <TimelineItem
                         label="Preferred Date"
-                        value={selectedRequest.preferredDate}
+                        value={selectedRequest.preferred_date}
                       />
                       <TimelineItem
                         label="Required By"
-                        value={selectedRequest.requiredBy}
+                        value={selectedRequest.required_by}
                       />
                       <TimelineItem
                         label="Expected Completion"
-                        value={selectedRequest.expectedCompletion}
+                        value={selectedRequest.expected_completion}
                       />
                     </div>
                   </div>
@@ -703,17 +474,17 @@ export default function ReviewRequest() {
                   <div className="grid grid-cols-2 gap-6">
                     <InfoItem
                       label="Preferred Vendor"
-                      value={selectedRequest.preferredVendor}
+                      value={selectedRequest.preferred_vendor}
                     />
                     <InfoItem
                       label="Contact Person"
-                      value={selectedRequest.vendorContactPerson}
+                      value={selectedRequest.contact_person}
                     />
                   </div>
                 </section>
 
                 {/* Vehicle Info */}
-                {selectedRequest.plateNumber && (
+                {selectedRequest.vehicle?.plate_number && (
                   <section className="bg-gradient-to-r from-[#2B3A9F]/5 to-white rounded-xl border border-[#2B3A9F]/10 p-6">
                     <div className="flex items-center gap-2 mb-5">
                       <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
@@ -724,21 +495,21 @@ export default function ReviewRequest() {
                         variant="outline"
                         className="ml-auto text-xs border-[#2B3A9F] text-[#2B3A9F]"
                       >
-                        {selectedRequest.carType}
+                        {selectedRequest.vehicle.car_type}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-3 gap-6">
                       <InfoItem
                         label="Plate Number"
-                        value={selectedRequest.plateNumber}
+                        value={selectedRequest.vehicle.plate_number}
                       />
                       <InfoItem
                         label="Vehicle Type"
-                        value={selectedRequest.carType}
+                        value={selectedRequest.vehicle.car_type}
                       />
                       <InfoItem
                         label="Owner"
-                        value={`${selectedRequest.ownerFirstname} ${selectedRequest.ownerLastname}`}
+                        value={`${selectedRequest.vehicle.owners_first_name} ${selectedRequest.vehicle.owners_last_name}`}
                       />
                     </div>
                   </section>
@@ -802,7 +573,7 @@ export default function ReviewRequest() {
                             className="group hover:bg-[#2B3A9F]/5 transition-colors"
                           >
                             <TableCell className="font-semibold text-sm text-slate-900 py-4">
-                              {item.item}
+                              {item.name}
                             </TableCell>
                             <TableCell className="text-sm text-slate-600 py-4">
                               {item.description}
@@ -819,7 +590,7 @@ export default function ReviewRequest() {
                               {item.quantity}
                             </TableCell>
                             <TableCell className="text-sm font-medium text-slate-900 py-4 text-right tabular-nums">
-                              {item.estimatedUnitPrice}
+                              {formatCurrency(item.unitPrice)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -834,15 +605,15 @@ export default function ReviewRequest() {
                         Total Estimated Cost
                       </span>
                       <span className="text-2xl font-bold tabular-nums">
-                        {selectedRequest.totalEstimatedCost}
+                        {calculateTotal(selectedRequest.items)}
                       </span>
                     </div>
                   </div>
                 </section>
 
                 {/* Attachments */}
-                {selectedRequest.attachment &&
-                  selectedRequest.attachment.length > 0 && (
+                {selectedRequest.supporting_documents &&
+                  selectedRequest.supporting_documents.length > 0 && (
                     <section>
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-1 h-5 bg-[#2B3A9F] rounded-full" />
@@ -850,41 +621,50 @@ export default function ReviewRequest() {
                           Attachments
                         </h3>
                         <span className="text-xs text-slate-500 ml-auto">
-                          {selectedRequest.attachment.length} file(s)
+                          {selectedRequest.supporting_documents.length} file(s)
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-3">
-                        {selectedRequest.attachment.map((file, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            className="gap-2 h-auto py-3 px-4 rounded-xl border-slate-200 hover:border-[#2B3A9F] hover:text-[#2B3A9F] hover:bg-[#2B3A9F]/5 transition-colors"
-                          >
-                            <div className="p-2 bg-[#2B3A9F]/10 rounded-lg">
-                              <svg
-                                className="w-4 h-4 text-[#2B3A9F]"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                                />
-                              </svg>
-                            </div>
-                            <div className="text-left">
-                              <span className="text-sm font-medium block truncate max-w-[200px]">
-                                {file}
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                Click to view
-                              </span>
-                            </div>
-                          </Button>
-                        ))}
+                        {selectedRequest.supporting_documents.map(
+                          (file, index) => (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              className="gap-2 h-auto py-3 px-4 rounded-xl border-slate-200 hover:border-[#2B3A9F] hover:text-[#2B3A9F] hover:bg-[#2B3A9F]/5 transition-colors"
+                              onClick={() =>
+                                window.open(
+                                  file,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                              }
+                            >
+                              <div className="p-2 bg-[#2B3A9F]/10 rounded-lg">
+                                <svg
+                                  className="w-4 h-4 text-[#2B3A9F]"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="text-left">
+                                <span className="text-sm font-medium block truncate max-w-[200px]">
+                                  {file.split("/").pop() || file}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  Click to view
+                                </span>
+                              </div>
+                            </Button>
+                          ),
+                        )}
                       </div>
                     </section>
                   )}
@@ -892,7 +672,6 @@ export default function ReviewRequest() {
             )}
           </div>
 
-          {/* Footer */}
           {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
             <div className="flex mb-4 mr-4 gap-4">
@@ -903,7 +682,7 @@ export default function ReviewRequest() {
                 Cancel
               </Button>
 
-              {selectedRequest?.status === "submitted" && (
+              {selectedRequest?.status === "for review" && (
                 <>
                   <Button
                     variant="outline"
@@ -946,7 +725,8 @@ export default function ReviewRequest() {
               {actionType === "approved" ? "Approve Request" : "Reject Request"}
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to {actionType} {selectedRequest?.id}?
+              Are you sure you want to {actionType}{" "}
+              {selectedRequest?.request_number}?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
