@@ -43,7 +43,7 @@ import {
   ChevronsUpDown,
   Check,
 } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { CreateServiceRequestFormProps, ServiceItem } from "@/lib/interfaces";
 import {
@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { SearchableCombobox } from "../inputs/SearchableCombobox";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CreateServiceRequestForm({
   types,
@@ -71,28 +72,25 @@ export default function CreateServiceRequestForm({
   paymentMethods,
   units,
 }: CreateServiceRequestFormProps) {
-  const [items, setItems] = useState<ServiceItem[]>([]);
+  // === FORM STATE ===
+  const [title, setTitle] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [expectedCompletion, setExpectedCompletion] = useState("");
+  const [requiredBy, setRequiredBy] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Selection states
   const [priority, setPriority] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [company, setCompany] = useState<string>("");
   const [department, setDepartment] = useState<string>("");
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [unit, setUnit] = useState<string>("");
 
-  // Popover states (managed internally by SearchableCombobox now)
-  const [selectedVendor, setSelectedVendor] = useState("");
-  const [contactPerson, setContactPerson] = useState("");
-  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [contactTouched, setContactTouched] = useState(false);
-  const [openPopover, setOpenPopover] = useState(false);
-
-  const selectedPlateNumber = vehicles?.find(
-    (p) => p.vehicle_id === plateNumber,
-  );
-
-  // Form state for new item
+  // Items state
+  const [items, setItems] = useState<ServiceItem[]>([]);
   const [newItem, setNewItem] = useState({
     name: "",
     description: "",
@@ -101,16 +99,90 @@ export default function CreateServiceRequestForm({
     unitPrice: 0,
   });
 
-  // Calculate item total
+  // Vendor state
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [contactTouched, setContactTouched] = useState(false);
+  const [openPopover, setOpenPopover] = useState(false);
+
+  // === COMPUTED ===
+  const selectedPlateNumber = vehicles?.find(
+    (p) => p.vehicle_id === plateNumber,
+  );
+
   const itemTotal = useMemo(() => {
     return (newItem.quantity || 0) * (newItem.unitPrice || 0);
   }, [newItem.quantity, newItem.unitPrice]);
 
-  // Calculate grand total
   const grandTotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.total, 0);
   }, [items]);
 
+  // === OPTIONS MEMO ===
+  const vehicleOptions = useMemo(() => {
+    return (
+      vehicles?.map((v) => ({
+        ...v,
+        id: v.vehicle_id,
+        name: v.plate_number,
+        subtitle: `${v.car_type} • ${v.owners_first_name} ${v.owners_last_name}`,
+      })) || []
+    );
+  }, [vehicles]);
+
+  const companyOptions = useMemo(() => {
+    return (
+      companies?.map((c) => ({
+        ...c,
+        id: c.company_id,
+        name: c.name,
+      })) || []
+    );
+  }, [companies]);
+
+  const departmentOptions = useMemo(() => {
+    return (
+      departments?.map((d) => ({
+        ...d,
+        id: d.department_id,
+        name: d.name,
+      })) || []
+    );
+  }, [departments]);
+
+  const typeOptions = useMemo(() => {
+    return (
+      types?.map((t) => ({
+        ...t,
+        id: t.type_id,
+        name: t.name,
+      })) || []
+    );
+  }, [types]);
+
+  const paymentMethodOptions = useMemo(() => {
+    return (
+      paymentMethods?.map((p) => ({
+        ...p,
+        id: p.payment_method_id,
+        name: p.name,
+      })) || []
+    );
+  }, [paymentMethods]);
+
+  const unitOptions = useMemo(() => {
+    return (
+      units?.map((u) => ({
+        ...u,
+        id: u.unit_id,
+        name: u.name,
+      })) || []
+    );
+  }, [units]);
+
+  // === HANDLERS ===
   const handleAddItem = () => {
     if (!newItem.name || !newItem.unit || newItem.quantity <= 0) return;
 
@@ -180,14 +252,6 @@ export default function CreateServiceRequestForm({
     })}`;
   };
 
-  // --- Safe Vendor Lookup ---
-  const getVendorById = useCallback(
-    (id: string) => {
-      return vendors?.find((v) => v?.vendor_id === id) || null;
-    },
-    [vendors],
-  );
-
   const getVendorByName = useCallback(
     (name: string) => {
       return vendors?.find((v) => v?.name === name) || null;
@@ -195,10 +259,8 @@ export default function CreateServiceRequestForm({
     [vendors],
   );
 
-  // --- Safe Selection Handler ---
   const handleVendorSelect = useCallback(
     (vendorName: string) => {
-      // Toggle off if same vendor clicked
       if (vendorName === selectedVendor) {
         setSelectedVendor("");
         setSelectedVendorId("");
@@ -216,8 +278,6 @@ export default function CreateServiceRequestForm({
       setSelectedVendor(vendor.name);
       setSelectedVendorId(vendor.vendor_id);
 
-      // Only auto-fill if user hasn't manually touched the field
-      // or if current field is empty
       const vendorContact = vendor?.contact_person?.trim();
       if (vendorContact && (!contactTouched || !contactPerson.trim())) {
         setContactPerson(vendorContact);
@@ -227,7 +287,6 @@ export default function CreateServiceRequestForm({
     [selectedVendor, getVendorByName, contactTouched, contactPerson],
   );
 
-  // --- Safe Contact Change Handler ---
   const handleContactChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target?.value ?? "";
@@ -238,7 +297,6 @@ export default function CreateServiceRequestForm({
     [],
   );
 
-  // --- Clear auto-fill visual on focus ---
   const handleContactFocus = useCallback(
     (e: React.FocusEvent<HTMLInputElement>) => {
       if (isContactAutoFilled) {
@@ -248,67 +306,180 @@ export default function CreateServiceRequestForm({
     [isContactAutoFilled],
   );
 
-  // Prepare options with subtitles for better UX
-  const vehicleOptions = useMemo(() => {
-    return (
-      vehicles?.map((v) => ({
-        ...v,
-        id: v.vehicle_id,
-        name: v.plate_number,
-        subtitle: `${v.car_type} • ${v.owners_first_name} ${v.owners_last_name}`,
-      })) || []
-    );
-  }, [vehicles]);
+  // === UNIT HANDLER - Sync with newItem ===
+  const handleUnitSelect = useCallback((unitId: string) => {
+    setNewItem((prev) => ({ ...prev, unit: unitId }));
+  }, []);
 
-  const companyOptions = useMemo(() => {
-    return (
-      companies?.map((c) => ({
-        ...c,
-        id: c.company_id,
-        name: c.name,
-      })) || []
-    );
-  }, [companies]);
+  // Helper to get unit name
+  const getUnitName = (unitId: string) => {
+    const unit = units?.find((u) => u.unit_id === unitId);
+    return unit?.name || unitId;
+  };
 
-  const departmentOptions = useMemo(() => {
-    return (
-      departments?.map((d) => ({
-        ...d,
-        id: d.department_id,
-        name: d.name,
-      })) || []
+  // Handler for file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    setFiles((prev) => [...prev, ...selectedFiles]);
+    console.log(
+      "Selected files:",
+      selectedFiles.map((f) => f.name),
     );
-  }, [departments]);
+  };
 
-  const typeOptions = useMemo(() => {
-    return (
-      types?.map((t) => ({
-        ...t,
-        id: t.type_id,
-        name: t.name,
-      })) || []
-    );
-  }, [types]);
+  // Handler for click
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
 
-  const paymentMethodOptions = useMemo(() => {
-    return (
-      paymentMethods?.map((p) => ({
-        ...p,
-        id: p.payment_method_id,
-        name: p.name,
-      })) || []
-    );
-  }, [paymentMethods]);
+  // Handler for drag and drop
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles((prev) => [...prev, ...droppedFiles]);
+  };
 
-  const unitOptions = useMemo(() => {
+  // Remove a file
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // === FILE UPLOAD LOGIC ===
+  const uploadFiles = async () => {
+    const supabase = createClient();
+
+    const fileIds: string[] = [];
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+
+      const filePath = `service-requests/${fileName}`;
+
+      // 1️⃣ Upload file
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
+
+      // 2️⃣ Generate long signed URL
+      const twentyYears = 60 * 60 * 24 * 365 * 20;
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(filePath, twentyYears);
+
+      if (signedError) {
+        console.error("Signed URL error:", signedError);
+        throw signedError;
+      }
+
+      const url = signedData?.signedUrl;
+
+      // 3️⃣ Insert into files table
+      const { data: fileRecord, error: insertError } = await supabase
+        .from("files")
+        .insert([
+          {
+            type: file.type,
+            url: url,
+          },
+        ])
+        .select("file_id")
+        .single();
+
+      if (insertError) {
+        console.error("Insert file error:", insertError);
+        throw insertError;
+      }
+
+      // 4️⃣ Collect IDs
+      fileIds.push(fileRecord.file_id);
+    }
+
+    return fileIds;
+  };
+
+  // === CREATE SERVICE REQUEST - Console Test Version ===
+  const createServiceRequest = useCallback(async () => {
+    const supabase = createClient();
+
+    try {
+      // 1️⃣ Upload files first
+      const fileIds = await uploadFiles();
+
+      // 2️⃣ Build payload
+      const payload = {
+        title,
+        service_category: category,
+        priority_level: priority,
+        company: company,
+        department: department || null,
+        vehicle: plateNumber || null,
+
+        preferred_date: preferredDate || null,
+        expected_completion: expectedCompletion || null,
+        required_by: requiredBy || null,
+
+        preferred_vendor: selectedVendor || null,
+        contact_person: contactPerson || null,
+        payment_method: paymentMethod || null,
+
+        description: serviceDescription || null,
+        items: items,
+
+        // store uploaded file IDs
+        supporting_documents: fileIds,
+      };
+
+      console.log("=== SERVICE REQUEST PAYLOAD ===");
+      console.log(JSON.stringify(payload, null, 2));
+
+      // 3️⃣ Insert service request
+      const { data, error } = await supabase
+        .from("service_requests")
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log("Created Service Request:", data);
+
+      alert(`Service Request Created: ${data.request_number}`);
+    } catch (err: any) {
+      console.error("Create Service Request Error:", err);
+      alert(err.message || "Something went wrong");
+    }
+  }, [
+    title,
+    category,
+    priority,
+    company,
+    department,
+    plateNumber,
+    preferredDate,
+    expectedCompletion,
+    requiredBy,
+    selectedVendor,
+    contactPerson,
+    paymentMethod,
+    serviceDescription,
+    items,
+  ]);
+
+  // === VALIDATION ===
+  const isSubmitDisabled = useMemo(() => {
     return (
-      units?.map((u) => ({
-        ...u,
-        id: u.unit_id,
-        name: u.name,
-      })) || []
+      !title.trim() || !category || !priority || !company || items.length === 0
     );
-  }, [units]);
+  }, [title, category, priority, company, items]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -361,18 +532,20 @@ export default function CreateServiceRequestForm({
                   Service Title <span className="text-rose-500">*</span>
                 </Label>
                 <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Office Air Conditioning Repair"
                   className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white"
                 />
               </div>
 
-              {/* Grid Layout - All Searchable */}
+              {/* Grid Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* Service Category - Now Searchable */}
+                {/* Service Category */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-slate-400" />
-                    Service Category
+                    Service Category <span className="text-rose-500">*</span>
                   </Label>
                   <SearchableCombobox
                     value={category}
@@ -386,13 +559,13 @@ export default function CreateServiceRequestForm({
                   />
                 </div>
 
-                {/* Priority - Kept as Dropdown for quick selection */}
+                {/* Priority */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <div
                       className={`w-2 h-2 rounded-full ${getPriorityStyles(priority).dot}`}
                     />
-                    Priority Level
+                    Priority Level <span className="text-rose-500">*</span>
                   </Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -439,11 +612,11 @@ export default function CreateServiceRequestForm({
                   </DropdownMenu>
                 </div>
 
-                {/* Company - Now Searchable */}
+                {/* Company */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-slate-400" />
-                    Company
+                    Company <span className="text-rose-500">*</span>
                   </Label>
                   <SearchableCombobox
                     value={company}
@@ -457,7 +630,7 @@ export default function CreateServiceRequestForm({
                   />
                 </div>
 
-                {/* Department - Now Searchable */}
+                {/* Department */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Department
@@ -486,6 +659,8 @@ export default function CreateServiceRequestForm({
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       type="date"
+                      value={preferredDate}
+                      onChange={(e) => setPreferredDate(e.target.value)}
                       className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
@@ -501,6 +676,8 @@ export default function CreateServiceRequestForm({
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
                       type="date"
+                      value={expectedCompletion}
+                      onChange={(e) => setExpectedCompletion(e.target.value)}
                       className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
@@ -515,6 +692,8 @@ export default function CreateServiceRequestForm({
                   Service Description <span className="text-rose-500">*</span>
                 </Label>
                 <textarea
+                  value={serviceDescription}
+                  onChange={(e) => setServiceDescription(e.target.value)}
                   placeholder="Describe the service needed, including scope of work, specific requirements, and any relevant details..."
                   className="w-full min-h-25 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B3A9F]/40 focus:border-[#2B3A9F]/80 resize-y transition-all"
                 />
@@ -525,8 +704,33 @@ export default function CreateServiceRequestForm({
                 <Label className="text-sm font-medium text-slate-900 flex items-center gap-2">
                   <Upload className="w-4 h-4 text-slate-400" />
                   Supporting Documents
+                  {files.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-indigo-50 text-[#2B3A9F]"
+                    >
+                      {files.length} file{files.length !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
                 </Label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-[#2B3A9F]/80 hover:bg-indigo-50/30 transition-all cursor-pointer group">
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                />
+
+                {/* Clickable drop zone */}
+                <div
+                  onClick={handleUploadClick}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-[#2B3A9F]/80 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+                >
                   <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-[#2B3A9F]/20 transition-colors">
                     <Upload className="w-6 h-6 text-slate-400 group-hover:text-[#2B3A9F]" />
                   </div>
@@ -537,6 +741,36 @@ export default function CreateServiceRequestForm({
                     PDF, images, or documents up to 10MB
                   </p>
                 </div>
+
+                {/* File list */}
+                {files.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="text-sm text-slate-700 truncate">
+                            {file.name}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -555,14 +789,14 @@ export default function CreateServiceRequestForm({
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* Plate Number - Now Searchable with rich info */}
+                {/* Plate Number */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     Plate Number
                   </Label>
                   <SearchableCombobox
                     value={plateNumber}
-                    onSelect={(id, vehicle) => setPlateNumber(id)}
+                    onSelect={(id) => setPlateNumber(id)}
                     options={vehicleOptions}
                     placeholder="Search or select plate..."
                     searchPlaceholder="Search by plate, type, or owner..."
@@ -574,7 +808,7 @@ export default function CreateServiceRequestForm({
                   />
                 </div>
 
-                {/* Car Type - Read only display */}
+                {/* Car Type - Read only */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Car Type
@@ -690,7 +924,6 @@ export default function CreateServiceRequestForm({
                               vendors.map((vendor) => {
                                 if (!vendor?.vendor_id || !vendor?.name)
                                   return null;
-
                                 const isSelected =
                                   selectedVendorId === vendor.vendor_id;
 
@@ -731,7 +964,7 @@ export default function CreateServiceRequestForm({
                   </Popover>
                 </div>
 
-                {/* Contact Person - Bulletproof Version */}
+                {/* Contact Person */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <Label
@@ -741,7 +974,7 @@ export default function CreateServiceRequestForm({
                       Contact Person
                     </Label>
                     {isContactAutoFilled && (
-                      <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in duration-200">
+                      <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0">
                         Auto-filled
                       </span>
                     )}
@@ -761,7 +994,7 @@ export default function CreateServiceRequestForm({
                     )}
                   />
                   {isContactAutoFilled && (
-                    <p className="text-xs text-slate-500 animate-in slide-in-from-top-1 duration-200">
+                    <p className="text-xs text-slate-500">
                       Tap to edit if different
                     </p>
                   )}
@@ -780,12 +1013,14 @@ export default function CreateServiceRequestForm({
                     <Input
                       id="required-by"
                       type="date"
+                      value={requiredBy}
+                      onChange={(e) => setRequiredBy(e.target.value)}
                       className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
                 </div>
 
-                {/* Payment Method - Now Searchable */}
+                {/* Payment Method */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-slate-400" />
@@ -800,6 +1035,8 @@ export default function CreateServiceRequestForm({
                     emptyMessage="No payment methods found."
                     valueKey="payment_method_id"
                     displayKey="name"
+                    optional
+                    optionalLabel="No Payment Method"
                   />
                 </div>
               </div>
@@ -832,7 +1069,7 @@ export default function CreateServiceRequestForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-4">
                   <div className="space-y-2 lg:col-span-3">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Item / Service
+                      Item / Service <span className="text-rose-500">*</span>
                     </Label>
                     <Input
                       placeholder="e.g., Plumbing Service"
@@ -860,13 +1097,13 @@ export default function CreateServiceRequestForm({
 
                   <div className="space-y-2 lg:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Unit
+                      Unit <span className="text-rose-500">*</span>
                     </Label>
                     <SearchableCombobox
-                      value={unit}
-                      onSelect={(id) => setUnit(id)}
+                      value={newItem.unit}
+                      onSelect={handleUnitSelect}
                       options={unitOptions}
-                      placeholder="Search or select unit..."
+                      placeholder="Select unit..."
                       searchPlaceholder="Search units..."
                       emptyMessage="No units found."
                       valueKey="unit_id"
@@ -876,7 +1113,7 @@ export default function CreateServiceRequestForm({
 
                   <div className="space-y-2 lg:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Qty
+                      Qty <span className="text-rose-500">*</span>
                     </Label>
                     <div className="relative">
                       <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1023,11 +1260,11 @@ export default function CreateServiceRequestForm({
                               variant="secondary"
                               className="bg-slate-100 text-slate-700 font-mono font-medium"
                             >
-                              {item.quantity} {item.unit}
+                              {item.quantity} {getUnitName(item.unit)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono text-slate-600">
-                            {formatCurrency(item.unitPrice)}
+                            `{formatCurrency(item.unitPrice)} / {getUnitName(item.unit)}`
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold text-slate-900">
                             {formatCurrency(item.total)}
@@ -1080,14 +1317,20 @@ export default function CreateServiceRequestForm({
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6">
           <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
-            <Button
-              variant="outline"
-              className="flex-1 sm:flex-none h-11 px-6 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            <Link
+              href="/home/finance/service-requests"
+              className="flex-1 sm:flex-none"
             >
-              Cancel
-            </Button>
+              <Button
+                variant="outline"
+                className="w-full h-11 px-6 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              >
+                Cancel
+              </Button>
+            </Link>
             <Button
-              disabled={items.length === 0}
+              onClick={createServiceRequest}
+              disabled={isSubmitDisabled}
               className="flex-1 sm:flex-none h-11 px-6 bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit Request
