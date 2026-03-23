@@ -320,6 +320,7 @@ export interface Request {
   items: Item[];
   status: string;
   requested_by: string;
+  journal_entries?: string;
 }
 
 export interface Item {
