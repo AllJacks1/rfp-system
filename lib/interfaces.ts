@@ -319,6 +319,7 @@ export interface Request {
   payment_method: string;
   items: Item[];
   status: string;
+  requested_by: string;
 }
 
 export interface Item {
@@ -327,4 +328,21 @@ export interface Item {
   unit: string;
   quantity: string;
   unitPrice: string;
+}
+export interface ReviewRequestProps {
+  requests: Request[];
+}
+
+export interface InfoItemProps {
+  label: string;
+  value: string | React.ReactNode;
+  className?: string;
+}
+
+export interface ServiceOrderProps {
+  requests: Request[];
+}
+
+export interface RequestDetailsPageProps {
+  request: Request;
 }

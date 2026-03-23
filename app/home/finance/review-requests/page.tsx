@@ -5,14 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 async function getRequests(supabase: any): Promise<Request[]> {
   const { data, error } = await supabase
     .from("service_requests")
-    .select(`
+    .select(
+      `
       *,
       service_category:types(name),
       company:companies(name),
       department:departments(name),
       vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
-      payment_method:payment_methods(name)
-    `)
+      payment_method:payment_methods(name),
+      requested_by:users(first_name, last_name)
+    `,
+    )
     .order("request_number", { ascending: true });
 
   if (error) {
@@ -35,9 +38,7 @@ async function getRequests(supabase: any): Promise<Request[]> {
       .select("file_id, type, url")
       .in("file_id", allFileIds);
 
-    fileMap = Object.fromEntries(
-      (files || []).map((f: any) => [f.file_id, f])
-    );
+    fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
   }
 
   // 2️⃣ Transform into your Request interface
@@ -80,6 +81,11 @@ async function getRequests(supabase: any): Promise<Request[]> {
       quantity: String(i.quantity),
       unitPrice: String(i.unitPrice),
     })),
+
+    // full name
+    requested_by: r.requested_by
+      ? `${r.requested_by.first_name} ${r.requested_by.last_name}`
+      : "",
   }));
 
   return flattened;

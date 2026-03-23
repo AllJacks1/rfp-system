@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Request, ServiceOrderProps } from "@/lib/interfaces";
 
 // Types (keep your existing interfaces)
 interface ServiceOrder {
@@ -46,330 +47,6 @@ interface ServiceOrder {
   approvedBy?: string;
   approvedDate?: string;
 }
-
-interface Request {
-  id: string;
-  title: string;
-  type: string;
-  priority: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  company: string;
-  department: string;
-  amount: string;
-  description: string;
-  preferredDate: string;
-  expectedCompletion: string;
-  attachment: string[];
-  plateNumber: string;
-  carType: string;
-  ownerFirstname: string;
-  ownerLastname: string;
-  preferredVendor: string;
-  vendorContactPerson: string;
-  requiredBy: string;
-  paymentMethod: string;
-  items: {
-    item: string;
-    description: string;
-    unit: string;
-    quantity: string;
-    estimatedUnitPrice: string;
-  }[];
-  totalEstimatedCost: string;
-}
-
-const mockRequests: Request[] = [
-  {
-    id: "REQ-2024-001",
-    title: "Laptop Upgrades for Dev Team",
-    type: "IT Equipment",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    company: "TechNova Solutions",
-    department: "Engineering",
-    amount: "$12,500",
-    description:
-      "Upgrade laptops for development team to handle heavier workloads.",
-    preferredDate: "2024-03-18",
-    expectedCompletion: "2024-03-25",
-    attachment: ["laptop-specs.pdf", "laptop-specs.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Dell Technologies",
-    vendorContactPerson: "Michael Reyes",
-    requiredBy: "2024-03-25",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Dell XPS 15",
-        description: "Intel i7, 32GB RAM, 1TB SSD",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$2,300",
-      },
-      {
-        item: "Laptop Docking Station",
-        description: "USB-C docking station",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$12,250",
-  },
-
-  {
-    id: "REQ-2024-002",
-    title: "Q1 Office Supplies",
-    type: "Office Supplies",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    company: "TechNova Solutions",
-    department: "Administration",
-    amount: "$850",
-    description: "Quarterly restocking of office supplies.",
-    preferredDate: "2024-03-12",
-    expectedCompletion: "2024-03-14",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Office Warehouse",
-    vendorContactPerson: "Ana Santos",
-    requiredBy: "2024-03-15",
-    paymentMethod: "Company Credit Card",
-    items: [
-      {
-        item: "Printer Paper",
-        description: "A4 80gsm",
-        unit: "ream",
-        quantity: "20",
-        estimatedUnitPrice: "$5",
-      },
-      {
-        item: "Ballpoint Pens",
-        description: "Blue ink",
-        unit: "box",
-        quantity: "10",
-        estimatedUnitPrice: "$8",
-      },
-      {
-        item: "Staplers",
-        description: "Standard office stapler",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$12",
-      },
-    ],
-    totalEstimatedCost: "$850",
-  },
-
-  {
-    id: "REQ-2024-003",
-    title: "Vehicle Tire Replacement",
-    type: "Vehicle Maintenance",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-07",
-    requestor: "Carlos Mendoza",
-    company: "TechNova Logistics",
-    department: "Operations",
-    amount: "$1,200",
-    description: "Replace worn-out tires for delivery vehicle.",
-    preferredDate: "2024-03-11",
-    expectedCompletion: "2024-03-11",
-    attachment: ["vehicle-inspection.jpg", "vehicle-inspection.jpg"],
-    plateNumber: "ABC-1234",
-    carType: "Toyota Hilux",
-    ownerFirstname: "Carlos",
-    ownerLastname: "Mendoza",
-    preferredVendor: "Goodyear Service Center",
-    vendorContactPerson: "Luis Ramirez",
-    requiredBy: "2024-03-11",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "All-Terrain Tire",
-        description: "265/65R17 Goodyear Wrangler",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$250",
-      },
-      {
-        item: "Chrome Valve Stems",
-        description: "Heavy-duty chrome valve stems",
-        unit: "set",
-        quantity: "4",
-        estimatedUnitPrice: "$12",
-      },
-      {
-        item: "Tire Pressure Sensors",
-        description: "TPMS sensors for Toyota Hilux",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$45",
-      },
-      {
-        item: "Wheel Balancing",
-        description: "Computer wheel balancing",
-        unit: "wheel",
-        quantity: "4",
-        estimatedUnitPrice: "$15",
-      },
-      {
-        item: "Wheel Alignment",
-        description: "Full alignment service",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$100",
-      },
-      {
-        item: "Tire Rotation Service",
-        description: "Professional tire rotation",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$35",
-      },
-      {
-        item: "Nitrogen Tire Inflation",
-        description: "Nitrogen fill for all tires",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$25",
-      },
-      {
-        item: "Tire Shine Treatment",
-        description: "Premium tire dressing",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$18",
-      },
-      {
-        item: "Road Hazard Warranty",
-        description: "2-year road hazard protection",
-        unit: "set",
-        quantity: "1",
-        estimatedUnitPrice: "$80",
-      },
-      {
-        item: "Tire Storage Bag",
-        description: "Heavy-duty tire storage covers",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$8",
-      },
-      {
-        item: "Lug Nut Set",
-        description: "Chrome lug nuts M12x1.5",
-        unit: "set",
-        quantity: "1",
-        estimatedUnitPrice: "$35",
-      },
-      {
-        item: "Wheel Spacers",
-        description: "25mm hub-centric spacers",
-        unit: "pair",
-        quantity: "2",
-        estimatedUnitPrice: "$65",
-      },
-    ],
-    totalEstimatedCost: "$1,663",
-  },
-
-  {
-    id: "REQ-2024-004",
-    title: "Marketing Campaign Printing",
-    type: "Marketing Materials",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-11",
-    requestor: "Emily Garcia",
-    company: "TechNova Solutions",
-    department: "Marketing",
-    amount: "$2,000",
-    description: "Printing brochures and flyers for Q2 campaign.",
-    preferredDate: "2024-03-20",
-    expectedCompletion: "2024-03-22",
-    attachment: ["campaign-design.pdf", "campaign-design.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "PrintHub Davao",
-    vendorContactPerson: "Kevin Tan",
-    requiredBy: "2024-03-22",
-    paymentMethod: "Credit Card",
-    items: [
-      {
-        item: "Tri-Fold Brochures",
-        description: "Full color glossy",
-        unit: "pcs",
-        quantity: "2000",
-        estimatedUnitPrice: "$0.60",
-      },
-      {
-        item: "Flyers",
-        description: "A5 promotional flyers",
-        unit: "pcs",
-        quantity: "1500",
-        estimatedUnitPrice: "$0.40",
-      },
-    ],
-    totalEstimatedCost: "$1,800",
-  },
-
-  {
-    id: "REQ-2024-005",
-    title: "Aircon Maintenance Service",
-    type: "Facility Maintenance",
-    priority: "Low",
-    status: "approved",
-    dateSubmitted: "2024-03-05",
-    requestor: "David Lee",
-    company: "TechNova Solutions",
-    department: "Facilities",
-    amount: "$600",
-    description:
-      "Routine cleaning and maintenance of office air conditioning units.",
-    preferredDate: "2024-03-15",
-    expectedCompletion: "2024-03-15",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "CoolAir Services",
-    vendorContactPerson: "Mark Lopez",
-    requiredBy: "2024-03-16",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Aircon Cleaning",
-        description: "Split-type AC cleaning",
-        unit: "unit",
-        quantity: "6",
-        estimatedUnitPrice: "$70",
-      },
-      {
-        item: "Freon Refill",
-        description: "R410 refrigerant refill",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$570",
-  },
-];
 
 // Mock Data for Service Orders
 const mockServiceOrders: ServiceOrder[] = [
@@ -473,7 +150,7 @@ const mockServiceOrders: ServiceOrder[] = [
   },
 ];
 
-export default function ServiceOrder() {
+export default function ServiceOrder({ requests }: ServiceOrderProps) {
   const [orders] = useState<ServiceOrder[]>(mockServiceOrders);
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -514,11 +191,6 @@ export default function ServiceOrder() {
     );
   };
 
-  // Filter approved requests from mockRequests
-  const approvedRequests = mockRequests.filter(
-    (req) => req.status === "approved",
-  );
-
   const handleView = (order: ServiceOrder) => {
     setSelectedOrder(order);
     setViewDialogOpen(true);
@@ -529,13 +201,8 @@ export default function ServiceOrder() {
   };
 
   const handleCreateServiceOrder = (request: Request) => {
-    // Logic to create service order from approved request
-    console.log("Creating service order from request:", request.id);
-    // You can add navigation or modal opening here
     setApprovedRequestsDialogOpen(false);
-    router.push(
-      `/home/finance/service-orders/create-so?requestId=${request.id}`,
-    );
+    router.push(`/home/finance/service-orders/create-so/${request.id}`);
   };
 
   // Stats calculation
@@ -837,14 +504,14 @@ export default function ServiceOrder() {
                 variant="secondary"
                 className="bg-slate-100 text-slate-700 hover:bg-slate-200"
               >
-                {approvedRequests.length} requests
+                {requests.length} requests
               </Badge>
             </div>
           </DialogHeader>
 
           {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-            {approvedRequests.length === 0 ? (
+            {requests.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8 text-slate-400" />
@@ -876,13 +543,13 @@ export default function ServiceOrder() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {approvedRequests.map((request) => (
+                    {requests.map((request) => (
                       <TableRow
                         key={request.id}
                         className="group hover:bg-slate-50 transition-colors"
                       >
                         <TableCell className="font-medium text-sm text-slate-700 py-4">
-                          {request.id}
+                          {request.request_number}
                         </TableCell>
                         <TableCell className="text-sm font-medium text-slate-900 py-4">
                           {request.title}
@@ -892,7 +559,7 @@ export default function ServiceOrder() {
                             variant="outline"
                             className="text-xs border-slate-300 text-slate-600"
                           >
-                            {request.type}
+                            {request.service_category}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right py-4">
@@ -922,7 +589,7 @@ export default function ServiceOrder() {
                 className="border-slate-300 text-slate-700 hover:bg-slate-100"
               >
                 Close
-              </Button>
+              </Button> 
             </div>
           </DialogFooter>
         </DialogContent>

@@ -55,6 +55,23 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { PrintServiceOrder } from "./PrintServiceOrderPage";
+import { Request } from "@/lib/interfaces";
+
+export interface Item {
+  name: string;
+  description: string;
+  unit: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+export interface Vehicle {
+  vehicle_id: string;
+  plate_number: string;
+  car_type: string;
+  owners_first_name: string;
+  owners_last_name: string;
+}
 
 interface JournalEntry {
   id: number;
@@ -63,266 +80,14 @@ interface JournalEntry {
   entryType: "debit" | "credit";
 }
 
-interface RequestItem {
-  item: string;
-  description: string;
-  unit: string;
-  quantity: string;
-  estimatedUnitPrice: string;
+interface RequestDetailsPageProps {
+  request: Request;
 }
 
-interface Request {
-  id: string;
-  title: string;
-  type: string;
-  priority: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  company: string;
-  department: string;
-  amount: string;
-  description: string;
-  preferredDate: string;
-  expectedCompletion: string;
-  attachment: string[];
-  plateNumber: string;
-  carType: string;
-  ownerFirstname: string;
-  ownerLastname: string;
-  preferredVendor: string;
-  vendorContactPerson: string;
-  requiredBy: string;
-  paymentMethod: string;
-  items: RequestItem[];
-  totalEstimatedCost: string;
-}
-
-const mockRequests: Request[] = [
-  {
-    id: "REQ-2024-001",
-    title: "Laptop Upgrades for Dev Team",
-    type: "IT Equipment",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    company: "TechNova Solutions",
-    department: "Engineering",
-    amount: "$12,500",
-    description:
-      "Upgrade laptops for development team to handle heavier workloads.",
-    preferredDate: "2024-03-18",
-    expectedCompletion: "2024-03-25",
-    attachment: ["laptop-specs.pdf", "laptop-specs.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Dell Technologies",
-    vendorContactPerson: "Michael Reyes",
-    requiredBy: "2024-03-25",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Dell XPS 15",
-        description: "Intel i7, 32GB RAM, 1TB SSD",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$2,300",
-      },
-      {
-        item: "Laptop Docking Station",
-        description: "USB-C docking station",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$12,250",
-  },
-  {
-    id: "REQ-2024-002",
-    title: "Q1 Office Supplies",
-    type: "Office Supplies",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    company: "TechNova Solutions",
-    department: "Administration",
-    amount: "$850",
-    description: "Quarterly restocking of office supplies.",
-    preferredDate: "2024-03-12",
-    expectedCompletion: "2024-03-14",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "Office Warehouse",
-    vendorContactPerson: "Ana Santos",
-    requiredBy: "2024-03-15",
-    paymentMethod: "Company Credit Card",
-    items: [
-      {
-        item: "Printer Paper",
-        description: "A4 80gsm",
-        unit: "ream",
-        quantity: "20",
-        estimatedUnitPrice: "$5",
-      },
-      {
-        item: "Ballpoint Pens",
-        description: "Blue ink",
-        unit: "box",
-        quantity: "10",
-        estimatedUnitPrice: "$8",
-      },
-      {
-        item: "Staplers",
-        description: "Standard office stapler",
-        unit: "pcs",
-        quantity: "5",
-        estimatedUnitPrice: "$12",
-      },
-    ],
-    totalEstimatedCost: "$850",
-  },
-  {
-    id: "REQ-2024-003",
-    title: "Vehicle Tire Replacement",
-    type: "Vehicle Maintenance",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-07",
-    requestor: "Carlos Mendoza",
-    company: "TechNova Logistics",
-    department: "Operations",
-    amount: "$1,200",
-    description: "Replace worn-out tires for delivery vehicle.",
-    preferredDate: "2024-03-11",
-    expectedCompletion: "2024-03-11",
-    attachment: ["vehicle-inspection.jpg", "vehicle-inspection.jpg"],
-    plateNumber: "ABC-1234",
-    carType: "Toyota Hilux",
-    ownerFirstname: "Carlos",
-    ownerLastname: "Mendoza",
-    preferredVendor: "Goodyear Service Center",
-    vendorContactPerson: "Luis Ramirez",
-    requiredBy: "2024-03-11",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "All-Terrain Tire",
-        description: "265/65R17 Goodyear Wrangler",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$250",
-      },
-      {
-        item: "Chrome Valve Stems",
-        description: "Heavy-duty chrome valve stems",
-        unit: "set",
-        quantity: "4",
-        estimatedUnitPrice: "$12",
-      },
-      {
-        item: "Tire Pressure Sensors",
-        description: "TPMS sensors for Toyota Hilux",
-        unit: "pcs",
-        quantity: "4",
-        estimatedUnitPrice: "$45",
-      },
-    ],
-    totalEstimatedCost: "$1,663",
-  },
-  {
-    id: "REQ-2024-004",
-    title: "Marketing Campaign Printing",
-    type: "Marketing Materials",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-11",
-    requestor: "Emily Garcia",
-    company: "TechNova Solutions",
-    department: "Marketing",
-    amount: "$2,000",
-    description: "Printing brochures and flyers for Q2 campaign.",
-    preferredDate: "2024-03-20",
-    expectedCompletion: "2024-03-22",
-    attachment: ["campaign-design.pdf", "campaign-design.pdf"],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "PrintHub Davao",
-    vendorContactPerson: "Kevin Tan",
-    requiredBy: "2024-03-22",
-    paymentMethod: "Credit Card",
-    items: [
-      {
-        item: "Tri-Fold Brochures",
-        description: "Full color glossy",
-        unit: "pcs",
-        quantity: "2000",
-        estimatedUnitPrice: "$0.60",
-      },
-      {
-        item: "Flyers",
-        description: "A5 promotional flyers",
-        unit: "pcs",
-        quantity: "1500",
-        estimatedUnitPrice: "$0.40",
-      },
-    ],
-    totalEstimatedCost: "$1,800",
-  },
-  {
-    id: "REQ-2024-005",
-    title: "Aircon Maintenance Service",
-    type: "Facility Maintenance",
-    priority: "Low",
-    status: "approved",
-    dateSubmitted: "2024-03-05",
-    requestor: "David Lee",
-    company: "TechNova Solutions",
-    department: "Facilities",
-    amount: "$600",
-    description:
-      "Routine cleaning and maintenance of office air conditioning units.",
-    preferredDate: "2024-03-15",
-    expectedCompletion: "2024-03-15",
-    attachment: [],
-    plateNumber: "",
-    carType: "",
-    ownerFirstname: "",
-    ownerLastname: "",
-    preferredVendor: "CoolAir Services",
-    vendorContactPerson: "Mark Lopez",
-    requiredBy: "2024-03-16",
-    paymentMethod: "Bank Transfer",
-    items: [
-      {
-        item: "Aircon Cleaning",
-        description: "Split-type AC cleaning",
-        unit: "unit",
-        quantity: "6",
-        estimatedUnitPrice: "$70",
-      },
-      {
-        item: "Freon Refill",
-        description: "R410 refrigerant refill",
-        unit: "service",
-        quantity: "1",
-        estimatedUnitPrice: "$150",
-      },
-    ],
-    totalEstimatedCost: "$570",
-  },
-];
-
-const statusConfig = {
+const statusConfig: Record<
+  string,
+  { color: string; icon: React.ElementType; label: string }
+> = {
   submitted: {
     color: "bg-blue-100 text-blue-800 border-blue-200",
     icon: AlertCircle,
@@ -340,10 +105,45 @@ const statusConfig = {
   },
 };
 
-const priorityConfig = {
+const priorityConfig: Record<string, string> = {
   High: "bg-red-100 text-red-800 border-red-200",
   Medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
   Low: "bg-green-100 text-green-800 border-green-200",
+};
+
+// Helper to calculate total from items
+const calculateTotal = (items: Item[]): number => {
+  return items.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.unitPrice) || 0;
+    return sum + qty * price;
+  }, 0);
+};
+
+// Helper to format currency
+const formatCurrency = (value: string | number | undefined | null): string => {
+  if (value === undefined || value === null || value === "") return "₱0.00";
+  if (typeof value === "number")
+    return isNaN(value)
+      ? "₱0.00"
+      : new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(value);
+
+  const cleanedValue = value
+    .toString()
+    .replace(/[₱$,\s]/g, "")
+    .trim();
+  if (!cleanedValue) return "₱0.00";
+
+  const numValue = parseFloat(cleanedValue);
+  return isNaN(numValue)
+    ? "₱0.00"
+    : new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+      }).format(numValue);
 };
 
 function DetailItem({
@@ -367,20 +167,23 @@ function DetailItem({
   );
 }
 
-export default function RequestDetailsPage() {
-  const searchParams = useSearchParams();
-  const requestId = searchParams.get("requestId");
+export default function RequestDetailsPage({
+  request,
+}: RequestDetailsPageProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [accountTitle, setAccountTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
+
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("id");
 
   // react-to-print setup
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     contentRef,
-    documentTitle: `Request_${requestId || "Details"}`,
+    documentTitle: `Request_${request?.request_number || "Details"}`,
     pageStyle: `
       @media print {
         @page { size: A4; margin: 10mm; }
@@ -389,10 +192,6 @@ export default function RequestDetailsPage() {
       }
     `,
   });
-
-  const request = useMemo(() => {
-    return mockRequests.find((r) => r.id === requestId);
-  }, [requestId]);
 
   const handleAddRow = () => {
     if (!accountTitle || !amount) return;
@@ -425,30 +224,11 @@ export default function RequestDetailsPage() {
 
   const isBalanced = totalDebits === totalCredits && entries.length > 0;
 
-  const formatCurrency = (value: string | number | undefined | null) => {
-    if (value === undefined || value === null || value === "") return "₱0.00";
-    if (typeof value === "number")
-      return isNaN(value)
-        ? "₱0.00"
-        : new Intl.NumberFormat("en-PH", {
-            style: "currency",
-            currency: "PHP",
-          }).format(value);
-
-    const cleanedValue = value
-      .toString()
-      .replace(/[₱$,\s]/g, "")
-      .trim();
-    if (!cleanedValue) return "₱0.00";
-
-    const numValue = parseFloat(cleanedValue);
-    return isNaN(numValue)
-      ? "₱0.00"
-      : new Intl.NumberFormat("en-PH", {
-          style: "currency",
-          currency: "PHP",
-        }).format(numValue);
-  };
+  // Calculate total amount from items
+  const totalAmount = useMemo(
+    () => calculateTotal(request.items),
+    [request.items],
+  );
 
   if (!request) {
     return (
@@ -458,9 +238,7 @@ export default function RequestDetailsPage() {
             <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Request Not Found</h2>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              {requestId
-                ? `No request found with ID: ${requestId}`
-                : "No request ID provided"}
+              No request found
             </p>
             <Link href="/home/finance/service-orders">
               <Button>
@@ -474,8 +252,8 @@ export default function RequestDetailsPage() {
     );
   }
 
-  const StatusIcon = statusConfig[request.status].icon;
-  const isVehicleRequest = request.type === "Vehicle Maintenance";
+  const StatusIcon = statusConfig[request.status]?.icon || AlertCircle;
+  const isVehicleRequest = request.service_category === "Vehicle Maintenance";
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
@@ -490,7 +268,7 @@ export default function RequestDetailsPage() {
           <div>
             <h1 className="text-2xl font-bold">Request Details</h1>
             <p className="text-sm text-muted-foreground">
-              Viewing {request.id}
+              Viewing {request.request_number}
             </p>
           </div>
         </div>
@@ -508,7 +286,7 @@ export default function RequestDetailsPage() {
           <PrintServiceOrder
             request={request}
             formatCurrency={formatCurrency}
-            serviceOrderNumber={requestId || "N/A"}
+            serviceOrderNumber={requestId || request.request_number || "N/A"}
           />
         </div>
       </div>
@@ -532,20 +310,20 @@ export default function RequestDetailsPage() {
                 <div className="flex gap-2">
                   <Badge
                     variant="outline"
-                    className={statusConfig[request.status].color}
+                    className={
+                      statusConfig[request.status]?.color || "bg-slate-100"
+                    }
                   >
                     <StatusIcon className="mr-1 h-3 w-3" />
-                    {statusConfig[request.status].label}
+                    {statusConfig[request.status]?.label || request.status}
                   </Badge>
                   <Badge
                     variant="outline"
                     className={
-                      priorityConfig[
-                        request.priority as keyof typeof priorityConfig
-                      ]
+                      priorityConfig[request.priority_level] || "bg-slate-100"
                     }
                   >
-                    {request.priority} Priority
+                    {request.priority_level} Priority
                   </Badge>
                 </div>
               </div>
@@ -553,8 +331,8 @@ export default function RequestDetailsPage() {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailItem
-                  label="Request Type"
-                  value={request.type}
+                  label="Service Category"
+                  value={request.service_category}
                   icon={Package}
                 />
                 <DetailItem
@@ -563,8 +341,8 @@ export default function RequestDetailsPage() {
                   icon={Building2}
                 />
                 <DetailItem
-                  label="Date Submitted"
-                  value={new Date(request.dateSubmitted).toLocaleDateString(
+                  label="Preferred Date"
+                  value={new Date(request.preferred_date).toLocaleDateString(
                     "en-US",
                     {
                       weekday: "long",
@@ -577,7 +355,7 @@ export default function RequestDetailsPage() {
                 />
                 <DetailItem
                   label="Required By"
-                  value={new Date(request.requiredBy).toLocaleDateString(
+                  value={new Date(request.required_by).toLocaleDateString(
                     "en-US",
                     {
                       weekday: "long",
@@ -593,7 +371,7 @@ export default function RequestDetailsPage() {
           </Card>
 
           {/* Vehicle Details */}
-          {isVehicleRequest && (
+          {isVehicleRequest && request.vehicle?.plate_number && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -605,12 +383,15 @@ export default function RequestDetailsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <DetailItem
                     label="Plate Number"
-                    value={request.plateNumber}
+                    value={request.vehicle.plate_number}
                   />
-                  <DetailItem label="Vehicle Type" value={request.carType} />
+                  <DetailItem
+                    label="Vehicle Type"
+                    value={request.vehicle.car_type}
+                  />
                   <DetailItem
                     label="Owner Name"
-                    value={`${request.ownerFirstname} ${request.ownerLastname}`.trim()}
+                    value={`${request.vehicle.owners_first_name} ${request.vehicle.owners_last_name}`.trim()}
                   />
                 </div>
               </CardContent>
@@ -645,10 +426,7 @@ export default function RequestDetailsPage() {
                   <TableBody>
                     {request.items.map((item, index) => {
                       const qty = parseFloat(item.quantity) || 0;
-                      const price =
-                        parseFloat(
-                          item.estimatedUnitPrice.replace(/[$,]/g, ""),
-                        ) || 0;
+                      const price = parseFloat(item.unitPrice) || 0;
                       const total = qty * price;
                       return (
                         <TableRow key={index}>
@@ -656,7 +434,7 @@ export default function RequestDetailsPage() {
                             {index + 1}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {item.item}
+                            {item.name}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {item.description}
@@ -665,7 +443,7 @@ export default function RequestDetailsPage() {
                             {item.quantity} {item.unit}
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(item.estimatedUnitPrice)}
+                            {formatCurrency(item.unitPrice)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(total)}
@@ -683,7 +461,7 @@ export default function RequestDetailsPage() {
                       Total Estimated Cost:
                     </span>
                     <span className="text-lg font-bold text-green-600">
-                      {formatCurrency(request.totalEstimatedCost)}
+                      {formatCurrency(totalAmount)}
                     </span>
                   </div>
                 </div>
@@ -692,7 +470,7 @@ export default function RequestDetailsPage() {
           </Card>
 
           {/* Attachments */}
-          {request.attachment.length > 0 && (
+          {request.supporting_documents.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -702,21 +480,25 @@ export default function RequestDetailsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {request.attachment.map((file, index) => (
+                  {request.supporting_documents.map((file, index) => (
                     <div
                       key={index}
                       className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors cursor-pointer group"
+                      onClick={() =>
+                        window.open(file, "_blank", "noopener,noreferrer")
+                      }
                     >
                       <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                         <FileText className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file}</p>
+                        <p className="text-sm font-medium truncate">
+                          {file.split("/").pop() || file}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          Click to download
+                          Click to view
                         </p>
                       </div>
-                      <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   ))}
                 </div>
@@ -729,20 +511,17 @@ export default function RequestDetailsPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Requestor Information</CardTitle>
+              <CardTitle className="text-base">Request Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                    {request.requestor
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {request.requested_by?.slice(0, 2).toUpperCase() || "RQ"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{request.requestor}</p>
+                  <p className="font-semibold">{request.requested_by}</p>
                   <p className="text-sm text-muted-foreground">
                     {request.department}
                   </p>
@@ -764,12 +543,12 @@ export default function RequestDetailsPage() {
             <CardContent className="space-y-3">
               <DetailItem
                 label="Preferred Vendor"
-                value={request.preferredVendor}
+                value={request.preferred_vendor}
                 icon={Building2}
               />
               <DetailItem
                 label="Contact Person"
-                value={request.vendorContactPerson}
+                value={request.contact_person}
                 icon={User}
               />
             </CardContent>
@@ -782,12 +561,12 @@ export default function RequestDetailsPage() {
             <CardContent className="space-y-3">
               <DetailItem
                 label="Payment Method"
-                value={request.paymentMethod}
+                value={request.payment_method}
                 icon={CreditCard}
               />
               <DetailItem
                 label="Amount"
-                value={formatCurrency(request.amount)}
+                value={formatCurrency(totalAmount)}
                 icon={DollarSign}
               />
             </CardContent>

@@ -32,53 +32,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-
-export interface Request {
-  id: string;
-  request_number: string;
-  title: string;
-  description: string;
-  service_category: string;
-  priority_level: string;
-  company: string;
-  department: string;
-  preferred_date: string;
-  expected_completion: string;
-  supporting_documents: string[];
-  vehicle: Vehicle;
-  preferred_vendor: string;
-  contact_person: string;
-  required_by: string;
-  payment_method: string;
-  items: Item[];
-  status: string;
-}
-
-export interface Item {
-  name: string;
-  description: string;
-  unit: string;
-  quantity: string;
-  unitPrice: string;
-}
-
-export interface Vehicle {
-  vehicle_id: string;
-  plate_number: string;
-  car_type: string;
-  owners_first_name: string;
-  owners_last_name: string;
-}
-
-interface InfoItemProps {
-  label: string;
-  value: string | React.ReactNode;
-  className?: string;
-}
-
-interface ReviewRequestProps {
-  requests: Request[];
-}
+import { InfoItemProps, Item, Request, ReviewRequestProps } from "@/lib/interfaces";
 
 // Helper to calculate total from items
 const calculateTotal = (items: Item[]): string => {
@@ -424,11 +378,12 @@ export default function ReviewRequest({ requests }: ReviewRequestProps) {
                       label="Priority"
                       value={selectedRequest.priority_level}
                     />
+                    <InfoItem label="Requested By" value={selectedRequest.requested_by} />
+                    <InfoItem label="Company" value={selectedRequest.company} />
                     <InfoItem
                       label="Department"
                       value={selectedRequest.department}
                     />
-                    <InfoItem label="Company" value={selectedRequest.company} />
                     <InfoItem
                       label="Payment Method"
                       value={selectedRequest.payment_method}
