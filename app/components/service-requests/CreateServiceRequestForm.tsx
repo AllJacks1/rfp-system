@@ -40,8 +40,10 @@ import {
   Clock,
   Car,
   ArrowLeft,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   Company,
@@ -53,6 +55,20 @@ import {
   Vehicle,
   Vendor,
 } from "@/lib/interfaces";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export default function CreateServiceRequestForm({
   types,
@@ -77,6 +93,8 @@ export default function CreateServiceRequestForm({
   const selectedPlateNumber = vehicles?.find(
     (p) => p.vehicle_id === plateNumber,
   );
+  const [openPopover, setOpenPopover] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState("");
 
   // Form state for new item
   const [newItem, setNewItem] = useState({
@@ -86,6 +104,10 @@ export default function CreateServiceRequestForm({
     quantity: 0,
     unitPrice: 0,
   });
+  const [contactPerson, setContactPerson] = useState("");
+  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [contactTouched, setContactTouched] = useState(false);
 
   // Calculate item total
   const itemTotal = useMemo(() => {
@@ -165,6 +187,72 @@ export default function CreateServiceRequestForm({
       maximumFractionDigits: 2,
     })}`;
   };
+
+  // --- Safe Vendor Lookup ---
+  const getVendorById = useCallback(
+    (id: string) => {
+      return vendors?.find((v) => v?.vendor_id === id) || null;
+    },
+    [vendors],
+  );
+
+  const getVendorByName = useCallback(
+    (name: string) => {
+      return vendors?.find((v) => v?.name === name) || null;
+    },
+    [vendors],
+  );
+
+  // --- Safe Selection Handler ---
+  const handleVendorSelect = useCallback(
+    (vendorName: string) => {
+      // Toggle off if same vendor clicked
+      if (vendorName === selectedVendor) {
+        setSelectedVendor("");
+        setSelectedVendorId("");
+        setContactPerson("");
+        setIsContactAutoFilled(false);
+        return;
+      }
+
+      const vendor = getVendorByName(vendorName);
+      if (!vendor) {
+        console.warn("Vendor not found:", vendorName);
+        return;
+      }
+
+      setSelectedVendor(vendor.name);
+      setSelectedVendorId(vendor.vendor_id);
+
+      // Only auto-fill if user hasn't manually touched the field
+      // or if current field is empty
+      const vendorContact = vendor?.contact_person?.trim();
+      if (vendorContact && (!contactTouched || !contactPerson.trim())) {
+        setContactPerson(vendorContact);
+        setIsContactAutoFilled(true);
+      }
+    },
+    [selectedVendor, getVendorByName, contactTouched, contactPerson],
+  );
+
+  // --- Safe Contact Change Handler ---
+  const handleContactChange = useCallback((e: any) => {
+    const value = e.target?.value ?? "";
+    setContactPerson(value);
+    setContactTouched(true);
+    setIsContactAutoFilled(false);
+  }, []);
+
+  // --- Clear auto-fill visual on focus ---
+  const handleContactFocus = useCallback(
+    (e: any) => {
+      if (isContactAutoFilled) {
+        // Optional: select all text for easy replacement
+        e.target?.select?.();
+      }
+    },
+    [isContactAutoFilled],
+  );
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -522,8 +610,10 @@ export default function CreateServiceRequestForm({
                 </CardTitle>
               </div>
             </CardHeader>
+
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Preferred Vendor */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Preferred Vendor
@@ -531,35 +621,130 @@ export default function CreateServiceRequestForm({
                       (Optional)
                     </span>
                   </Label>
-                  <Input
-                    placeholder="Vendor company name"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <Popover open={openPopover} onOpenChange={setOpenPopover}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openPopover}
+                        className="w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-normal"
+                      >
+                        <span className="truncate">
+                          {selectedVendor || "Search or select vendor..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Search vendors..." />
+                        <CommandList>
+                          <CommandEmpty>No vendors found.</CommandEmpty>
+                          <CommandGroup>
+                            {Array.isArray(vendors) &&
+                              vendors.map((vendor) => {
+                                // Defensive: skip invalid vendor objects
+                                if (!vendor?.vendor_id || !vendor?.name)
+                                  return null;
+
+                                const isSelected =
+                                  selectedVendorId === vendor.vendor_id;
+
+                                return (
+                                  <CommandItem
+                                    key={vendor.vendor_id}
+                                    value={vendor.name}
+                                    onSelect={() =>
+                                      handleVendorSelect(vendor.name)
+                                    }
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 shrink-0",
+                                        isSelected
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="truncate">
+                                        {vendor.name}
+                                      </span>
+                                      {vendor.contact_person && (
+                                        <span className="text-xs text-slate-400 truncate">
+                                          Contact: {vendor.contact_person}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
+                {/* Contact Person - Bulletproof Version */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Contact Person
-                  </Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label
+                      htmlFor="contact-person"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Contact Person
+                    </Label>
+                    {isContactAutoFilled && (
+                      <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in duration-200">
+                        Auto-filled
+                      </span>
+                    )}
+                  </div>
                   <Input
+                    id="contact-person"
+                    value={contactPerson}
+                    onChange={handleContactChange}
+                    onFocus={handleContactFocus}
                     placeholder="Name or contact details"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                    autoComplete="off"
+                    className={cn(
+                      "h-11 border-slate-200 transition-colors duration-200",
+                      "focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20",
+                      isContactAutoFilled &&
+                        "bg-violet-50/50 border-violet-200 text-violet-900",
+                    )}
                   />
+                  {isContactAutoFilled && (
+                    <p className="text-xs text-slate-500 animate-in slide-in-from-top-1 duration-200">
+                      Tap to edit if different
+                    </p>
+                  )}
                 </div>
 
+                {/* Required By */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
+                  <Label
+                    htmlFor="required-by"
+                    className="text-sm font-medium text-slate-700"
+                  >
                     Required By
                   </Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
+                      id="required-by"
                       type="date"
-                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
                 </div>
 
+                {/* Payment Method */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-slate-400" />
@@ -569,10 +754,14 @@ export default function CreateServiceRequestForm({
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
+                        className={cn(
+                          "w-full justify-between h-11 border-slate-200",
+                          "hover:border-slate-300 hover:bg-slate-50 transition-colors",
+                          paymentMethod ? "text-slate-900" : "text-slate-500",
+                        )}
                       >
                         {paymentMethod || "Select method"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="start">

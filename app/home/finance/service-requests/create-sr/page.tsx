@@ -99,7 +99,23 @@ async function getVehicles(supabase: any) {
     .order("plate_number", { ascending: true });
 
   if (error) {
-    console.error("Error fetching types:", error);
+    console.error("Error fetching vehicles:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+async function getVendors(supabase: any) {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select(
+      "vendor_id, name, contact_person, payment_terms",
+    )
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching vendors:", error);
     return [];
   }
 
@@ -113,6 +129,7 @@ export default async function CreateServiceRequestPage() {
   const companies = await getCompanies(supabase);
   const departments = await getDepartments(supabase);
   const vehicles = await getVehicles(supabase);
+  const vendors = await getVendors(supabase);
 
   return (
     <div>
@@ -121,6 +138,7 @@ export default async function CreateServiceRequestPage() {
         companies={companies}
         departments={departments}
         vehicles={vehicles}
+        vendors={vendors}
       />
     </div>
   );

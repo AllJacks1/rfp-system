@@ -306,7 +306,7 @@ export interface CreateServiceRequestFormProps {
   types: Type[],
   companies: Company[],
   departments: Department[],
-  vehicles?: Vehicle[],
-  vendors?: Vendor[],
+  vehicles: Vehicle[],
+  vendors: Vendor[],
   paymentMethods?: PaymentMethod[],
 }
