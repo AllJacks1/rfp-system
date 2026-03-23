@@ -45,16 +45,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import {
-  Company,
-  CreateServiceRequestFormProps,
-  Department,
-  PaymentMethod,
-  ServiceItem,
-  Type,
-  Vehicle,
-  Vendor,
-} from "@/lib/interfaces";
+import { CreateServiceRequestFormProps, ServiceItem } from "@/lib/interfaces";
 import {
   Popover,
   PopoverContent,
@@ -69,126 +60,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-
-// Reusable Combobox Component
-function SearchableCombobox({
-  value,
-  onSelect,
-  options,
-  placeholder = "Search...",
-  emptyMessage = "No results found.",
-  searchPlaceholder = "Search...",
-  displayKey = "name",
-  valueKey = "id",
-  optional = false,
-  optionalLabel,
-  align = "start",
-  disabled = false,
-}: {
-  value: string;
-  onSelect: (value: string, item: any) => void;
-  options: any[];
-  placeholder?: string;
-  emptyMessage?: string;
-  searchPlaceholder?: string;
-  displayKey?: string;
-  valueKey?: string;
-  optional?: boolean;
-  optionalLabel?: string;
-  align?: "start" | "center" | "end";
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const selectedItem = options?.find((opt) => opt?.[valueKey] === value);
-  const displayValue = selectedItem?.[displayKey] || value;
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            "w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-normal transition-colors",
-            !value && "text-slate-500",
-            value && "text-slate-900",
-          )}
-        >
-          <span className="truncate">{displayValue || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
-        align={align}
-      >
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {optional && (
-                <CommandItem
-                  value=""
-                  onSelect={() => {
-                    onSelect("", null);
-                    setOpen(false);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4 shrink-0",
-                      !value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <span className="text-slate-500 italic">
-                    {optionalLabel || "None"}
-                  </span>
-                </CommandItem>
-              )}
-              {Array.isArray(options) &&
-                options.map((option) => {
-                  if (!option?.[valueKey]) return null;
-                  const isSelected = value === option[valueKey];
-
-                  return (
-                    <CommandItem
-                      key={option[valueKey]}
-                      value={option[displayKey]}
-                      onSelect={() => {
-                        onSelect(option[valueKey], option);
-                        setOpen(false);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 shrink-0",
-                          isSelected ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate">{option[displayKey]}</span>
-                        {option.subtitle && (
-                          <span className="text-xs text-slate-400 truncate">
-                            {option.subtitle}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
+import { SearchableCombobox } from "../inputs/SearchableCombobox";
 
 export default function CreateServiceRequestForm({
   types,
@@ -197,6 +69,7 @@ export default function CreateServiceRequestForm({
   vehicles,
   vendors,
   paymentMethods,
+  units,
 }: CreateServiceRequestFormProps) {
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [priority, setPriority] = useState<string>("");
@@ -205,6 +78,7 @@ export default function CreateServiceRequestForm({
   const [department, setDepartment] = useState<string>("");
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [unit, setUnit] = useState<string>("");
 
   // Popover states (managed internally by SearchableCombobox now)
   const [selectedVendor, setSelectedVendor] = useState("");
@@ -425,6 +299,16 @@ export default function CreateServiceRequestForm({
       })) || []
     );
   }, [paymentMethods]);
+
+  const unitOptions = useMemo(() => {
+    return (
+      units?.map((u) => ({
+        ...u,
+        id: u.unit_id,
+        name: u.name,
+      })) || []
+    );
+  }, [units]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -978,36 +862,16 @@ export default function CreateServiceRequestForm({
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       Unit
                     </Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={`w-full justify-between h-10 border-slate-200 hover:bg-white ${newItem.unit ? "text-slate-900" : "text-slate-500"}`}
-                        >
-                          {newItem.unit || "Select"}
-                          <ChevronDown className="h-4 w-4 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {[
-                          "Hour",
-                          "Day",
-                          "Piece",
-                          "Job",
-                          "Lot",
-                          "kg",
-                          "Meter",
-                        ].map((u) => (
-                          <DropdownMenuItem
-                            key={u}
-                            className="cursor-pointer"
-                            onClick={() => setNewItem({ ...newItem, unit: u })}
-                          >
-                            {u}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <SearchableCombobox
+                      value={unit}
+                      onSelect={(id) => setUnit(id)}
+                      options={unitOptions}
+                      placeholder="Search or select unit..."
+                      searchPlaceholder="Search units..."
+                      emptyMessage="No units found."
+                      valueKey="unit_id"
+                      displayKey="name"
+                    />
                   </div>
 
                   <div className="space-y-2 lg:col-span-2">

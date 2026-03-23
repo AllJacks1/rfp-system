@@ -134,6 +134,20 @@ async function getPaymentMethods(supabase: any) {
   return data || [];
 }
 
+async function getunits(supabase: any) {
+  const { data, error } = await supabase
+    .from("units")
+    .select("unit_id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching units:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export default async function CreateServiceRequestPage() {
   const supabase = await createClient();
 
@@ -143,6 +157,7 @@ export default async function CreateServiceRequestPage() {
   const vehicles = await getVehicles(supabase);
   const vendors = await getVendors(supabase);
   const paymentMethods = await getPaymentMethods(supabase);
+  const units = await getunits(supabase);
 
   return (
     <div>
@@ -153,6 +168,7 @@ export default async function CreateServiceRequestPage() {
         vehicles={vehicles}
         vendors={vendors}
         paymentMethods={paymentMethods}
+        units={units}
       />
     </div>
   );
