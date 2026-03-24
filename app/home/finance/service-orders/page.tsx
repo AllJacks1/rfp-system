@@ -3,7 +3,21 @@ import { Request } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
 
 async function getApprovedRequests(supabase: any): Promise<Request[]> {
-  const { data, error } = await supabase
+  // 1️⃣ Get all request IDs that already have service orders
+  const { data: existingOrders, error: orderError } = await supabase
+    .from("service_orders")
+    .select("service_request_id");
+
+  if (orderError) {
+    console.error("Error fetching service orders:", orderError);
+    return [];
+  }
+
+  const orderedRequestIds =
+    existingOrders?.map((o: any) => o.service_request_id) ?? [];
+
+  // 2️⃣ Build query for approved requests
+  let query = supabase
     .from("service_requests")
     .select(
       `
@@ -15,8 +29,16 @@ async function getApprovedRequests(supabase: any): Promise<Request[]> {
       payment_method:payment_methods(name)
     `,
     )
-    .eq("status", "approved")
-    .order("request_number", { ascending: true });
+    .eq("status", "approved");
+
+  // Exclude requests that already have service orders
+  if (orderedRequestIds.length > 0) {
+    query = query.not("id", "in", `(${orderedRequestIds.join(",")})`);
+  }
+
+  const { data, error } = await query.order("request_number", {
+    ascending: true,
+  });
 
   if (error) {
     console.error("Error fetching requests:", error);
@@ -25,7 +47,7 @@ async function getApprovedRequests(supabase: any): Promise<Request[]> {
 
   const requests = data || [];
 
-  // 1️⃣ Collect all file IDs
+  // 3️⃣ Collect all file IDs
   const allFileIds = requests
     .flatMap((r: any) => r.supporting_documents || [])
     .filter(Boolean);
@@ -41,7 +63,7 @@ async function getApprovedRequests(supabase: any): Promise<Request[]> {
     fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
   }
 
-  // 2️⃣ Transform into your Request interface
+  // 4️⃣ Transform into your Request interface
   const flattened: Request[] = requests.map((r: any) => ({
     id: r.id,
     request_number: r.request_number,
