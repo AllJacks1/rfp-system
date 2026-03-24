@@ -514,3 +514,7 @@ export interface PurchaseItem {
   unitPrice: number;
   total: number;
 }
+
+export interface PurchaseRequestPageProps {
+  requests: Request[];
+}
