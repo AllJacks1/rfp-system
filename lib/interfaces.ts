@@ -495,3 +495,22 @@ export interface ServiceRequestPageProps {
   requests: Request[];
 }
 
+export interface CreatePurchaseRequestFormProps {
+  types: Type[],
+  companies: Company[],
+  departments: Department[],
+  vehicles: Vehicle[],
+  vendors: Vendor[],
+  paymentMethods: PaymentMethod[],
+  units: Unit[],
+}
+
+export interface PurchaseItem {
+  id: number;
+  name: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}

@@ -32,28 +32,55 @@ import {
   CreditCard,
   Package,
   User,
+  Upload,
   ArrowRight,
   ShoppingCart,
   Hash,
   Calculator,
   Car,
   ArrowLeft,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
+import { CreatePurchaseRequestFormProps, PurchaseItem } from "@/lib/interfaces";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { SearchableCombobox } from "../inputs/SearchableCombobox";
+import { createClient } from "@/lib/supabase/client";
 
-interface LineItem {
-  id: number;
-  name: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
+export default function CreatePurchaseRequestForm({
+  types,
+  companies,
+  departments,
+  vehicles,
+  vendors,
+  paymentMethods,
+  units,
+}: CreatePurchaseRequestFormProps) {
+  // === FORM STATE ===
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [expectedCompletion, setExpectedCompletion] = useState("");
+  const [requiredBy, setRequiredBy] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-export default function CreatePurchaseRequestForm() {
-  const [items, setItems] = useState<LineItem[]>([]);
+  // Selection states
   const [priority, setPriority] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [company, setCompany] = useState<string>("");
@@ -61,7 +88,8 @@ export default function CreatePurchaseRequestForm() {
   const [plateNumber, setPlateNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
 
-  // Form state for new item
+  // Items state
+  const [items, setItems] = useState<PurchaseItem[]>([]);
   const [newItem, setNewItem] = useState({
     name: "",
     description: "",
@@ -70,20 +98,94 @@ export default function CreatePurchaseRequestForm() {
     unitPrice: 0,
   });
 
-  // Calculate item total
+  // Vendor state
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [isContactAutoFilled, setIsContactAutoFilled] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [contactTouched, setContactTouched] = useState(false);
+  const [openPopover, setOpenPopover] = useState(false);
+
+  // === COMPUTED ===
+  const selectedPlateNumber = vehicles?.find(
+    (p) => p.vehicle_id === plateNumber,
+  );
+
   const itemTotal = useMemo(() => {
     return (newItem.quantity || 0) * (newItem.unitPrice || 0);
   }, [newItem.quantity, newItem.unitPrice]);
 
-  // Calculate grand total
   const grandTotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.total, 0);
   }, [items]);
 
+  // === OPTIONS MEMO ===
+  const vehicleOptions = useMemo(() => {
+    return (
+      vehicles?.map((v) => ({
+        ...v,
+        id: v.vehicle_id,
+        name: v.plate_number,
+        subtitle: `${v.car_type} • ${v.owners_first_name} ${v.owners_last_name}`,
+      })) || []
+    );
+  }, [vehicles]);
+
+  const companyOptions = useMemo(() => {
+    return (
+      companies?.map((c) => ({
+        ...c,
+        id: c.company_id,
+        name: c.name,
+      })) || []
+    );
+  }, [companies]);
+
+  const departmentOptions = useMemo(() => {
+    return (
+      departments?.map((d) => ({
+        ...d,
+        id: d.department_id,
+        name: d.name,
+      })) || []
+    );
+  }, [departments]);
+
+  const typeOptions = useMemo(() => {
+    return (
+      types?.map((t) => ({
+        ...t,
+        id: t.type_id,
+        name: t.name,
+      })) || []
+    );
+  }, [types]);
+
+  const paymentMethodOptions = useMemo(() => {
+    return (
+      paymentMethods?.map((p) => ({
+        ...p,
+        id: p.payment_method_id,
+        name: p.name,
+      })) || []
+    );
+  }, [paymentMethods]);
+
+  const unitOptions = useMemo(() => {
+    return (
+      units?.map((u) => ({
+        ...u,
+        id: u.unit_id,
+        name: u.name,
+      })) || []
+    );
+  }, [units]);
+
+  // === HANDLERS ===
   const handleAddItem = () => {
     if (!newItem.name || !newItem.unit || newItem.quantity <= 0) return;
 
-    const item: LineItem = {
+    const item: PurchaseItem = {
       id: Date.now(),
       name: newItem.name,
       description: newItem.description,
@@ -149,13 +251,219 @@ export default function CreatePurchaseRequestForm() {
     })}`;
   };
 
+  const getVendorByName = useCallback(
+    (name: string) => {
+      return vendors?.find((v) => v?.name === name) || null;
+    },
+    [vendors],
+  );
+
+  const handleVendorSelect = useCallback(
+    (vendorName: string) => {
+      if (vendorName === selectedVendor) {
+        setSelectedVendor("");
+        setSelectedVendorId("");
+        setContactPerson("");
+        setIsContactAutoFilled(false);
+        return;
+      }
+
+      const vendor = getVendorByName(vendorName);
+      if (!vendor) {
+        console.warn("Vendor not found:", vendorName);
+        return;
+      }
+
+      setSelectedVendor(vendor.name);
+      setSelectedVendorId(vendor.vendor_id);
+
+      const vendorContact = vendor?.contact_person?.trim();
+      if (vendorContact && (!contactTouched || !contactPerson.trim())) {
+        setContactPerson(vendorContact);
+        setIsContactAutoFilled(true);
+      }
+    },
+    [selectedVendor, getVendorByName, contactTouched, contactPerson],
+  );
+
+  const handleContactChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target?.value ?? "";
+      setContactPerson(value);
+      setContactTouched(true);
+      setIsContactAutoFilled(false);
+    },
+    [],
+  );
+
+  const handleContactFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      if (isContactAutoFilled) {
+        e.target?.select?.();
+      }
+    },
+    [isContactAutoFilled],
+  );
+
+  // === UNIT HANDLER ===
+  const handleUnitSelect = useCallback((unitId: string) => {
+    setNewItem((prev) => ({ ...prev, unit: unitId }));
+  }, []);
+
+  // Helper to get unit name
+  const getUnitName = (unitId: string) => {
+    const unit = units?.find((u) => u.unit_id === unitId);
+    return unit?.name || unitId;
+  };
+
+  // === FILE HANDLERS ===
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    setFiles((prev) => [...prev, ...selectedFiles]);
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles((prev) => [...prev, ...droppedFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // === FILE UPLOAD ===
+  const uploadFiles = async () => {
+    const supabase = createClient();
+    const fileIds: string[] = [];
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `purchase-requests/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
+
+      const twentyYears = 60 * 60 * 24 * 365 * 20;
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(filePath, twentyYears);
+
+      if (signedError) {
+        console.error("Signed URL error:", signedError);
+        throw signedError;
+      }
+
+      const { data: fileRecord, error: insertError } = await supabase
+        .from("files")
+        .insert([{ type: file.type, url: signedData.signedUrl }])
+        .select("file_id")
+        .single();
+
+      if (insertError) {
+        console.error("Insert file error:", insertError);
+        throw insertError;
+      }
+
+      fileIds.push(fileRecord.file_id);
+    }
+
+    return fileIds;
+  };
+
+  // === CREATE PURCHASE REQUEST ===
+  const createPurchaseRequest = useCallback(async () => {
+    const supabase = createClient();
+    const storedUser = localStorage.getItem("userProfile");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (!user?.user_id) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    try {
+      const fileIds = await uploadFiles();
+
+      const payload = {
+        title,
+        purchase_category: category,
+        priority_level: priority,
+        company: company,
+        department: department || null,
+        vehicle: plateNumber || null,
+        preferred_date: preferredDate || null,
+        expected_completion: expectedCompletion || null,
+        required_by: requiredBy || null,
+        preferred_vendor: selectedVendor || null,
+        contact_person: contactPerson || null,
+        payment_method: paymentMethod || null,
+        description: description || null,
+        items: items,
+        requested_by: user.user_id,
+        supporting_documents: fileIds,
+      };
+
+      console.log("=== PURCHASE REQUEST PAYLOAD ===");
+      console.log(JSON.stringify(payload, null, 2));
+
+      const { data, error } = await supabase
+        .from("purchase_requests")
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log("Created Purchase Request:", data);
+      alert(`Purchase Request Created: ${data.purchase_number}`);
+    } catch (err: any) {
+      console.error("Create Purchase Request Error:", err);
+      alert(err.message || "Something went wrong");
+    }
+  }, [
+    title,
+    category,
+    priority,
+    company,
+    department,
+    plateNumber,
+    preferredDate,
+    expectedCompletion,
+    requiredBy,
+    selectedVendor,
+    contactPerson,
+    paymentMethod,
+    description,
+    items,
+    files,
+  ]);
+
+  // === VALIDATION ===
+  const isSubmitDisabled = useMemo(() => {
+    return (
+      !title.trim() || !category || !priority || !company || items.length === 0
+    );
+  }, [title, category, priority, company, items]);
+
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
           <div className="flex items-center gap-3">
-            <Link href="/home/finance/service-requests">
+            <Link href="/home/finance/purchase-requests">
               <Button variant="outline" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -200,54 +508,40 @@ export default function CreatePurchaseRequestForm() {
                   Request Title <span className="text-rose-500">*</span>
                 </Label>
                 <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Q4 Office Supplies Procurement"
-                  className="h-11 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 bg-white"
+                  className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20 bg-white"
                 />
               </div>
 
               {/* Grid Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* Purchase Category */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-slate-400" />
-                    Request Type
+                    Purchase Category <span className="text-rose-500">*</span>
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${category ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {category || "Select type"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Office Supplies",
-                        "IT Equipment",
-                        "Services",
-                        "Raw Materials",
-                        "Others",
-                      ].map((cat) => (
-                        <DropdownMenuItem
-                          key={cat}
-                          className="cursor-pointer"
-                          onClick={() => setCategory(cat)}
-                        >
-                          {cat}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={category}
+                    onSelect={(id) => setCategory(id)}
+                    options={typeOptions}
+                    placeholder="Search or select category..."
+                    searchPlaceholder="Search categories..."
+                    emptyMessage="No categories found."
+                    valueKey="type_id"
+                    displayKey="name"
+                  />
                 </div>
 
+                {/* Priority */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <div
                       className={`w-2 h-2 rounded-full ${getPriorityStyles(priority).dot}`}
                     />
-                    Priority
+                    Priority <span className="text-rose-500">*</span>
                   </Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -294,67 +588,75 @@ export default function CreatePurchaseRequestForm() {
                   </DropdownMenu>
                 </div>
 
+                {/* Company */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-slate-400" />
-                    Company
+                    Company <span className="text-rose-500">*</span>
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${company ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {company || "Select company"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {["Ihub", "Astra", "Jmave", "Nexus"].map((comp) => (
-                        <DropdownMenuItem
-                          key={comp}
-                          className="cursor-pointer"
-                          onClick={() => setCompany(comp)}
-                        >
-                          {comp}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={company}
+                    onSelect={(id) => setCompany(id)}
+                    options={companyOptions}
+                    placeholder="Search or select company..."
+                    searchPlaceholder="Search companies..."
+                    emptyMessage="No companies found."
+                    valueKey="company_id"
+                    displayKey="name"
+                  />
                 </div>
 
+                {/* Department */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Department
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${department ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {department || "Select dept"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Operations",
-                        "Administration",
-                        "Development",
-                        "Marketing",
-                        "Finance",
-                      ].map((dept) => (
-                        <DropdownMenuItem
-                          key={dept}
-                          className="cursor-pointer"
-                          onClick={() => setDepartment(dept)}
-                        >
-                          {dept}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={department}
+                    onSelect={(id) => setDepartment(id)}
+                    options={departmentOptions}
+                    placeholder="Search or select department..."
+                    searchPlaceholder="Search departments..."
+                    emptyMessage="No departments found."
+                    valueKey="department_id"
+                    displayKey="name"
+                    optional
+                    optionalLabel="No Department"
+                  />
+                </div>
+
+                {/* Preferred Date */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    Preferred Date
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <Input
+                      type="date"
+                      value={preferredDate}
+                      onChange={(e) => setPreferredDate(e.target.value)}
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Expected Completion */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    Expected Completion
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <Input
+                      type="date"
+                      value={expectedCompletion}
+                      onChange={(e) => setExpectedCompletion(e.target.value)}
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -366,9 +668,82 @@ export default function CreatePurchaseRequestForm() {
                   Description <span className="text-rose-500">*</span>
                 </Label>
                 <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Provide detailed information about the items or services needed, including specifications, purpose, and any other relevant details..."
-                  className="w-full min-h-25 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-y transition-all"
+                  className="w-full min-h-[100px] px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B3A9F]/40 focus:border-[#2B3A9F]/80 resize-y transition-all"
                 />
+              </div>
+
+              {/* File Upload */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-900 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-slate-400" />
+                  Supporting Documents
+                  {files.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-indigo-50 text-[#2B3A9F]"
+                    >
+                      {files.length} file{files.length !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </Label>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                />
+
+                <div
+                  onClick={handleUploadClick}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-[#2B3A9F]/80 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+                >
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-[#2B3A9F]/20 transition-colors">
+                    <Upload className="w-6 h-6 text-slate-400 group-hover:text-[#2B3A9F]" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-900 mb-1">
+                    Drop files here or click to upload
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    PDF, images, or documents up to 10MB
+                  </p>
+                </div>
+
+                {files.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="text-sm text-slate-700 truncate">
+                            {file.name}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -387,74 +762,71 @@ export default function CreatePurchaseRequestForm() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Plate Number */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <Label className="text-sm font-medium text-slate-700">
                     Plate Number
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {plateNumber || "Select plate number"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "NAA 1234",
-                        "CAB 5678",
-                        "FAG 9012",
-                        "LDT 3456",
-                        "NHV 7890",
-                      ].map((number) => (
-                        <DropdownMenuItem
-                          key={number}
-                          className="cursor-pointer"
-                          onClick={() => setPlateNumber(number)}
-                        >
-                          {number}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={plateNumber}
+                    onSelect={(id) => setPlateNumber(id)}
+                    options={vehicleOptions}
+                    placeholder="Search or select plate..."
+                    searchPlaceholder="Search by plate, type, or owner..."
+                    emptyMessage="No vehicles found."
+                    valueKey="vehicle_id"
+                    displayKey="plate_number"
+                    optional
+                    optionalLabel="No Vehicle"
+                  />
                 </div>
 
+                {/* Car Type - Read only */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Car Type
                   </Label>
-                  <Input
-                    placeholder="Partner's car type"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.car_type || (
+                      <span className="text-slate-400">
+                        Select vehicle first
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Owner's First Name - Read only */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner&rsquo;s first name
+                    Owner&apos;s First Name
                   </Label>
-                  <Input
-                    placeholder="Car owner's first name"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.owners_first_name || (
+                      <span className="text-slate-400">
+                        Select vehicle first
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Owner's Last Name - Read only */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
-                    Owner&rsquo;s last name
+                    Owner&apos;s Last Name
                   </Label>
-                  <Input
-                    placeholder="Car owner's last name"
-                    className="h-11 border-slate-200 focus:border-violet-500 focus:ring-violet-500/20"
-                  />
+                  <div className="h-11 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm flex items-center">
+                    {selectedPlateNumber?.owners_last_name || (
+                      <span className="text-slate-400">
+                        Select vehicle first
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Vendor & Payment Card */}
+          {/* Vendor & Payment */}
           <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/80 border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-2">
@@ -462,12 +834,13 @@ export default function CreatePurchaseRequestForm() {
                   <User className="w-4 h-4 text-[#2B3A9F]" />
                 </div>
                 <CardTitle className="text-sm font-semibold text-slate-900">
-                  Vendor Information
+                  Vendor & Payment
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Preferred Vendor */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">
                     Preferred Vendor
@@ -475,69 +848,167 @@ export default function CreatePurchaseRequestForm() {
                       (Optional)
                     </span>
                   </Label>
-                  <Input
-                    placeholder="Vendor company name"
-                    className="h-11 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20"
-                  />
+                  <Popover open={openPopover} onOpenChange={setOpenPopover}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openPopover}
+                        className="w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-normal"
+                      >
+                        <span className="truncate">
+                          {selectedVendor || "Search or select vendor..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Search vendors..." />
+                        <CommandList>
+                          <CommandEmpty>No vendors found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value=""
+                              onSelect={() => {
+                                setSelectedVendor("");
+                                setSelectedVendorId("");
+                                setContactPerson("");
+                                setIsContactAutoFilled(false);
+                                setOpenPopover(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4 shrink-0",
+                                  !selectedVendor ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <span className="text-slate-500 italic">
+                                None
+                              </span>
+                            </CommandItem>
+                            {Array.isArray(vendors) &&
+                              vendors.map((vendor) => {
+                                if (!vendor?.vendor_id || !vendor?.name)
+                                  return null;
+                                const isSelected =
+                                  selectedVendorId === vendor.vendor_id;
+                                return (
+                                  <CommandItem
+                                    key={vendor.vendor_id}
+                                    value={vendor.name}
+                                    onSelect={() =>
+                                      handleVendorSelect(vendor.name)
+                                    }
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 shrink-0",
+                                        isSelected
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="truncate">
+                                        {vendor.name}
+                                      </span>
+                                      {vendor.contact_person && (
+                                        <span className="text-xs text-slate-400 truncate">
+                                          Contact: {vendor.contact_person}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
+                {/* Contact Person */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Contact Person
-                  </Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label
+                      htmlFor="contact-person"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Contact Person
+                    </Label>
+                    {isContactAutoFilled && (
+                      <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0">
+                        Auto-filled
+                      </span>
+                    )}
+                  </div>
                   <Input
-                    placeholder="Name or contact info"
-                    className="h-11 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20"
+                    id="contact-person"
+                    value={contactPerson}
+                    onChange={handleContactChange}
+                    onFocus={handleContactFocus}
+                    placeholder="Name or contact details"
+                    autoComplete="off"
+                    className={cn(
+                      "h-11 border-slate-200 transition-colors duration-200",
+                      "focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20",
+                      isContactAutoFilled &&
+                        "bg-violet-50/50 border-violet-200 text-violet-900",
+                    )}
                   />
+                  {isContactAutoFilled && (
+                    <p className="text-xs text-slate-500">
+                      Tap to edit if different
+                    </p>
+                  )}
                 </div>
 
+                {/* Required By */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    Required Date
+                  <Label
+                    htmlFor="required-by"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Required By
                   </Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     <Input
+                      id="required-by"
                       type="date"
-                      className="h-11 pl-10 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20"
+                      value={requiredBy}
+                      onChange={(e) => setRequiredBy(e.target.value)}
+                      className="h-11 pl-10 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                     />
                   </div>
                 </div>
 
+                {/* Payment Method */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-slate-400" />
-                    Payment Terms
+                    Payment Method
                   </Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between h-11 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors ${paymentMethod ? "text-slate-900" : "text-slate-500"}`}
-                      >
-                        {paymentMethod || "Select terms"}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                      {[
-                        "Cash",
-                        "Check",
-                        "Bank Transfer",
-                        "Credit Card",
-                        "Net 30",
-                        "Net 60",
-                      ].map((method) => (
-                        <DropdownMenuItem
-                          key={method}
-                          className="cursor-pointer"
-                          onClick={() => setPaymentMethod(method)}
-                        >
-                          {method}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableCombobox
+                    value={paymentMethod}
+                    onSelect={(id) => setPaymentMethod(id)}
+                    options={paymentMethodOptions}
+                    placeholder="Search or select payment..."
+                    searchPlaceholder="Search payment methods..."
+                    emptyMessage="No payment methods found."
+                    valueKey="payment_method_id"
+                    displayKey="name"
+                    optional
+                    optionalLabel="No Payment Method"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -569,7 +1040,7 @@ export default function CreatePurchaseRequestForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-4">
                   <div className="space-y-2 lg:col-span-3">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Item Name
+                      Item Name <span className="text-rose-500">*</span>
                     </Label>
                     <Input
                       placeholder="e.g., A4 Paper Ream"
@@ -577,7 +1048,7 @@ export default function CreatePurchaseRequestForm() {
                       onChange={(e) =>
                         setNewItem({ ...newItem, name: e.target.value })
                       }
-                      className="h-10 border-slate-200 focus:border-indigo-500 bg-white"
+                      className="h-10 border-slate-200 focus:border-violet-500 bg-white"
                     />
                   </div>
 
@@ -591,50 +1062,29 @@ export default function CreatePurchaseRequestForm() {
                       onChange={(e) =>
                         setNewItem({ ...newItem, description: e.target.value })
                       }
-                      className="h-10 border-slate-200 focus:border-indigo-500 bg-white"
+                      className="h-10 border-slate-200 focus:border-violet-500 bg-white"
                     />
                   </div>
 
                   <div className="space-y-2 lg:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Unit
+                      Unit <span className="text-rose-500">*</span>
                     </Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={`w-full justify-between h-10 border-slate-200 hover:bg-white ${newItem.unit ? "text-slate-900" : "text-slate-500"}`}
-                        >
-                          {newItem.unit || "Select"}
-                          <ChevronDown className="h-4 w-4 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {[
-                          "Piece",
-                          "Box",
-                          "Pack",
-                          "Ream",
-                          "kg",
-                          "Liter",
-                          "Hour",
-                          "Day",
-                        ].map((u) => (
-                          <DropdownMenuItem
-                            key={u}
-                            className="cursor-pointer"
-                            onClick={() => setNewItem({ ...newItem, unit: u })}
-                          >
-                            {u}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <SearchableCombobox
+                      value={newItem.unit}
+                      onSelect={handleUnitSelect}
+                      options={unitOptions}
+                      placeholder="Select unit..."
+                      searchPlaceholder="Search units..."
+                      emptyMessage="No units found."
+                      valueKey="unit_id"
+                      displayKey="name"
+                    />
                   </div>
 
                   <div className="space-y-2 lg:col-span-2">
                     <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Qty
+                      Qty <span className="text-rose-500">*</span>
                     </Label>
                     <div className="relative">
                       <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -650,7 +1100,7 @@ export default function CreatePurchaseRequestForm() {
                             quantity: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="h-10 pl-9 border-slate-200 focus:border-indigo-500 bg-white"
+                        className="h-10 pl-9 border-slate-200 focus:border-violet-500 bg-white"
                       />
                     </div>
                   </div>
@@ -675,7 +1125,7 @@ export default function CreatePurchaseRequestForm() {
                             unitPrice: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="h-10 pl-7 border-slate-200 focus:border-indigo-500 bg-white"
+                        className="h-10 pl-7 border-slate-200 focus:border-violet-500 bg-white"
                       />
                     </div>
                   </div>
@@ -781,7 +1231,7 @@ export default function CreatePurchaseRequestForm() {
                               variant="secondary"
                               className="bg-slate-100 text-slate-700 font-mono font-medium"
                             >
-                              {item.quantity} {item.unit}
+                              {item.quantity} {getUnitName(item.unit)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono text-slate-600">
@@ -824,7 +1274,7 @@ export default function CreatePurchaseRequestForm() {
                       <span className="text-base font-semibold text-slate-900">
                         Total Amount
                       </span>
-                      <span className="text-2xl font-bold text-indigo-600 font-mono">
+                      <span className="text-2xl font-bold text-[#2B3A9F] font-mono">
                         {formatCurrency(grandTotal)}
                       </span>
                     </div>
@@ -838,14 +1288,20 @@ export default function CreatePurchaseRequestForm() {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6">
           <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
-            <Button
-              variant="outline"
-              className="flex-1 sm:flex-none h-11 px-6 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            <Link
+              href="/home/finance/purchase-requests"
+              className="flex-1 sm:flex-none"
             >
-              Cancel
-            </Button>
+              <Button
+                variant="outline"
+                className="w-full h-11 px-6 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              >
+                Cancel
+              </Button>
+            </Link>
             <Button
-              disabled={items.length === 0}
+              onClick={createPurchaseRequest}
+              disabled={isSubmitDisabled}
               className="flex-1 sm:flex-none h-11 px-6 bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit Request
