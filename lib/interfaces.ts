@@ -341,6 +341,8 @@ export interface InfoItemProps {
 
 export interface ServiceOrderProps {
   requests: Request[];
+  orders: Order[];
+  units: Unit[];
 }
 
 export interface RequestDetailsPageProps {
@@ -357,7 +359,7 @@ export interface JournalEntry {
 
 export interface Order {
   id: string;
-  request_number: string;
+  order_number: string;
   title: string;
   description: string;
   service_category: string;
@@ -375,5 +377,6 @@ export interface Order {
   items: Item[];
   status: string;
   requested_by: string;
+  order_prepared_by: string;
   journal_entries?: JournalEntry[];
 }

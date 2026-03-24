@@ -323,8 +323,8 @@ export default function RequestDetailsPage({
       const supabase = createClient();
 
       const journalEntriesPayload = entries.map((entry) => ({
-        account_title: entry.accountTitle,
-        entry_type: entry.entryType,
+        accountTitle: entry.accountTitle,
+        entryType: entry.entryType,
         amount: entry.amount,
       }));
 
