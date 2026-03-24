@@ -155,7 +155,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
         bgColor: "bg-[#2B3A9F]/10",
       },
       {
-        title: "for approval",
+        title: "For Approval",
         value: orders.filter((r) => r.status === "for approval").length,
         icon: Clock,
         color: "text-amber-600",
