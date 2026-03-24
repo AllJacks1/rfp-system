@@ -26,10 +26,9 @@ export default function Authentication() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     setIsLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -40,6 +39,30 @@ export default function Authentication() {
       setIsLoading(false);
       return;
     }
+
+    const uuid = data.user?.id;
+
+    if (!uuid) {
+      alert("User UUID not found");
+      setIsLoading(false);
+      return;
+    }
+
+    // Fetch your internal user record
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("user_id")
+      .eq("auth_user_id", uuid)
+      .single();
+
+    if (userError) {
+      console.error("User fetch error:", userError);
+      setIsLoading(false);
+      return;
+    }
+
+    // Cache it
+    localStorage.setItem("userProfile", JSON.stringify(userData));
 
     router.push("/home");
     router.refresh();

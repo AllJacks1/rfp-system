@@ -248,19 +248,6 @@ export default function RequestDetailsPage({
   const searchParams = useSearchParams();
   const requestId = searchParams.get("id");
 
-  useEffect(() => {
-    if (request?.journal_entries) {
-      setEntries(
-        request.journal_entries.map((j) => ({
-          id: j.id,
-          accountTitle: j.accountTitle,
-          amount: j.amount,
-          entryType: j.entryType,
-        })),
-      );
-    }
-  }, [request]);
-
   // react-to-print setup
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -316,33 +303,50 @@ export default function RequestDetailsPage({
     [request.items],
   );
 
-  async function handleUpdateJournalEntries() {
+  async function handleCreateServiceOrder() {
     if (!request?.id) return;
 
     if (entries.length === 0 || totalDebits !== totalCredits) {
+      console.warn("Entries must exist and be balanced");
+      return;
+    }
+
+    const storedUser = localStorage.getItem("userProfile");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (!user?.user_id) {
+      console.error("User not authenticated");
       return;
     }
 
     try {
       const supabase = createClient();
 
-      const payload = entries.map((e) => ({
-        id: e.id,
-        accountTitle: e.accountTitle,
-        amount: e.amount,
-        entryType: e.entryType,
+      const journalEntriesPayload = entries.map((entry) => ({
+        account_title: entry.accountTitle,
+        entry_type: entry.entryType,
+        amount: entry.amount,
       }));
 
       const { data, error } = await supabase
-        .from("service_requests")
-        .update({ journal_entries: payload })
-        .eq("id", request.id);
+        .from("service_orders")
+        .insert({
+          service_request_id: request.id,
+          order_prepared_by: user.user_id,
+          journal_entries: journalEntriesPayload,
+          status: "for approval",
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      console.log("Saved to journal_entries (JSONB):", payload);
+      console.log("Service Order created:", data);
+
+      // optional UI reset
+      setEntries([]);
     } catch (err) {
-      console.error("Save failed:", err);
+      console.error("Service Order Creation failed:", err);
     }
   }
 
@@ -1120,7 +1124,7 @@ export default function RequestDetailsPage({
           {/* Submit Action */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
-              onClick={handleUpdateJournalEntries}
+              onClick={handleCreateServiceOrder}
               disabled={!isBalanced || entries.length === 0}
               className={cn(
                 "px-8 h-12 text-base font-semibold shadow-lg transition-all",

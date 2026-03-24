@@ -75,12 +75,6 @@ async function getRequest(supabase: any, id: string): Promise<Request | null> {
     requested_by: data.requested_by
       ? `${data.requested_by.first_name} ${data.requested_by.last_name}`
       : "",
-    journal_entries: (data.journal_entries || []).map((j: any) => ({
-      id: j.id,
-      accountTitle: j.accountTitle,
-      amount: j.amount,
-      entryType: j.entryType,
-    })),
   };
 }
 

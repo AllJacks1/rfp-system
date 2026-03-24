@@ -320,7 +320,6 @@ export interface Request {
   items: Item[];
   status: string;
   requested_by: string;
-  journal_entries?: JournalEntry[];
 }
 
 export interface Item {
@@ -354,4 +353,27 @@ export interface JournalEntry {
   accountTitle: string;
   amount: number;
   entryType: "debit" | "credit";
+}
+
+export interface Order {
+  id: string;
+  request_number: string;
+  title: string;
+  description: string;
+  service_category: string;
+  priority_level: string;
+  company: string;
+  department: string;
+  preferred_date: string;
+  expected_completion: string;
+  supporting_documents: string[];
+  vehicle: Vehicle;
+  preferred_vendor: string;
+  contact_person: string;
+  required_by: string;
+  payment_method: string;
+  items: Item[];
+  status: string;
+  requested_by: string;
+  journal_entries?: JournalEntry[];
 }
