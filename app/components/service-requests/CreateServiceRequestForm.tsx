@@ -410,6 +410,14 @@ export default function CreateServiceRequestForm({
   const createServiceRequest = useCallback(async () => {
     const supabase = createClient();
 
+    const storedUser = localStorage.getItem("userProfile");
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (!user?.user_id) {
+      console.error("User not authenticated");
+      return;
+    }
+
     try {
       // 1️⃣ Upload files first
       const fileIds = await uploadFiles();
@@ -433,6 +441,8 @@ export default function CreateServiceRequestForm({
 
         description: serviceDescription || null,
         items: items,
+
+        requested_by: user.user_id,
 
         // store uploaded file IDs
         supporting_documents: fileIds,
@@ -1264,7 +1274,8 @@ export default function CreateServiceRequestForm({
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono text-slate-600">
-                            `{formatCurrency(item.unitPrice)} / {getUnitName(item.unit)}`
+                            `{formatCurrency(item.unitPrice)} /{" "}
+                            {getUnitName(item.unit)}`
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold text-slate-900">
                             {formatCurrency(item.total)}
