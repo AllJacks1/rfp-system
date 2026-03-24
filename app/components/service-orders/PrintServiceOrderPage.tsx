@@ -1,4 +1,4 @@
-import { Request, Item } from "@/lib/interfaces";
+import { Request, Item, Unit } from "@/lib/interfaces";
 import {
   CreditCard,
   MapPin,
@@ -35,10 +35,12 @@ export const PrintServiceOrder = ({
   request,
   formatCurrency,
   serviceOrderNumber,
+  units,
 }: {
   request: Request;
   formatCurrency: (value: string | number | undefined | null) => string;
   serviceOrderNumber: string;
+  units: Unit[];
 }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -63,6 +65,11 @@ export const PrintServiceOrder = ({
 
   // Calculate total from items
   const totalAmount = calculateTotal(request.items);
+
+  const getUnitName = (unitId: string) => {
+    const unit = units?.find((u) => u.unit_id === unitId);
+    return unit?.name || unitId;
+  };
 
   return (
     <div className="print-content bg-white text-black min-h-[277mm] w-[210mm] mx-auto p-[15mm] box-border text-[12px] leading-normal flex flex-col">
@@ -242,11 +249,14 @@ export const PrintServiceOrder = ({
                     <p className="text-xs text-gray-500">{item.description}</p>
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-center">
-                    {item.quantity}{" "}
-                    <span className="text-xs uppercase">{item.unit}</span>
+                    {item.quantity}
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono">
                     {formatCurrency(item.unitPrice)}
+                    {" / "}
+                    <span className="text-xs uppercase">
+                      {getUnitName(item.unit)}
+                    </span>
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono font-bold">
                     {formatCurrency(total)}

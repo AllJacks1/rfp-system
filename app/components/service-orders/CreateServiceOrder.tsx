@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useReactToPrint } from "react-to-print";
 import {
   Card,
   CardContent,
@@ -36,7 +34,6 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
-  Printer,
   Plus,
   ArrowLeftRight,
   Trash2,
@@ -58,7 +55,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PrintServiceOrder } from "./PrintServiceOrderPage";
 import { createClient } from "@/lib/supabase/client";
 import { Item, JournalEntry, RequestDetailsPageProps } from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
@@ -246,22 +242,6 @@ export default function RequestDetailsPage({
   const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
 
   const searchParams = useSearchParams();
-  const requestId = searchParams.get("id");
-
-  // react-to-print setup
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = useReactToPrint({
-    contentRef,
-    documentTitle: `Request_${request?.request_number || "Details"}`,
-    pageStyle: `
-      @media print {
-        @page { size: A4; margin: 10mm; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-content { padding: 0 !important; }
-      }
-    `,
-  });
 
   const handleAddRow = () => {
     if (!accountTitle || !amount) return;
@@ -408,27 +388,6 @@ export default function RequestDetailsPage({
                 </span>
               </p>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="border-[#E2E8F0] hover:bg-[#EEF2FF] hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 transition-all"
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print / PDF
-            </Button>
-          </div>
-        </div>
-
-        {/* Hidden Printable Content */}
-        <div className="hidden">
-          <div ref={contentRef}>
-            <PrintServiceOrder
-              request={request}
-              formatCurrency={formatCurrency}
-              serviceOrderNumber={requestId || request.request_number || "N/A"}
-            />
           </div>
         </div>
 

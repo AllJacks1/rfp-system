@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import {
   Package,
   Truck,
   CreditCard,
+  Printer,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -40,6 +41,8 @@ import {
 } from "@/components/ui/table";
 import { Order, Request, ServiceOrderProps } from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
+import { useReactToPrint } from "react-to-print";
+import { PrintServiceOrder } from "./PrintServiceOrderPage";
 
 // Color palette consistent with previous components
 const colors = {
@@ -101,6 +104,24 @@ export default function ServiceOrder({
     useState(false);
   const router = useRouter();
 
+  // Ref for print content
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Setup react-to-print hook
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: selectedOrder?.order_number
+      ? `Service_Order_${selectedOrder.order_number}`
+      : "Service_Order_Details",
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-content { padding: 0 !important; }
+      }
+    `,
+  });
+
   // Calculate total amount from items
   const calculateTotal = (items: Order["items"]): number => {
     return items.reduce((sum, item) => {
@@ -111,11 +132,15 @@ export default function ServiceOrder({
   };
 
   // Format currency
-  const formatCurrency = (value: number): string => {
+  const formatCurrency = (
+    value: string | number | undefined | null,
+  ): string => {
+    const amount = Number(value ?? 0);
+
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
       currency: "PHP",
-    }).format(value);
+    }).format(amount);
   };
 
   const getStatusBadge = (status: string) => {
@@ -296,6 +321,30 @@ export default function ServiceOrder({
     return unit?.name || unitId;
   };
 
+  function mapOrderToRequest(order: Order): Request {
+    return {
+      id: order.id,
+      request_number: order.order_number, // Use order_number as request_number
+      title: order.title,
+      description: order.description,
+      service_category: order.service_category,
+      priority_level: order.priority_level,
+      company: order.company,
+      department: order.department,
+      preferred_date: order.preferred_date,
+      expected_completion: order.expected_completion,
+      supporting_documents: [...order.supporting_documents], // copy array
+      vehicle: order.vehicle,
+      preferred_vendor: order.preferred_vendor,
+      contact_person: order.contact_person,
+      required_by: order.required_by,
+      payment_method: order.payment_method,
+      items: order.items.map((i) => ({ ...i })), // copy items array
+      status: order.status,
+      requested_by: order.requested_by,
+    };
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8">
       {/* Header Section */}
@@ -391,9 +440,38 @@ export default function ServiceOrder({
                   {selectedOrder?.order_number}
                 </DialogDescription>
               </div>
-              {selectedOrder && getStatusBadge(selectedOrder.status)}
+              <div className="flex items-center gap-3">
+                {selectedOrder && getStatusBadge(selectedOrder.status)}
+
+                {/* Print Button - Only show when order is selected */}
+                {selectedOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrint}
+                    className="border-[#E2E8F0] hover:bg-[#EEF2FF] hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 transition-all"
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                )}
+              </div>
             </div>
           </DialogHeader>
+
+          {/* Hidden Printable Content - Moved outside scrollable area but inside Dialog */}
+          {selectedOrder && (
+            <div className="hidden">
+              <div ref={contentRef}>
+                <PrintServiceOrder
+                  request={mapOrderToRequest(selectedOrder)}
+                  formatCurrency={formatCurrency}
+                  serviceOrderNumber={selectedOrder.order_number}
+                  units={units}
+                />
+              </div>
+            </div>
+          )}
 
           {selectedOrder && (
             <div className="space-y-6 py-4">
@@ -656,7 +734,10 @@ export default function ServiceOrder({
                               className="border-b border-[#E2E8F0] last:border-b-0"
                             >
                               <TableCell className="font-medium text-slate-900 capitalize">
-                                {entry.accountTitle.replace(/-/g, " ")}
+                                {(entry.accountTitle || "Unknown").replace(
+                                  /-/g,
+                                  " ",
+                                )}
                               </TableCell>
                               <TableCell className="text-right font-mono">
                                 {entry.entryType === "debit" ? (
@@ -817,15 +898,13 @@ export default function ServiceOrder({
           </div>
 
           <DialogFooter className="px-6 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-            <div className="mr-4 mb-4">
-              <Button
-                variant="outline"
-                onClick={() => setApprovedRequestsDialogOpen(false)}
-                className="border-[#E2E8F0] text-slate-700 hover:bg-white"
-              >
-                Close
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => setApprovedRequestsDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-white"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
