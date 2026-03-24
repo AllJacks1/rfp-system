@@ -1,3 +1,5 @@
+import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+
 export interface NavItem {
   icon?: React.ComponentType;
   label: string;
@@ -433,3 +435,63 @@ export const colors = {
     },
   },
 };
+
+
+export const statusConfig: Record<
+  string,
+  {
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    icon: React.ElementType;
+    label: string;
+  }
+> = {
+  submitted: {
+    color: "text-[#3B82F6]",
+    bgColor: "bg-[#DBEAFE]",
+    borderColor: "border-[#93C5FD]",
+    icon: AlertCircle,
+    label: "Submitted",
+  },
+  approved: {
+    color: "text-[#059669]",
+    bgColor: "bg-[#D1FAE5]",
+    borderColor: "border-[#6EE7B7]",
+    icon: CheckCircle2,
+    label: "Approved",
+  },
+  rejected: {
+    color: "text-[#DC2626]",
+    bgColor: "bg-[#FEE2E2]",
+    borderColor: "border-[#FCA5A5]",
+    icon: XCircle,
+    label: "Rejected",
+  },
+};
+
+export const priorityConfig: Record<
+  string,
+  { color: string; bgColor: string; borderColor: string }
+> = {
+  High: {
+    color: "text-[#DC2626]",
+    bgColor: "bg-[#FEE2E2]",
+    borderColor: "border-[#FCA5A5]",
+  },
+  Medium: {
+    color: "text-[#D97706]",
+    bgColor: "bg-[#FEF3C7]",
+    borderColor: "border-[#FCD34D]",
+  },
+  Low: {
+    color: "text-[#059669]",
+    bgColor: "bg-[#D1FAE5]",
+    borderColor: "border-[#6EE7B7]",
+  },
+};
+
+export interface ServiceRequestPageProps {
+  requests: Request[];
+}
+

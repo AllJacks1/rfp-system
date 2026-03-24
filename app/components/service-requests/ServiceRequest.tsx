@@ -13,155 +13,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, FileText, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  Package,
+  AlertCircle,
+  User,
+  Building2,
+  Calendar,
+  CreditCard,
+  Truck,
+} from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
+import {
+  priorityConfig,
+  Request,
+  ServiceRequestPageProps,
+  statusConfig,
+} from "@/lib/interfaces";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-// Types
-interface ServiceRequest {
-  id: string;
-  title: string;
-  serviceType: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  department: string;
-  description: string;
-  priority: "low" | "medium" | "high";
-}
-
-// Mock Data for Service Requests
-const mockServiceRequests: ServiceRequest[] = [
-  {
-    id: "SR-2024-001",
-    title: "Network Infrastructure Upgrade",
-    serviceType: "IT Services",
-    status: "submitted",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    department: "Engineering",
-    description: "Upgrade office network to support 10Gbps",
-    priority: "high",
-  },
-  {
-    id: "SR-2024-002",
-    title: "Office Cleaning Services",
-    serviceType: "Facilities",
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Administration",
-    description: "Weekly deep cleaning for main office",
-    priority: "medium",
-  },
-  {
-    id: "SR-2024-003",
-    title: "Security System Maintenance",
-    serviceType: "Security",
-    status: "submitted",
-    dateSubmitted: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Operations",
-    description: "Annual maintenance of CCTV and access control",
-    priority: "high",
-  },
-  {
-    id: "SR-2024-004",
-    title: "Catering for Q1 Meeting",
-    serviceType: "Catering",
-    status: "rejected",
-    dateSubmitted: "2024-03-07",
-    requestor: "Emily Davis",
-    department: "Marketing",
-    description: "Lunch catering for quarterly all-hands",
-    priority: "low",
-  },
-  {
-    id: "SR-2024-005",
-    title: "HVAC Repair",
-    serviceType: "Facilities",
-    status: "approved",
-    dateSubmitted: "2024-03-06",
-    requestor: "Robert Wilson",
-    department: "Operations",
-    description: "Repair air conditioning in Conference Room B",
-    priority: "high",
-  },
-  {
-    id: "SR-2024-006",
-    title: "Software Development Consulting",
-    serviceType: "Professional Services",
-    status: "submitted",
-    dateSubmitted: "2024-03-05",
-    requestor: "Lisa Anderson",
-    department: "Engineering",
-    description: "External consulting for microservices architecture",
-    priority: "medium",
-  },
-  {
-    id: "SR-2024-007",
-    title: "Employee Transport Service",
-    serviceType: "Transportation",
-    status: "approved",
-    dateSubmitted: "2024-03-04",
-    requestor: "David Brown",
-    department: "HR",
-    description: "Shuttle service for night shift employees",
-    priority: "medium",
-  },
-  {
-    id: "SR-2024-008",
-    title: "Event Management",
-    serviceType: "Events",
-    status: "rejected",
-    dateSubmitted: "2024-03-03",
-    requestor: "Jennifer Lee",
-    department: "Marketing",
-    description: "Annual company retreat planning and execution",
-    priority: "low",
-  },
-];
-
-export default function ServiceRequest() {
+export default function ServiceRequest({ requests }: ServiceRequestPageProps) {
   const router = useRouter();
-  const [requests, setRequests] =
-    useState<ServiceRequest[]>(mockServiceRequests);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(
-    null,
-  );
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-  const getStatusBadge = (status: ServiceRequest["status"]) => {
-    const styles = {
-      submitted: "bg-amber-100 text-amber-700 hover:bg-amber-100",
-      approved: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
-      rejected: "bg-rose-100 text-rose-700 hover:bg-rose-100",
-    };
-    const labels = {
-      submitted: "Submitted",
-      approved: "Approved",
-      rejected: "Rejected",
-    };
+  const getStatusBadge = (status: keyof typeof statusConfig) => {
+    const config = statusConfig[status];
     return (
-      <Badge className={styles[status]} variant="secondary">
-        {labels[status]}
+      <Badge
+        className={`${config.bgColor} ${config.color} border ${config.borderColor}`}
+        variant="secondary"
+      >
+        {config.label}
       </Badge>
     );
   };
 
-  const getPriorityBadge = (priority: ServiceRequest["priority"]) => {
-    const styles = {
-      low: "bg-slate-100 text-slate-700",
-      medium: "bg-blue-100 text-blue-700",
-      high: "bg-orange-100 text-orange-700",
-    };
+  const getPriorityBadge = (priority: keyof typeof priorityConfig) => {
+    const config = priorityConfig[priority];
     return (
-      <Badge className={styles[priority]} variant="secondary">
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+      <Badge
+        className={`${config.bgColor} ${config.color} border ${config.borderColor}`}
+        variant="secondary"
+      >
+        {priority}
       </Badge>
     );
   };
 
-  const handleView = (request: ServiceRequest) => {
+  const handleView = (request: Request) => {
     setSelectedRequest(request);
     setViewDialogOpen(true);
   };
@@ -199,17 +111,17 @@ export default function ServiceRequest() {
   ];
 
   // Define columns for Service Requests
-  const columns: Column<ServiceRequest>[] = [
-    { key: "id", header: "Request ID", width: "w-[140px]" },
+  const columns: Column<Request>[] = [
+    { key: "request_number", header: "Request ID", width: "w-[140px]" },
     { key: "title", header: "Request Title", width: "min-w-[200px]" },
-    { key: "serviceType", header: "Service Type", width: "w-[160px]" },
+    { key: "service_category", header: "Service Type", width: "w-[160px]" },
     {
       key: "requestor",
       header: "Requestor",
       width: "w-[140px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.requestor}</span>
+          <span className="font-medium">{row.requested_by}</span>
           <span className="text-xs text-slate-500">{row.department}</span>
         </div>
       ),
@@ -218,24 +130,13 @@ export default function ServiceRequest() {
       key: "priority",
       header: "Priority",
       width: "w-[100px]",
-      render: (row) => getPriorityBadge(row.priority),
+      render: (row) => getPriorityBadge(row.priority_level),
     },
     {
       key: "status",
       header: "Status",
       width: "w-[110px]",
       render: (row) => getStatusBadge(row.status),
-    },
-    {
-      key: "dateSubmitted",
-      header: "Date Submitted",
-      width: "w-[130px]",
-      render: (row) =>
-        new Date(row.dateSubmitted).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
     },
   ];
 
@@ -244,6 +145,13 @@ export default function ServiceRequest() {
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
   ];
+
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(value);
+  };
 
   return (
     <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
@@ -289,7 +197,13 @@ export default function ServiceRequest() {
         subtitle="View and manage your service requests"
         searchPlaceholder="Search requests..."
         searchable
-        searchKeys={["id", "title", "serviceType", "requestor", "department"]}
+        searchKeys={[
+          "id",
+          "title",
+          "service_category",
+          "requested_by",
+          "department",
+        ]}
         filterable
         filterKey="status"
         filterOptions={filterOptions}
@@ -321,90 +235,398 @@ export default function ServiceRequest() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-slate-900">
-              Service Request Details
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Full details for {selectedRequest?.id}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Request ID
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRequest.id}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Status</p>
-                  <div className="mt-1">
-                    {getStatusBadge(selectedRequest.status)}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Service Type
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRequest.serviceType}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Priority</p>
-                  <div className="mt-1">
-                    {getPriorityBadge(selectedRequest.priority)}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Requestor
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRequest.requestor}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Department
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedRequest.department}
-                  </p>
-                </div>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto p-0 gap-0">
+          {/* Header with gradient accent */}
+          <div className="h-1.5 bg-gradient-to-r from-[#2B3A9F] via-[#3B4DB8] to-[#14B8A6]" />
+
+          <DialogHeader className="px-6 py-5 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight truncate">
+                  Service Request Details
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[#2B3A9F] font-semibold">
+                    {selectedRequest?.request_number}
+                  </span>
+                  <span className="text-[#CBD5E1] hidden sm:inline">•</span>
+                  <span className="truncate">
+                    View complete request information
+                  </span>
+                </DialogDescription>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  Description
-                </p>
-                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">
+              {selectedRequest && (
+                <div className="shrink-0">
+                  {getStatusBadge(selectedRequest.status)}
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+
+          {selectedRequest && (
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Title & Description Card */}
+              <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]">
+                <h3 className="font-bold text-lg text-slate-900 mb-2">
+                  {selectedRequest.title}
+                </h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
                   {selectedRequest.description}
                 </p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  Date Submitted
-                </p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {new Date(selectedRequest.dateSubmitted).toLocaleDateString(
-                    "en-US",
-                    {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    },
-                  )}
-                </p>
+
+              {/* Info Grid - Responsive: 1 col mobile, 2 col tablet+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Service Category */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F] shrink-0">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Service Category
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {selectedRequest.service_category}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Priority */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-amber-50 text-amber-600 shrink-0">
+                    <AlertCircle className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Priority Level
+                    </p>
+                    <div className="mt-0.5">
+                      {getPriorityBadge(selectedRequest.priority_level)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Requested By */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F] shrink-0">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Requested By
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {selectedRequest.requested_by}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Department */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F] shrink-0">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Department
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {selectedRequest.department}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Company */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Company
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {selectedRequest.company}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-purple-50 text-purple-600 shrink-0">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Payment Method
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {selectedRequest.payment_method}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Preferred Date */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+                    <Calendar className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Preferred Date
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {new Date(
+                        selectedRequest.preferred_date,
+                      ).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Required By */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-rose-50 text-rose-600 shrink-0">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Required By
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {new Date(selectedRequest.required_by).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Expected Completion */}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-white border border-[#E2E8F0] hover:border-[#2B3A9F]/30 transition-colors sm:col-span-2">
+                  <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                    <CheckCircle className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+                      Expected Completion
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {new Date(
+                        selectedRequest.expected_completion,
+                      ).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              {/* Vendor Information */}
+              {(selectedRequest.preferred_vendor ||
+                selectedRequest.contact_person) && (
+                <div className="border border-[#E2E8F0] rounded-xl p-5 bg-white">
+                  <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-[#EEF2FF]">
+                      <Building2 className="h-4 w-4 text-[#2B3A9F]" />
+                    </div>
+                    Vendor Information
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedRequest.preferred_vendor && (
+                      <div className="p-3 rounded-lg bg-[#F8FAFC]">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                          Preferred Vendor
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedRequest.preferred_vendor}
+                        </p>
+                      </div>
+                    )}
+                    {selectedRequest.contact_person && (
+                      <div className="p-3 rounded-lg bg-[#F8FAFC]">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                          Contact Person
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedRequest.contact_person}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Vehicle Information */}
+              {selectedRequest.vehicle?.plate_number && (
+                <div className="border border-[#E2E8F0] rounded-xl p-5 bg-white">
+                  <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-amber-50">
+                      <Truck className="h-4 w-4 text-amber-600" />
+                    </div>
+                    Vehicle Information
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-3 rounded-lg bg-[#F8FAFC]">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                        Plate Number
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 font-mono">
+                        {selectedRequest.vehicle.plate_number}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#F8FAFC]">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                        Vehicle Type
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedRequest.vehicle.car_type}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#F8FAFC]">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                        Owner
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedRequest.vehicle.owners_first_name}{" "}
+                        {selectedRequest.vehicle.owners_last_name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Items Table */}
+              {selectedRequest.items?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-[#EEF2FF]">
+                      <Package className="h-4 w-4 text-[#2B3A9F]" />
+                    </div>
+                    Requested Items ({selectedRequest.items.length})
+                  </h4>
+                  <div className="border border-[#E2E8F0] rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-[#F8FAFC]">
+                        <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
+                          <TableHead className="text-xs font-bold text-slate-600 py-3">
+                            Item
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-slate-600 py-3 text-center w-24">
+                            Qty
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-slate-600 py-3 text-right w-28">
+                            Unit Price
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-slate-600 py-3 text-right w-28">
+                            Total
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedRequest.items.map((item, index) => {
+                          const qty = parseFloat(item.quantity) || 0;
+                          const price = parseFloat(item.unitPrice) || 0;
+                          const total = qty * price;
+                          return (
+                            <TableRow
+                              key={index}
+                              className="border-b border-[#E2E8F0] last:border-b-0 hover:bg-[#F8FAFC]"
+                            >
+                              <TableCell className="py-3">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-slate-900 text-sm">
+                                    {item.name}
+                                  </span>
+                                  <span className="text-xs text-slate-500 line-clamp-1">
+                                    {item.description}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center py-3">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#EEF2FF] text-[#2B3A9F]">
+                                  {item.quantity} {item.unit}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-slate-600 text-sm py-3">
+                                {formatCurrency(price)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-semibold text-slate-900 text-sm py-3">
+                                {formatCurrency(total)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <div className="bg-[#EEF2FF] rounded-lg px-4 py-2 border border-[#2B3A9F]/20">
+                      <span className="text-sm text-slate-600 mr-2">
+                        Total Estimated Cost:
+                      </span>
+                      <span className="text-lg font-bold text-[#2B3A9F] font-mono">
+                        {formatCurrency(
+                          selectedRequest.items.reduce((sum, item) => {
+                            const qty = parseFloat(item.quantity) || 0;
+                            const price = parseFloat(item.unitPrice) || 0;
+                            return sum + qty * price;
+                          }, 0),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Supporting Documents */}
+              {selectedRequest.supporting_documents?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-[#EEF2FF]">
+                      <FileText className="h-4 w-4 text-[#2B3A9F]" />
+                    </div>
+                    Supporting Documents
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRequest.supporting_documents.map((doc, index) => (
+                      <a
+                        key={index}
+                        href={doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F] text-sm font-medium hover:bg-[#2B3A9F] hover:text-white transition-all border border-[#2B3A9F]/20 hover:border-[#2B3A9F]"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="truncate max-w-[200px]">
+                          {doc.split("/").pop()?.split("?")[0] ||
+                            `Document ${index + 1}`}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+
+          <DialogFooter className="sm:max-w-3xl max-h-[85vh] overflow-y-auto p-4 gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-white hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 transition-all w-full sm:w-auto"
+            >
               Close
             </Button>
           </DialogFooter>
