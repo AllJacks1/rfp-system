@@ -232,8 +232,6 @@ export default async function ServiceOrderPage() {
   const orders = await getOrders(supabase);
   const units = await getunits(supabase);
 
-  console.log(JSON.stringify(orders));
-
   return (
     <div>
       <ServiceOrder requests={requests} orders={orders} units={units} />
