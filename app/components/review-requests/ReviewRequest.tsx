@@ -32,7 +32,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { InfoItemProps, Item, Request, ReviewRequestProps } from "@/lib/interfaces";
+import {
+  InfoItemProps,
+  Item,
+  Request,
+  ReviewRequestProps,
+} from "@/lib/interfaces";
 
 // Helper to calculate total from items
 const calculateTotal = (items: Item[]): string => {
@@ -92,33 +97,37 @@ export default function ReviewRequest({ requests }: ReviewRequestProps) {
   };
 
   const handleConfirmAction = async () => {
-  if (!selectedRequest || !actionType) return;
+    if (!selectedRequest || !actionType) return;
 
-  await handleUpdateStatus(selectedRequest.id, actionType);
+    await handleUpdateStatus(selectedRequest, actionType);
 
-  setActionDialogOpen(false);
-  setSelectedRequest(null);
-  setActionType(null);
-};
+    setActionDialogOpen(false);
+    setSelectedRequest(null);
+    setActionType(null);
+  };
 
   async function handleUpdateStatus(
-    requestId: string,
+    request: Request,
     status: "approved" | "rejected",
   ) {
     try {
+      const isServiceRequest = request.request_number.startsWith("SR");
+
+      const table = isServiceRequest ? "service_requests" : "purchase_requests";
+
       const { error } = await supabase
-        .from("service_requests")
+        .from(table)
         .update({ status })
-        .eq("id", requestId);
+        .eq("id", request.id);
 
       if (error) {
         console.error("Error updating status:", error);
         return;
       }
 
-      // Update local UI
+      // Update UI
       setRequestList((prev) =>
-        prev.map((req) => (req.id === requestId ? { ...req, status } : req)),
+        prev.map((req) => (req.id === request.id ? { ...req, status } : req)),
       );
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -378,7 +387,10 @@ export default function ReviewRequest({ requests }: ReviewRequestProps) {
                       label="Priority"
                       value={selectedRequest.priority_level}
                     />
-                    <InfoItem label="Requested By" value={selectedRequest.requested_by} />
+                    <InfoItem
+                      label="Requested By"
+                      value={selectedRequest.requested_by}
+                    />
                     <InfoItem label="Company" value={selectedRequest.company} />
                     <InfoItem
                       label="Department"
