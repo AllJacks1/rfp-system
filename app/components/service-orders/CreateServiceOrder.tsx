@@ -241,8 +241,6 @@ export default function RequestDetailsPage({
   const [amount, setAmount] = useState("");
   const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
 
-  const searchParams = useSearchParams();
-
   const handleAddRow = () => {
     if (!accountTitle || !amount) return;
     const parsedAmount = parseFloat(amount);

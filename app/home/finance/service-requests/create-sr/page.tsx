@@ -134,7 +134,7 @@ async function getPaymentMethods(supabase: any) {
   return data || [];
 }
 
-async function getunits(supabase: any) {
+async function getUnits(supabase: any) {
   const { data, error } = await supabase
     .from("units")
     .select("unit_id, name")
@@ -157,7 +157,7 @@ export default async function CreateServiceRequestPage() {
   const vehicles = await getVehicles(supabase);
   const vendors = await getVendors(supabase);
   const paymentMethods = await getPaymentMethods(supabase);
-  const units = await getunits(supabase);
+  const units = await getUnits(supabase);
 
   return (
     <div>

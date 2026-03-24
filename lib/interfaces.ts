@@ -380,3 +380,56 @@ export interface Order {
   order_prepared_by: string;
   journal_entries?: JournalEntry[];
 }
+
+export interface ReviewOrderProps {
+  orders: Order[];
+  units: Unit[];
+}
+
+export const colors = {
+  primary: {
+    DEFAULT: "#2B3A9F",
+    light: "#3B4DB8",
+    dark: "#1E2A7A",
+    muted: "#EEF2FF",
+  },
+  semantic: {
+    pending: {
+      bg: "bg-amber-50",
+      text: "text-amber-700",
+      border: "border-amber-200",
+    },
+    approved: {
+      bg: "bg-emerald-50",
+      text: "text-emerald-700",
+      border: "border-emerald-200",
+    },
+    rejected: {
+      bg: "bg-rose-50",
+      text: "text-rose-700",
+      border: "border-rose-200",
+    },
+    for_approval: {
+      bg: "bg-blue-50",
+      text: "text-blue-700",
+      border: "border-blue-200",
+    },
+  },
+  priority: {
+    Low: {
+      bg: "bg-slate-100",
+      text: "text-slate-700",
+      border: "border-slate-200",
+    },
+    Medium: {
+      bg: "bg-[#EEF2FF]",
+      text: "text-[#2B3A9F]",
+      border: "border-[#2B3A9F]/20",
+    },
+    High: {
+      bg: "bg-orange-50",
+      text: "text-orange-700",
+      border: "border-orange-200",
+    },
+  },
+};
