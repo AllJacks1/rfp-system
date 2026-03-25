@@ -42,12 +42,10 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
   colors,
-  InfoItemProps,
   Item,
   Order,
   Request,
   ReviewOrderProps,
-  ReviewRequestProps,
 } from "@/lib/interfaces";
 import { PrintServiceOrder } from "../service-orders/PrintServiceOrderPage";
 import { useReactToPrint } from "react-to-print";
@@ -60,11 +58,9 @@ const calculateTotal = (items: Item[]): number => {
   }, 0);
 };
 
-// Helper to format currency
+// Format currency
 const formatCurrency = (value: string | number | undefined | null): string => {
   const amount = Number(value ?? 0);
-  console.log(amount)
-
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
@@ -72,7 +68,7 @@ const formatCurrency = (value: string | number | undefined | null): string => {
 };
 
 export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
-  const [ordertList, setOrderList] = useState<Order[]>(orders);
+  const [orderList, setOrderList] = useState<Order[]>(orders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
@@ -81,18 +77,62 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
   );
   const supabase = createClient();
 
+  // Ref for print content
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Setup react-to-print hook
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: selectedOrder?.order_number
+      ? `Order_${selectedOrder.order_number}`
+      : "Order_Details",
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-content { padding: 0 !important; }
+      }
+    `,
+  });
+
   const getStatusBadge = (status: Order["status"]) => {
     const styles: Record<string, string> = {
-      "for approval": "bg-amber-100 text-amber-700",
-      approved: "bg-emerald-100 text-emerald-700",
-      rejected: "bg-rose-100 text-rose-700",
+      "for approval": "bg-amber-50 text-amber-700 border-amber-200",
+      approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      rejected: "bg-rose-50 text-rose-700 border-rose-200",
     };
     return (
       <Badge
-        className={styles[status] || "bg-slate-100 text-slate-700"}
+        className={cn(
+          styles[status] || "bg-slate-50 text-slate-700 border-slate-200",
+          "border font-semibold",
+        )}
         variant="secondary"
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status === "for approval"
+          ? "For Approval"
+          : status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const config =
+      colors.priority[priority as keyof typeof colors.priority] ||
+      colors.priority.Medium;
+
+    return (
+      <Badge
+        className={cn(
+          config.bg,
+          config.text,
+          "border",
+          config.border,
+          "font-semibold",
+        )}
+        variant="secondary"
+      >
+        {priority}
       </Badge>
     );
   };
@@ -124,7 +164,6 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
   ) {
     try {
       const isServiceOrder = order.order_number.startsWith("SO");
-
       const table = isServiceOrder ? "service_orders" : "purchase_orders";
 
       const { error } = await supabase
@@ -146,84 +185,103 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
     }
   }
 
-  // Stats calculation
+  // Stats calculation - Updated to match ServiceOrder
   const stats = useMemo(
     () => [
       {
-        title: "Total Requests",
-        value: orders.length,
+        title: "Total Orders",
+        value: orderList.length,
         icon: FileText,
         color: "text-[#2B3A9F]",
-        bgColor: "bg-[#2B3A9F]/10",
+        bgColor: "bg-[#EEF2FF]",
       },
       {
         title: "For Approval",
-        value: orders.filter((r) => r.status === "for approval").length,
+        value: orderList.filter((r) => r.status === "for approval").length,
         icon: Clock,
         color: "text-amber-600",
         bgColor: "bg-amber-50",
       },
       {
         title: "Approved",
-        value: orders.filter((r) => r.status === "approved").length,
+        value: orderList.filter((r) => r.status === "approved").length,
         icon: CheckCircle,
         color: "text-emerald-600",
         bgColor: "bg-emerald-50",
       },
       {
         title: "Rejected",
-        value: orders.filter((r) => r.status === "rejected").length,
+        value: orderList.filter((r) => r.status === "rejected").length,
         icon: XCircle,
         color: "text-rose-600",
         bgColor: "bg-rose-50",
       },
     ],
-    [ordertList],
+    [orderList],
   );
 
-  // Define columns with custom widths and renderers
+  // Define columns - Enhanced to match ServiceOrder
   const columns: Column<Order>[] = [
     {
       key: "order_number",
-      header: "Order ID",
+      header: "Order #",
       width: "w-[140px]",
+      render: (row) => (
+        <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
+          {row.order_number}
+        </span>
+      ),
     },
     {
       key: "title",
-      header: "Order Title",
+      header: "Title",
       width: "min-w-[200px]",
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-900 line-clamp-1">
+            {row.title}
+          </span>
+          <span className="text-xs text-slate-500">{row.service_category}</span>
+        </div>
+      ),
     },
     {
-      key: "service_category",
-      header: "Service Category",
+      key: "company",
+      header: "Company / Dept",
       width: "w-[180px]",
-    },
-    {
-      key: "department",
-      header: "Department",
-      width: "w-[140px]",
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-900">{row.company}</span>
+          <span className="text-xs text-slate-500">{row.department}</span>
+        </div>
+      ),
     },
     {
       key: "priority_level",
       header: "Priority",
       width: "w-[100px]",
+      render: (row) => getPriorityBadge(row.priority_level),
     },
     {
       key: "status",
       header: "Status",
-      width: "w-[110px]",
+      width: "w-[120px]",
       render: (row) => getStatusBadge(row.status),
     },
     {
       key: "preferred_date",
       header: "Preferred Date",
-      width: "w-[130px]",
-      render: (row) =>
-        new Date(row.preferred_date).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
+      width: "w-[140px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          {new Date(row.preferred_date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </div>
+      ),
     },
   ];
 
@@ -233,45 +291,6 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
     { value: "rejected", label: "Rejected" },
   ];
 
-  // Ref for print content
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  // Setup react-to-print hook
-  const handlePrint = useReactToPrint({
-    contentRef,
-    documentTitle: selectedOrder?.order_number
-      ? `Service_Order_${selectedOrder.order_number}`
-      : "Service_Order_Details",
-    pageStyle: `
-        @media print {
-          @page { size: A4; margin: 10mm; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-content { padding: 0 !important; }
-        }
-      `,
-  });
-
-  const getPriorityBadge = (priority: string) => {
-    const config =
-      colors.priority[priority as keyof typeof colors.priority] ||
-      colors.priority.Medium;
-
-    return (
-      <Badge
-        className={cn(
-          config.bg,
-          config.text,
-          "border",
-          config.border,
-          "font-semibold",
-        )}
-        variant="secondary"
-      >
-        {priority}
-      </Badge>
-    );
-  };
-
   const getUnitName = (unitId: string) => {
     const unit = units?.find((u) => u.unit_id === unitId);
     return unit?.name || unitId;
@@ -280,7 +299,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
   function mapOrderToRequest(order: Order): Request {
     return {
       id: order.id,
-      request_number: order.order_number, // Use order_number as request_number
+      request_number: order.order_number,
       title: order.title,
       description: order.description,
       service_category: order.service_category,
@@ -289,56 +308,23 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
       department: order.department,
       preferred_date: order.preferred_date,
       expected_completion: order.expected_completion,
-      supporting_documents: [...order.supporting_documents], // copy array
+      supporting_documents: [...order.supporting_documents],
       vehicle: order.vehicle,
       preferred_vendor: order.preferred_vendor,
       contact_person: order.contact_person,
       required_by: order.required_by,
       payment_method: order.payment_method,
-      items: order.items.map((i) => ({ ...i })), // copy items array
+      items: order.items.map((i) => ({ ...i })),
       status: order.status,
       requested_by: order.requested_by,
     };
   }
 
-  function InfoItem({ label, value, className }: InfoItemProps) {
-    return (
-      <div className={cn("space-y-1.5", className)}>
-        <dt className="text-xs font-semibold text-[#2B3A9F]/70 uppercase tracking-wider">
-          {label}
-        </dt>
-        <dd className="text-sm font-semibold text-slate-900">
-          {value || (
-            <span className="text-slate-400 font-normal italic">—</span>
-          )}
-        </dd>
-      </div>
-    );
-  }
-
-  function TimelineItem({ label, value }: { label: string; value: string }) {
-    return (
-      <div className="relative pl-4 border-l-2 border-[#2B3A9F]/20">
-        <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-[#2B3A9F] ring-4 ring-white" />
-        <span className="text-xs font-semibold text-[#2B3A9F]/70 uppercase tracking-wider block mb-1">
-          {label}
-        </span>
-        <span className="text-sm font-bold text-slate-900">
-          {new Date(value).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
-      {/* Header */}
+    <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8">
+      {/* Header - Updated to match ServiceOrder */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
           Service and Purchase Orders
         </h1>
         <p className="text-slate-500">
@@ -346,10 +332,13 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Updated to match ServiceOrder */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.title} className="border-0 shadow-sm bg-white">
+          <Card
+            key={stat.title}
+            className="border-[#E2E8F0] shadow-sm bg-white hover:shadow-md transition-shadow"
+          >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -360,8 +349,8 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                     {stat.value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={cn("p-3 rounded-xl", stat.bgColor)}>
+                  <stat.icon className={cn("h-6 w-6", stat.color)} />
                 </div>
               </div>
             </CardContent>
@@ -369,28 +358,34 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
         ))}
       </div>
 
-      {/* Data Table */}
+      {/* Data Table - Updated styling */}
       <DataTableCard<Order>
-        data={ordertList}
+        data={orderList}
         columns={columns}
         keyExtractor={(row) => row.id}
         title="All Service and Purchase Orders"
         subtitle="Manage and track all incoming service and purchase orders"
-        searchPlaceholder="Search requests..."
+        searchPlaceholder="Search orders..."
         searchable
-        searchKeys={["order_number", "title", "service_category", "department"]}
+        searchKeys={[
+          "order_number",
+          "title",
+          "service_category",
+          "company",
+          "department",
+        ]}
         filterable
         filterKey="status"
         filterOptions={filterOptions}
         pagination
         defaultPageSize={5}
         actions={(row) => (
-          <>
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleView(row)}
-              className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:text-[#2B3A9F]"
+              className="h-8 px-3 text-xs font-medium border-[#E2E8F0] text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#EEF2FF] transition-all"
             >
               <Eye className="h-3.5 w-3.5 mr-1.5" />
               View
@@ -401,7 +396,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => handleActionClick(row, "approved")}
-                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
                 >
                   <Check className="h-3.5 w-3.5 mr-1.5" />
                   Approve
@@ -410,25 +405,25 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => handleActionClick(row, "rejected")}
-                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50"
+                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
                 >
                   <X className="h-3.5 w-3.5 mr-1.5" />
                   Reject
                 </Button>
               </>
             )}
-          </>
+          </div>
         )}
       />
 
-      {/* View Dialog */}
+      {/* View Dialog - Updated to match ServiceOrder */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-[#E2E8F0] pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle className="text-xl font-bold text-slate-900">
-                  Service Order Details
+                  Order Details
                 </DialogTitle>
                 <DialogDescription className="text-slate-500 mt-1">
                   {selectedOrder?.order_number}
@@ -437,7 +432,6 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
               <div className="flex items-center gap-3">
                 {selectedOrder && getStatusBadge(selectedOrder.status)}
 
-                {/* Print Button - Only show when order is selected */}
                 {selectedOrder && (
                   <Button
                     variant="outline"
@@ -453,7 +447,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
             </div>
           </DialogHeader>
 
-          {/* Hidden Printable Content - Moved outside scrollable area but inside Dialog */}
+          {/* Hidden Printable Content */}
           {selectedOrder && (
             <div className="hidden">
               <div ref={contentRef}>
@@ -479,7 +473,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                 </p>
               </div>
 
-              {/* Key Info Grid */}
+              {/* Key Info Grid - Icon style like ServiceOrder */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
@@ -510,9 +504,11 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                       <p className="text-sm font-semibold text-slate-900">
                         {selectedOrder.requested_by}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        Prepared by: {selectedOrder.order_prepared_by}
-                      </p>
+                      {selectedOrder.order_prepared_by && (
+                        <p className="text-xs text-slate-500">
+                          Prepared by: {selectedOrder.order_prepared_by}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -631,7 +627,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                   <Package className="h-4 w-4 text-[#2B3A9F]" />
                   Items ({selectedOrder.items.length})
                 </h4>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
                   <Table>
                     <TableHeader className="bg-[#F8FAFC]">
                       <TableRow className="border-b border-[#E2E8F0]">
@@ -657,7 +653,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                         return (
                           <TableRow
                             key={index}
-                            className="border-b border-[#E2E8F0] last:border-b-0"
+                            className="border-b border-[#E2E8F0] last:border-b-0 hover:bg-[#F8FAFC] transition-colors"
                           >
                             <TableCell>
                               <div className="flex flex-col">
@@ -706,7 +702,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
                       <DollarSign className="h-4 w-4 text-[#2B3A9F]" />
                       Journal Entries
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
                       <Table>
                         <TableHeader className="bg-[#F8FAFC]">
                           <TableRow className="border-b border-[#E2E8F0]">
@@ -762,7 +758,8 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
               {/* Supporting Documents */}
               {selectedOrder.supporting_documents.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-slate-900 mb-3">
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-[#2B3A9F]" />
                     Supporting Documents
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -784,66 +781,68 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
             </div>
           )}
 
-          <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setViewDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-
-              {selectedOrder?.status === "for approval" && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setViewDialogOpen(false);
-                      handleActionClick(selectedOrder, "rejected");
-                    }}
-                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Reject
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setViewDialogOpen(false);
-                      handleActionClick(selectedOrder, "approved");
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Approve
-                  </Button>
-                </>
-              )}
-            </div>
+          <DialogFooter className="border-t border-[#E2E8F0] pt-4 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-[#F8FAFC]"
+            >
+              Close
+            </Button>
+            {selectedOrder?.status === "for approval" && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleActionClick(selectedOrder, "rejected");
+                  }}
+                  className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reject
+                </Button>
+                <Button
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleActionClick(selectedOrder, "approved");
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Action Confirmation Dialog */}
+      {/* Action Confirmation Dialog - Updated styling */}
       <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               {actionType === "approved" ? (
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
               ) : (
                 <XCircle className="h-5 w-5 text-rose-600" />
               )}
-              {actionType === "approved" ? "Approve Request" : "Reject Request"}
+              {actionType === "approved" ? "Approve Order" : "Reject Order"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500">
               Are you sure you want to {actionType}{" "}
-              {selectedOrder?.order_number}?
+              <span className="font-semibold text-slate-900">
+                {selectedOrder?.order_number}
+              </span>
+              ?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => setActionDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700"
             >
               Cancel
             </Button>
@@ -851,8 +850,8 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
               onClick={handleConfirmAction}
               className={
                 actionType === "approved"
-                  ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-rose-600 hover:bg-rose-700"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-rose-600 hover:bg-rose-700 text-white"
               }
             >
               {actionType === "approved" ? "Approve" : "Reject"}
