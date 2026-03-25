@@ -180,7 +180,7 @@ async function getPurchaseRequests(supabase: any): Promise<Request[]> {
   return flattened;
 }
 
-export async function getAllRequests(supabase: any): Promise<Request[]> {
+async function getAllRequests(supabase: any): Promise<Request[]> {
   const [serviceRequests, purchaseRequests] = await Promise.all([
     getServiceRequests(supabase),
     getPurchaseRequests(supabase),

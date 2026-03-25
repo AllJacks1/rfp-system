@@ -111,7 +111,7 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
   const handleConfirmAction = async () => {
     if (!selectedOrder || !actionType) return;
 
-    await handleUpdateStatus(selectedOrder.id, actionType);
+    await handleUpdateStatus(selectedOrder, actionType);
 
     setActionDialogOpen(false);
     setSelectedOrder(null);
@@ -119,25 +119,27 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
   };
 
   async function handleUpdateStatus(
-    orderId: string,
+    order: Order,
     status: "approved" | "rejected",
   ) {
     try {
+      const isServiceOrder = order.order_number.startsWith("SO");
+
+      const table = isServiceOrder ? "service_orders" : "purchase_orders";
+
       const { error } = await supabase
-        .from("service_orders")
+        .from(table)
         .update({ status })
-        .eq("id", orderId);
+        .eq("id", order.id);
 
       if (error) {
         console.error("Error updating status:", error);
         return;
       }
 
-      // Update local UI
+      // Update UI
       setOrderList((prev) =>
-        prev.map((order) =>
-          order.id === orderId ? { ...order, status } : order,
-        ),
+        prev.map((req) => (req.id === order.id ? { ...req, status } : req)),
       );
     } catch (err) {
       console.error("Unexpected error:", err);
