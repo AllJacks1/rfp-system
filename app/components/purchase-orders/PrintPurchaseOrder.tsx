@@ -1,3 +1,4 @@
+import { Item, Request } from "@/lib/interfaces";
 import {
   CreditCard,
   MapPin,
@@ -7,41 +8,6 @@ import {
   Car,
 } from "lucide-react";
 import Image from "next/image";
-
-interface RequestItem {
-  item: string;
-  description: string;
-  unit: string;
-  quantity: string;
-  estimatedUnitPrice: string;
-}
-
-interface Request {
-  id: string;
-  title: string;
-  type: string;
-  priority: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  company: string;
-  department: string;
-  amount: string;
-  description: string;
-  preferredDate: string;
-  expectedCompletion: string;
-  attachment: string[];
-  plateNumber: string;
-  carType: string;
-  ownerFirstname: string;
-  ownerLastname: string;
-  preferredVendor: string;
-  vendorContactPerson: string;
-  requiredBy: string;
-  paymentMethod: string;
-  items: RequestItem[];
-  totalEstimatedCost: string;
-}
 
 const COMPANY_INFO = {
   name: "Astra Business Solutions",
@@ -81,14 +47,25 @@ export const PrintPurchaseOrder = ({
 
   // Check if vehicle details exist
   const hasVehicleDetails =
-    request.plateNumber?.trim() ||
-    request.carType?.trim() ||
-    request.ownerFirstname?.trim() ||
-    request.ownerLastname?.trim();
+    request.vehicle.plate_number?.trim() ||
+    request.vehicle.car_type?.trim() ||
+    request.vehicle.owners_first_name?.trim() ||
+    request.vehicle.owners_last_name?.trim();
 
-  const ownerFullName = [request.ownerFirstname, request.ownerLastname]
+  const ownerFullName = [
+    request.vehicle.owners_first_name,
+    request.vehicle.owners_last_name,
+  ]
     .filter(Boolean)
     .join(" ");
+
+  const calculateTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return sum + qty * price;
+    }, 0);
+  };
 
   return (
     <div className="print-content bg-white text-black min-h-[277mm] w-[210mm] mx-auto p-[15mm] box-border text-[12px] leading-normal flex flex-col">
@@ -157,7 +134,7 @@ export const PrintPurchaseOrder = ({
               <span className="font-semibold text-gray-600 w-28">
                 Purchase Type:
               </span>
-              <span>{request.type}</span>
+              <span>{request.service_category}</span>
             </div>
             <div className="flex">
               <span className="font-semibold text-gray-600 w-28">
@@ -169,14 +146,14 @@ export const PrintPurchaseOrder = ({
               <span className="font-semibold text-gray-600 w-28">
                 Date Submitted:
               </span>
-              <span>{formatDate(request.dateSubmitted)}</span>
+              <span>{formatDate(request.prepared_at || "")}</span>
             </div>
             <div className="flex">
               <span className="font-semibold text-gray-600 w-28">
                 Required By:
               </span>
               <span className="text-red-700 font-semibold">
-                {formatDate(request.requiredBy)}
+                {formatDate(request.requested_by)}
               </span>
             </div>
           </div>
@@ -192,22 +169,22 @@ export const PrintPurchaseOrder = ({
           </h3>
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-              {request.plateNumber?.trim() && (
+              {request.vehicle.plate_number?.trim() && (
                 <div className="flex">
                   <span className="font-semibold text-gray-600 w-28">
                     Plate Number:
                   </span>
                   <span className="font-mono font-medium">
-                    {request.plateNumber}
+                    {request.vehicle.plate_number}
                   </span>
                 </div>
               )}
-              {request.carType?.trim() && (
+              {request.vehicle.car_type?.trim() && (
                 <div className="flex">
                   <span className="font-semibold text-gray-600 w-28">
                     Vehicle Type:
                   </span>
-                  <span>{request.carType}</span>
+                  <span>{request.vehicle.car_type}</span>
                 </div>
               )}
               {ownerFullName && (
@@ -253,7 +230,7 @@ export const PrintPurchaseOrder = ({
             {request.items.map((item, index) => {
               const qty = parseFloat(item.quantity) || 0;
               const price =
-                parseFloat(item.estimatedUnitPrice.replace(/[$,]/g, "")) || 0;
+                parseFloat(item.unitPrice.replace(/[$,]/g, "")) || 0;
               const total = qty * price;
               return (
                 <tr key={index} className="bg-white">
@@ -261,7 +238,7 @@ export const PrintPurchaseOrder = ({
                     {index + 1}
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2">
-                    <p className="font-semibold text-gray-900">{item.item}</p>
+                    <p className="font-semibold text-gray-900">{item.name}</p>
                     <p className="text-xs text-gray-500">{item.description}</p>
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-center">
@@ -269,7 +246,7 @@ export const PrintPurchaseOrder = ({
                     <span className="text-xs uppercase">{item.unit}</span>
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono">
-                    {formatCurrency(item.estimatedUnitPrice)}
+                    {formatCurrency(item.unitPrice)}
                   </td>
                   <td className="border-2 border-gray-400 px-2 py-2 text-right font-mono font-bold">
                     {formatCurrency(total)}
@@ -285,7 +262,7 @@ export const PrintPurchaseOrder = ({
             <div className="flex justify-between items-center">
               <span className="font-bold text-blue-900">TOTAL AMOUNT:</span>
               <span className="font-mono font-bold text-lg text-blue-900">
-                {formatCurrency(request.totalEstimatedCost)}
+                {formatCurrency(calculateTotal(request.items))}
               </span>
             </div>
           </div>
@@ -299,7 +276,7 @@ export const PrintPurchaseOrder = ({
             Requestor / Client
           </h4>
           <p className="font-bold text-base text-gray-900">
-            {request.requestor}
+            {request.requested_by}
           </p>
           <p className="text-xs text-gray-600">
             {request.department} Department
@@ -323,14 +300,14 @@ export const PrintPurchaseOrder = ({
             Supplier
           </h4>
           <p className="font-bold text-base text-gray-900">
-            {request.preferredVendor}
+            {request.preferred_vendor}
           </p>
           <p className="text-xs text-gray-600">
-            Contact: {request.vendorContactPerson}
+            Contact: {request.contact_person}
           </p>
           <p className="text-xs text-gray-600 flex items-center gap-1">
             <CreditCard className="h-3 w-3" />
-            {request.paymentMethod}
+            {request.payment_method}
           </p>
           <div className="mt-3 pt-2 border-t border-gray-200">
             <p className="text-[10px] text-gray-500 uppercase font-semibold">

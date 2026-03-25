@@ -137,7 +137,7 @@ async function getOrders(supabase: any): Promise<Order[]> {
 
   // 1️⃣ Collect all file IDs from service_requests
   const allFileIds = orders
-    .flatMap((o: any) => o.service_requests?.supporting_documents || [])
+    .flatMap((o: any) => o.purchase_requests?.supporting_documents || [])
     .filter(Boolean);
 
   let fileMap: Record<number, any> = {};
@@ -153,7 +153,7 @@ async function getOrders(supabase: any): Promise<Order[]> {
 
   // 2️⃣ Flatten results
   const flattened: Order[] = orders.map((o: any) => {
-    const r = o.service_requests;
+    const r = o.purchase_requests;
 
     return {
       id: o.id,

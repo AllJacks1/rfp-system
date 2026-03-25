@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,14 @@ import {
   Clock,
   Eye,
   ArrowRight,
+  Calendar,
+  User,
+  Building2,
+  DollarSign,
+  Package,
+  Truck,
+  CreditCard,
+  Printer,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -39,6 +47,8 @@ import {
   Request,
 } from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
+import { useReactToPrint } from "react-to-print";
+import { PrintPurchaseOrder } from "./PrintPurchaseOrder";
 
 export default function PurchaseOrder({
   requests,
@@ -48,10 +58,46 @@ export default function PurchaseOrder({
   const router = useRouter();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-
-  // New state for approved requests dialog
   const [approvedRequestsDialogOpen, setApprovedRequestsDialogOpen] =
     useState(false);
+
+  // Ref for print content
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Setup react-to-print hook
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: selectedOrder?.order_number
+      ? `Purchase_Order_${selectedOrder.order_number}`
+      : "Purchase_Order_Details",
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-content { padding: 0 !important; }
+      }
+    `,
+  });
+
+  // Calculate total amount from items
+  const calculateTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return sum + qty * price;
+    }, 0);
+  };
+
+  // Format currency
+  const formatCurrency = (
+    value: string | number | undefined | null,
+  ): string => {
+    const amount = Number(value ?? 0);
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(amount);
+  };
 
   const getStatusBadge = (status: string) => {
     const config =
@@ -78,6 +124,27 @@ export default function PurchaseOrder({
     );
   };
 
+  const getPriorityBadge = (priority: string) => {
+    const config =
+      colors.priority[priority as keyof typeof colors.priority] ||
+      colors.priority.Medium;
+
+    return (
+      <Badge
+        className={cn(
+          config.bg,
+          config.text,
+          "border",
+          config.border,
+          "font-semibold",
+        )}
+        variant="secondary"
+      >
+        {priority}
+      </Badge>
+    );
+  };
+
   const handleView = (order: Order) => {
     setSelectedOrder(order);
     setViewDialogOpen(true);
@@ -88,21 +155,13 @@ export default function PurchaseOrder({
   };
 
   const handleCreatePurchaseOrder = (request: Request) => {
-    // Logic to create purchase order from approved request
-    console.log("Creating purchase order from request:", request.id);
-    // You can add navigation or modal opening here
     setApprovedRequestsDialogOpen(false);
-    router.push(
-      `/home/finance/purchase-orders/create-po?requestId=${request.id}`,
-    );
+    router.push(`/home/finance/purchase-orders/create-po/${request.id}`);
   };
 
-  const calculateTotal = (items: Item[]): number => {
-    return items.reduce((sum, item) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const price = parseFloat(item.unitPrice) || 0;
-      return sum + qty * price;
-    }, 0);
+  const getUnitName = (unitId: string) => {
+    const unit = units?.find((u) => u.unit_id === unitId);
+    return unit?.name || unitId;
   };
 
   // Stats calculation
@@ -111,12 +170,12 @@ export default function PurchaseOrder({
       title: "Total Orders",
       value: orders.length,
       icon: FileText,
-      color: "text-slate-700",
-      bgColor: "bg-slate-100",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#EEF2FF]",
     },
     {
-      title: "To be Approved",
-      value: orders.filter((o) => o.status === "pending").length,
+      title: "For Approval",
+      value: orders.filter((o) => o.status === "for approval").length,
       icon: Clock,
       color: "text-amber-600",
       bgColor: "bg-amber-50",
@@ -137,42 +196,92 @@ export default function PurchaseOrder({
     },
   ];
 
-  // Define columns for Purchase Orders
+  // Define columns for Purchase Orders - Enhanced to match ServiceOrder style
   const columns: Column<Order>[] = [
-    { key: "id", header: "Order ID", width: "w-[140px]" },
-    { key: "orderTitle", header: "Order Title", width: "min-w-[200px]" },
-    { key: "purchaseType", header: "Purchase Type", width: "w-[180px]" },
     {
-      key: "requestor",
-      header: "Requestor",
+      key: "order_number",
+      header: "Order #",
       width: "w-[140px]",
       render: (row) => (
+        <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
+          {row.order_number}
+        </span>
+      ),
+    },
+    {
+      key: "title",
+      header: "Title",
+      width: "min-w-[200px]",
+      render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.requested_by}</span>
+          <span className="font-semibold text-slate-900 line-clamp-1">
+            {row.title}
+          </span>
+          <span className="text-xs text-slate-500">{row.service_category}</span>
+        </div>
+      ),
+    },
+    {
+      key: "company",
+      header: "Company / Dept",
+      width: "w-[180px]",
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-900">{row.company}</span>
           <span className="text-xs text-slate-500">{row.department}</span>
         </div>
       ),
     },
-    { key: "amount", header: "Amount", width: "w-[100px]" },
+    {
+      key: "priority_level",
+      header: "Priority",
+      width: "w-[100px]",
+      render: (row) => getPriorityBadge(row.priority_level),
+    },
     {
       key: "status",
       header: "Status",
-      width: "w-[110px]",
+      width: "w-[120px]",
       render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "expected_completion",
+      header: "Expected Completion",
+      width: "w-[140px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          {new Date(row.expected_completion).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </div>
+      ),
+    },
+    {
+      key: "total_amount",
+      header: "Amount",
+      width: "w-[120px]",
+      render: (row) => (
+        <span className="font-mono font-semibold text-slate-900">
+          {formatCurrency(calculateTotal(row.items))}
+        </span>
+      ),
     },
   ];
 
   const filterOptions = [
-    { value: "pending", label: "Pending" },
+    { value: "for approval", label: "For Approval" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
   ];
 
   return (
-    <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
+    <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8">
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
           Purchase Orders
         </h1>
         <p className="text-slate-500">
@@ -183,7 +292,10 @@ export default function PurchaseOrder({
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.title} className="border-0 shadow-sm bg-white">
+          <Card
+            key={stat.title}
+            className="border-[#E2E8F0] shadow-sm bg-white hover:shadow-md transition-shadow"
+          >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -194,8 +306,8 @@ export default function PurchaseOrder({
                     {stat.value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={cn("p-3 rounded-xl", stat.bgColor)}>
+                  <stat.icon className={cn("h-6 w-6", stat.color)} />
                 </div>
               </div>
             </CardContent>
@@ -203,7 +315,7 @@ export default function PurchaseOrder({
         ))}
       </div>
 
-      {/* Data Table Card - Only View Action */}
+      {/* Data Table Card */}
       <DataTableCard
         data={orders}
         columns={columns}
@@ -216,9 +328,9 @@ export default function PurchaseOrder({
           "order_number",
           "title",
           "service_category",
-          "requested_by",
+          "company",
           "department",
-          "preferred_vendor",
+          "requested_by",
         ]}
         filterable
         filterKey="status"
@@ -227,7 +339,7 @@ export default function PurchaseOrder({
         defaultPageSize={5}
         headerActions={
           <Button
-            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white"
+            className="bg-[#2B3A9F] hover:bg-[#1E2A7A] text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/30"
             onClick={handleReviewRequests}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -239,7 +351,7 @@ export default function PurchaseOrder({
             variant="outline"
             size="sm"
             onClick={() => handleView(row)}
-            className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="h-8 px-3 text-xs font-medium border-[#E2E8F0] text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#EEF2FF] transition-all"
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
             View
@@ -247,129 +359,412 @@ export default function PurchaseOrder({
         )}
       />
 
-      {/* View Dialog */}
+      {/* View Dialog - Enhanced to match ServiceOrder style */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-slate-900">
-              Purchase Order Details
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Full details for {selectedOrder?.id}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedOrder && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Order ID</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.id}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Status</p>
-                  <div className="mt-1">
-                    {getStatusBadge(selectedOrder.status)}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Purchase Type
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.priority_level}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Amount</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {calculateTotal(selectedOrder.items)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Vendor</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.preferred_date}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Requestor
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.requested_by}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Department
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.department}
-                  </p>
-                </div>
-                {selectedOrder.approved_by && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {selectedOrder.status === "approved"
-                        ? "Approved By"
-                        : "Rejected By"}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {selectedOrder.approved_by}
-                    </p>
-                  </div>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-[#E2E8F0] pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900">
+                  Purchase Order Details
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 mt-1">
+                  {selectedOrder?.order_number}
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedOrder && getStatusBadge(selectedOrder.status)}
+
+                {/* Print Button */}
+                {selectedOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrint}
+                    className="border-[#E2E8F0] hover:bg-[#EEF2FF] hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 transition-all"
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
                 )}
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  Description
-                </p>
-                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">
+            </div>
+          </DialogHeader>
+
+          {/* Hidden Printable Content */}
+          {selectedOrder && (
+            <div className="hidden">
+              <div ref={contentRef}>
+                <PrintPurchaseOrder
+                  request={{
+                    id: selectedOrder.id,
+                    request_number: selectedOrder.order_number,
+                    title: selectedOrder.title,
+                    description: selectedOrder.description,
+                    service_category: selectedOrder.service_category,
+                    priority_level: selectedOrder.priority_level,
+                    company: selectedOrder.company,
+                    department: selectedOrder.department,
+                    preferred_date: selectedOrder.preferred_date,
+                    expected_completion: selectedOrder.expected_completion,
+                    supporting_documents: selectedOrder.supporting_documents,
+                    vehicle: selectedOrder.vehicle,
+                    preferred_vendor: selectedOrder.preferred_vendor,
+                    contact_person: selectedOrder.contact_person,
+                    required_by: selectedOrder.required_by,
+                    payment_method: selectedOrder.payment_method,
+                    items: selectedOrder.items,
+                    status: selectedOrder.status,
+                    requested_by: selectedOrder.requested_by,
+                  }}
+                  formatCurrency={formatCurrency}
+                  purchaseOrderNumber={selectedOrder.order_number}
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedOrder && (
+            <div className="space-y-6 py-4">
+              {/* Order Title & Description */}
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+                <h3 className="font-bold text-lg text-slate-900 mb-2">
+                  {selectedOrder.title}
+                </h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
                   {selectedOrder.description}
                 </p>
               </div>
-              {selectedOrder.approved_on && (
+
+              {/* Key Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F]">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Company
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedOrder.company}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {selectedOrder.department}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F]">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Requested By
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedOrder.requested_by}
+                      </p>
+                      {selectedOrder.order_prepared_by && (
+                        <p className="text-xs text-slate-500">
+                          Prepared by: {selectedOrder.order_prepared_by}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F]">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Dates
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Preferred:{" "}
+                        {new Date(
+                          selectedOrder.preferred_date,
+                        ).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Expected Completion:{" "}
+                        {new Date(
+                          selectedOrder.expected_completion,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+                      <Package className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Service Category
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedOrder.service_category}
+                      </p>
+                      {getPriorityBadge(selectedOrder.priority_level)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Payment
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedOrder.payment_method}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Required by:{" "}
+                        {new Date(
+                          selectedOrder.required_by,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedOrder.vehicle?.plate_number && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                        <Truck className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          Vehicle
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedOrder.vehicle.plate_number}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {selectedOrder.vehicle.car_type} •{" "}
+                          {selectedOrder.vehicle.owners_first_name}{" "}
+                          {selectedOrder.vehicle.owners_last_name}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vendor Info */}
+              <div className="p-4 rounded-xl border border-[#E2E8F0] bg-white">
+                <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-[#2B3A9F]" />
+                  Vendor Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">
+                      Preferred Vendor
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {selectedOrder.preferred_vendor}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">
+                      Contact Person
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {selectedOrder.contact_person}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-[#2B3A9F]" />
+                  Items ({selectedOrder.items.length})
+                </h4>
+                <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-[#F8FAFC]">
+                      <TableRow className="border-b border-[#E2E8F0]">
+                        <TableHead className="text-xs font-bold text-slate-600">
+                          Item
+                        </TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 text-center">
+                          Qty
+                        </TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 text-right">
+                          Unit Price
+                        </TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 text-right">
+                          Total
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items.map((item, index) => {
+                        const qty = parseFloat(item.quantity) || 0;
+                        const price = parseFloat(item.unitPrice) || 0;
+                        const total = qty * price;
+                        return (
+                          <TableRow
+                            key={index}
+                            className="border-b border-[#E2E8F0] last:border-b-0"
+                          >
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-slate-900">
+                                  {item.name}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {item.description}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#EEF2FF] text-[#2B3A9F]">
+                                {item.quantity}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-slate-600">
+                              {formatCurrency(price)} / {getUnitName(item.unit)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold text-slate-900">
+                              {formatCurrency(total)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <div className="bg-[#EEF2FF] rounded-lg px-4 py-2 border border-[#2B3A9F]/20">
+                    <span className="text-sm text-slate-600 mr-2">
+                      Total Amount:
+                    </span>
+                    <span className="text-lg font-bold text-[#2B3A9F] font-mono">
+                      {formatCurrency(calculateTotal(selectedOrder.items))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Journal Entries */}
+              {selectedOrder.journal_entries &&
+                selectedOrder.journal_entries.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-[#2B3A9F]" />
+                      Journal Entries
+                    </h4>
+                    <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-[#F8FAFC]">
+                          <TableRow className="border-b border-[#E2E8F0]">
+                            <TableHead className="text-xs font-bold text-slate-600">
+                              Account
+                            </TableHead>
+                            <TableHead className="text-xs font-bold text-slate-600 text-right text-emerald-600">
+                              Debit
+                            </TableHead>
+                            <TableHead className="text-xs font-bold text-slate-600 text-right text-rose-600">
+                              Credit
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedOrder.journal_entries.map((entry, index) => (
+                            <TableRow
+                              key={index}
+                              className="border-b border-[#E2E8F0] last:border-b-0"
+                            >
+                              <TableCell className="font-medium text-slate-900 capitalize">
+                                {(entry.accountTitle || "Unknown").replace(
+                                  /-/g,
+                                  " ",
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.entryType === "debit" ? (
+                                  <span className="text-emerald-600 font-semibold">
+                                    {formatCurrency(entry.amount)}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {entry.entryType === "credit" ? (
+                                  <span className="text-rose-600 font-semibold">
+                                    {formatCurrency(entry.amount)}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+              {/* Supporting Documents */}
+              {selectedOrder.supporting_documents.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    {selectedOrder.status === "approved"
-                      ? "Approved Date"
-                      : "Rejected Date"}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedOrder.approved_on).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    )}
-                  </p>
+                  <h4 className="font-semibold text-slate-900 mb-3">
+                    Supporting Documents
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOrder.supporting_documents.map((doc, index) => (
+                      <a
+                        key={index}
+                        href={doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#EEF2FF] text-[#2B3A9F] text-sm font-medium hover:bg-[#2B3A9F] hover:text-white transition-colors"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Document {index + 1}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+
+          <DialogFooter className="border-t border-[#E2E8F0] pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-[#F8FAFC]"
+            >
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* NEW: Approved Purchase Requests Dialog */}
+      {/* Approved Purchase Requests Dialog - Enhanced */}
       <Dialog
         open={approvedRequestsDialogOpen}
         onOpenChange={setApprovedRequestsDialogOpen}
       >
         <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-          {/* Header - Clean slate with subtle border */}
-          <DialogHeader className="px-6 py-5 border-b bg-slate-50/50">
+          <DialogHeader className="px-6 py-5 border-b border-[#E2E8F0] bg-[#F8FAFC]">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900 tracking-tight">
+                <DialogTitle className="text-lg font-bold text-slate-900">
                   Approved Purchase Requests
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-500 mt-1">
@@ -378,19 +773,18 @@ export default function PurchaseOrder({
               </div>
               <Badge
                 variant="secondary"
-                className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                className="bg-[#EEF2FF] text-[#2B3A9F] border border-[#2B3A9F]/20 font-semibold"
               >
                 {requests.length} requests
               </Badge>
             </div>
           </DialogHeader>
 
-          {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
             {requests.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-[#EEF2FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-[#2B3A9F]" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
                   No approved requests
@@ -401,20 +795,20 @@ export default function PurchaseOrder({
                 </p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-45">
+                  <TableHeader className="bg-[#F8FAFC]">
+                    <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 w-40">
                         Request ID
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4">
+                      <TableHead className="font-bold text-xs text-slate-600 py-4">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-35">
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 w-40">
                         Type
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-40">
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 text-right w-48">
                         Action
                       </TableHead>
                     </TableRow>
@@ -423,18 +817,18 @@ export default function PurchaseOrder({
                     {requests.map((request) => (
                       <TableRow
                         key={request.id}
-                        className="group hover:bg-slate-50 transition-colors"
+                        className="group hover:bg-[#F8FAFC] transition-colors border-b border-[#E2E8F0] last:border-b-0"
                       >
-                        <TableCell className="font-medium text-sm text-slate-700 py-4">
+                        <TableCell className="font-mono text-sm text-[#2B3A9F] font-semibold py-4">
                           {request.request_number}
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-slate-900 py-4">
+                        <TableCell className="text-sm font-semibold text-slate-900 py-4">
                           {request.title}
                         </TableCell>
                         <TableCell className="text-sm text-slate-600 py-4">
                           <Badge
                             variant="outline"
-                            className="text-xs border-slate-300 text-slate-600"
+                            className="text-xs border-[#E2E8F0] text-slate-600 bg-white"
                           >
                             {request.service_category}
                           </Badge>
@@ -443,7 +837,7 @@ export default function PurchaseOrder({
                           <Button
                             size="sm"
                             onClick={() => handleCreatePurchaseOrder(request)}
-                            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white gap-2"
+                            className="bg-[#2B3A9F] hover:bg-[#1E2A7A] text-white gap-2 shadow-md shadow-[#2B3A9F]/20 transition-all hover:shadow-lg"
                           >
                             Create Purchase Order
                             <ArrowRight className="w-4 h-4" />
@@ -457,17 +851,14 @@ export default function PurchaseOrder({
             )}
           </div>
 
-          {/* Footer */}
-          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
-            <div className="mb-4 mr-4">
-              <Button
-                variant="outline"
-                onClick={() => setApprovedRequestsDialogOpen(false)}
-                className="border-slate-300 text-slate-700 hover:bg-slate-100"
-              >
-                Close
-              </Button>
-            </div>
+          <DialogFooter className="px-6 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+            <Button
+              variant="outline"
+              onClick={() => setApprovedRequestsDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-white"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

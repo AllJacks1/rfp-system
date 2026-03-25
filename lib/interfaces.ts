@@ -322,6 +322,8 @@ export interface Request {
   items: Item[];
   status: string;
   requested_by: string;
+  prepared_at?: string;
+  created_on?: string;
 }
 
 export interface Item {
@@ -356,6 +358,7 @@ export interface PurchaseOrderProps {
 export interface RequestDetailsPageProps {
   request: Request;
   accounts: Account[];
+  units: Unit[];
 }
 
 export interface JournalEntry {

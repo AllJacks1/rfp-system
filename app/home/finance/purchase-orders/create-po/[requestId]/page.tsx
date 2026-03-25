@@ -1,4 +1,4 @@
-import CreateServiceOrder from "@/app/components/service-orders/CreateServiceOrder";
+import CreatePurchaseOrder from "@/app/components/purchase-orders/CreatePurchaseOrder";
 import { Request } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
@@ -9,11 +9,11 @@ interface PageProps {
 
 async function getRequest(supabase: any, id: string): Promise<Request | null> {
   const { data, error } = await supabase
-    .from("service_requests")
+    .from("purchase_requests")
     .select(
       `
       *,
-      service_category:types(name),
+      purchase_category:types(name),
       company:companies(name),
       department:departments(name),
       vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
@@ -50,7 +50,7 @@ async function getRequest(supabase: any, id: string): Promise<Request | null> {
     request_number: data.request_number,
     title: data.title,
     description: data.description,
-    service_category: data.service_category?.name || "",
+    service_category: data.purchase_category?.name || "",
     priority_level: data.priority_level,
     company: data.company?.name || "",
     department: data.department?.name || "",
@@ -106,7 +106,7 @@ async function getunits(supabase: any) {
   return data || [];
 }
 
-export default async function CreateServiceOrderPage({ params }: PageProps) {
+export default async function CreatePurchaseOrderPage({ params }: PageProps) {
   const { requestId } = await params;
   const supabase = await createClient();
 
@@ -120,7 +120,11 @@ export default async function CreateServiceOrderPage({ params }: PageProps) {
 
   return (
     <div>
-      <CreateServiceOrder request={request} accounts={accounts} units={units} />
+      <CreatePurchaseOrder
+        request={request}
+        accounts={accounts}
+        units={units}
+      />
     </div>
   );
 }

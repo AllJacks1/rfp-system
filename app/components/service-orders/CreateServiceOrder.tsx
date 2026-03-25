@@ -1,6 +1,4 @@
 "use client";
-
-import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   Card,
@@ -32,7 +30,6 @@ import {
   Package,
   AlertCircle,
   CheckCircle2,
-  XCircle,
   ArrowLeft,
   Plus,
   ArrowLeftRight,
@@ -44,6 +41,7 @@ import {
   Calculator,
   TrendingUp,
   TrendingDown,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
@@ -56,7 +54,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { Item, JournalEntry, priorityConfig, RequestDetailsPageProps, statusConfig } from "@/lib/interfaces";
+import {
+  Item,
+  JournalEntry,
+  priorityConfig,
+  RequestDetailsPageProps,
+  statusConfig,
+} from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
 
 // Helper to calculate total from items
@@ -147,6 +151,7 @@ function DetailItem({
 export default function RequestDetailsPage({
   request,
   accounts,
+  units,
 }: RequestDetailsPageProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [accountTitle, setAccountTitle] = useState("");
@@ -239,6 +244,11 @@ export default function RequestDetailsPage({
       console.error("Service Order Creation failed:", err);
     }
   }
+
+  const getUnitName = (unitId: string) => {
+    const unit = units?.find((u) => u.unit_id === unitId);
+    return unit?.name || unitId;
+  };
 
   if (!request) {
     return (
@@ -488,11 +498,11 @@ export default function RequestDetailsPage({
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#EEF2FF] text-[#2B3A9F]">
-                                {item.quantity} {item.unit}
+                                {item.quantity}
                               </span>
                             </TableCell>
                             <TableCell className="text-right font-mono text-[#64748B]">
-                              {formatCurrency(item.unitPrice)}
+                              {formatCurrency(item.unitPrice)} / {getUnitName(item.unit)}
                             </TableCell>
                             <TableCell className="text-right font-mono font-bold text-[#2B3A9F]">
                               {formatCurrency(total)}
@@ -547,9 +557,10 @@ export default function RequestDetailsPage({
                             {file.split("/").pop() || file}
                           </p>
                           <p className="text-xs text-[#64748B]">
-                            Click to view document
+                            Click to view
                           </p>
                         </div>
+                        <ExternalLink className="h-4 w-4 text-[#64748B] group-hover:text-[#2B3A9F] transition-colors" />
                       </div>
                     ))}
                   </div>
