@@ -31,273 +31,54 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
+import {
+  colors,
+  Item,
+  Order,
+  PurchaseOrderProps,
+  Request,
+} from "@/lib/interfaces";
+import { cn } from "@/lib/utils";
 
-// Types
-interface PurchaseOrder {
-  id: string;
-  orderTitle: string;
-  purchaseType: string;
-  status: "pending" | "approved" | "rejected";
-  dateUpdated: string;
-  requestor: string;
-  department: string;
-  amount: string;
-  description: string;
-  vendor: string;
-  approvedBy?: string;
-  approvedDate?: string;
-}
-
-// Request type for the approved requests dialog
-interface Request {
-  id: string;
-  title: string;
-  type: string;
-  priority: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  company: string;
-  department: string;
-  amount: string;
-  description: string;
-  preferredVendor: string;
-  vendorContactPerson: string;
-  requiredBy: string;
-  paymentMethod: string;
-}
-
-// Mock Data for Approved Purchase Requests
-const mockRequests: Request[] = [
-  {
-    id: "REQ-2024-001",
-    title: "Laptop Upgrades for Dev Team",
-    type: "IT Equipment",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    company: "TechNova Solutions",
-    department: "Engineering",
-    amount: "$12,500",
-    description:
-      "Upgrade laptops for development team to handle heavier workloads.",
-    preferredVendor: "Dell Technologies",
-    vendorContactPerson: "Michael Reyes",
-    requiredBy: "2024-03-25",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    id: "REQ-2024-002",
-    title: "Q1 Office Supplies",
-    type: "Office Supplies",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    company: "TechNova Solutions",
-    department: "Administration",
-    amount: "$850",
-    description: "Quarterly restocking of office supplies.",
-    preferredVendor: "Office Warehouse",
-    vendorContactPerson: "Ana Santos",
-    requiredBy: "2024-03-15",
-    paymentMethod: "Company Credit Card",
-  },
-  {
-    id: "REQ-2024-003",
-    title: "Adobe Creative Cloud Licenses",
-    type: "Software License",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-08",
-    requestor: "Mike Chen",
-    company: "TechNova Solutions",
-    department: "Design",
-    amount: "$3,200",
-    description: "Annual subscription for 10 design team members.",
-    preferredVendor: "Adobe",
-    vendorContactPerson: "Sales Team",
-    requiredBy: "2024-03-20",
-    paymentMethod: "Credit Card",
-  },
-  {
-    id: "REQ-2024-004",
-    title: "Server Rack and Networking Equipment",
-    type: "Hardware",
-    priority: "High",
-    status: "approved",
-    dateSubmitted: "2024-03-06",
-    requestor: "Robert Wilson",
-    company: "TechNova Solutions",
-    department: "Engineering",
-    amount: "$8,750",
-    description: "48U server rack with switches and cables.",
-    preferredVendor: "Dell Technologies",
-    vendorContactPerson: "Jane Smith",
-    requiredBy: "2024-03-30",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    id: "REQ-2024-005",
-    title: "Trade Show Booth and Materials",
-    type: "Marketing",
-    priority: "Medium",
-    status: "approved",
-    dateSubmitted: "2024-03-04",
-    requestor: "David Brown",
-    company: "TechNova Solutions",
-    department: "Marketing",
-    amount: "$15,000",
-    description: "10x10 booth, banners, and promotional items for TechExpo.",
-    preferredVendor: "Expo Solutions LLC",
-    vendorContactPerson: "Tom Wilson",
-    requiredBy: "2024-04-15",
-    paymentMethod: "Company Credit Card",
-  },
-];
-
-// Mock Data for Purchase Orders
-const mockPurchaseOrders: PurchaseOrder[] = [
-  {
-    id: "PO-2024-001",
-    orderTitle: "Laptop Upgrades for Dev Team",
-    purchaseType: "IT Equipment",
-    status: "pending",
-    dateUpdated: "2024-03-10",
-    requestor: "John Smith",
-    department: "Engineering",
-    amount: "$12,500",
-    description: "15 MacBook Pro laptops for new developers",
-    vendor: "Apple Inc.",
-  },
-  {
-    id: "PO-2024-002",
-    orderTitle: "Q1 Office Supplies Restock",
-    purchaseType: "Office Supplies",
-    status: "approved",
-    dateUpdated: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Administration",
-    amount: "$850",
-    description: "Paper, pens, folders, and other stationary",
-    vendor: "Staples",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-09",
-  },
-  {
-    id: "PO-2024-003",
-    orderTitle: "Adobe Creative Cloud Licenses",
-    purchaseType: "Software License",
-    status: "pending",
-    dateUpdated: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Design",
-    amount: "$3,200",
-    description: "Annual subscription for 10 design team members",
-    vendor: "Adobe",
-  },
-  {
-    id: "PO-2024-004",
-    orderTitle: "Q2 Marketing Strategy Consulting",
-    purchaseType: "Consulting Services",
-    status: "rejected",
-    dateUpdated: "2024-03-07",
-    requestor: "Emily Davis",
-    department: "Marketing",
-    amount: "$25,000",
-    description: "External marketing firm for campaign strategy",
-    vendor: "McKinsey & Company",
-    approvedBy: "Lisa Wong",
-    approvedDate: "2024-03-07",
-  },
-  {
-    id: "PO-2024-005",
-    orderTitle: "Server Rack and Networking Equipment",
-    purchaseType: "Hardware",
-    status: "approved",
-    dateUpdated: "2024-03-06",
-    requestor: "Robert Wilson",
-    department: "Engineering",
-    amount: "$8,750",
-    description: "48U server rack with switches and cables",
-    vendor: "Dell Technologies",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-06",
-  },
-  {
-    id: "PO-2024-006",
-    orderTitle: "Leadership Development Program",
-    purchaseType: "Training",
-    status: "pending",
-    dateUpdated: "2024-03-05",
-    requestor: "Lisa Anderson",
-    department: "HR",
-    amount: "$5,000",
-    description: "Executive coaching for senior managers",
-    vendor: "FranklinCovey",
-  },
-  {
-    id: "PO-2024-007",
-    orderTitle: "Trade Show Booth and Materials",
-    purchaseType: "Marketing",
-    status: "approved",
-    dateUpdated: "2024-03-04",
-    requestor: "David Brown",
-    department: "Marketing",
-    amount: "$15,000",
-    description: "10x10 booth, banners, and promotional items for TechExpo",
-    vendor: "Expo Solutions LLC",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-04",
-  },
-  {
-    id: "PO-2024-008",
-    orderTitle: "Office Renovation Phase 1",
-    purchaseType: "Facilities",
-    status: "rejected",
-    dateUpdated: "2024-03-03",
-    requestor: "Jennifer Lee",
-    department: "Operations",
-    amount: "$45,000",
-    description: "Flooring and lighting upgrade for 3rd floor",
-    vendor: "BuildRight Construction",
-    approvedBy: "Lisa Wong",
-    approvedDate: "2024-03-03",
-  },
-];
-
-export default function PurchaseOrder() {
+export default function PurchaseOrder({
+  requests,
+  orders,
+  units,
+}: PurchaseOrderProps) {
   const router = useRouter();
-  const [orders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
-    null,
-  );
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   // New state for approved requests dialog
   const [approvedRequestsDialogOpen, setApprovedRequestsDialogOpen] =
     useState(false);
 
-  const getStatusBadge = (status: PurchaseOrder["status"]) => {
-    const styles = {
-      pending: "bg-amber-100 text-amber-700 hover:bg-amber-100",
-      approved: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
-      rejected: "bg-rose-100 text-rose-700 hover:bg-rose-100",
-    };
-    const labels = {
-      pending: "Pending",
-      approved: "Approved",
-      rejected: "Rejected",
-    };
+  const getStatusBadge = (status: string) => {
+    const config =
+      colors.semantic[status as keyof typeof colors.semantic] ||
+      colors.semantic.for_approval;
+    const label =
+      status === "for approval"
+        ? "For Approval"
+        : status.charAt(0).toUpperCase() + status.slice(1);
+
     return (
-      <Badge className={styles[status]} variant="secondary">
-        {labels[status]}
+      <Badge
+        className={cn(
+          config.bg,
+          config.text,
+          "border",
+          config.border,
+          "font-semibold",
+        )}
+        variant="secondary"
+      >
+        {label}
       </Badge>
     );
   };
 
-  const handleView = (order: PurchaseOrder) => {
+  const handleView = (order: Order) => {
     setSelectedOrder(order);
     setViewDialogOpen(true);
   };
@@ -316,10 +97,13 @@ export default function PurchaseOrder() {
     );
   };
 
-  // Filter approved requests
-  const approvedRequests = mockRequests.filter(
-    (req) => req.status === "approved",
-  );
+  const calculateTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return sum + qty * price;
+    }, 0);
+  };
 
   // Stats calculation
   const stats = [
@@ -354,7 +138,7 @@ export default function PurchaseOrder() {
   ];
 
   // Define columns for Purchase Orders
-  const columns: Column<PurchaseOrder>[] = [
+  const columns: Column<Order>[] = [
     { key: "id", header: "Order ID", width: "w-[140px]" },
     { key: "orderTitle", header: "Order Title", width: "min-w-[200px]" },
     { key: "purchaseType", header: "Purchase Type", width: "w-[180px]" },
@@ -364,7 +148,7 @@ export default function PurchaseOrder() {
       width: "w-[140px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.requestor}</span>
+          <span className="font-medium">{row.requested_by}</span>
           <span className="text-xs text-slate-500">{row.department}</span>
         </div>
       ),
@@ -375,17 +159,6 @@ export default function PurchaseOrder() {
       header: "Status",
       width: "w-[110px]",
       render: (row) => getStatusBadge(row.status),
-    },
-    {
-      key: "dateUpdated",
-      header: "Date Updated",
-      width: "w-[130px]",
-      render: (row) =>
-        new Date(row.dateUpdated).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
     },
   ];
 
@@ -440,12 +213,12 @@ export default function PurchaseOrder() {
         searchPlaceholder="Search orders..."
         searchable
         searchKeys={[
-          "id",
-          "orderTitle",
-          "purchaseType",
-          "requestor",
+          "order_number",
+          "title",
+          "service_category",
+          "requested_by",
           "department",
-          "vendor",
+          "preferred_vendor",
         ]}
         filterable
         filterKey="status"
@@ -505,34 +278,19 @@ export default function PurchaseOrder() {
                     Purchase Type
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.purchaseType}
+                    {selectedOrder.priority_level}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Amount</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.amount}
+                    {calculateTotal(selectedOrder.items)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-500">Vendor</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.vendor}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Date Updated
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedOrder.dateUpdated).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    )}
+                    {selectedOrder.preferred_date}
                   </p>
                 </div>
                 <div>
@@ -540,7 +298,7 @@ export default function PurchaseOrder() {
                     Requestor
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedOrder.requestor}
+                    {selectedOrder.requested_by}
                   </p>
                 </div>
                 <div>
@@ -551,7 +309,7 @@ export default function PurchaseOrder() {
                     {selectedOrder.department}
                   </p>
                 </div>
-                {selectedOrder.approvedBy && (
+                {selectedOrder.approved_by && (
                   <div>
                     <p className="text-sm font-medium text-slate-500">
                       {selectedOrder.status === "approved"
@@ -559,7 +317,7 @@ export default function PurchaseOrder() {
                         : "Rejected By"}
                     </p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {selectedOrder.approvedBy}
+                      {selectedOrder.approved_by}
                     </p>
                   </div>
                 )}
@@ -572,7 +330,7 @@ export default function PurchaseOrder() {
                   {selectedOrder.description}
                 </p>
               </div>
-              {selectedOrder.approvedDate && (
+              {selectedOrder.approved_on && (
                 <div>
                   <p className="text-sm font-medium text-slate-500">
                     {selectedOrder.status === "approved"
@@ -580,7 +338,7 @@ export default function PurchaseOrder() {
                       : "Rejected Date"}
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedOrder.approvedDate).toLocaleDateString(
+                    {new Date(selectedOrder.approved_on).toLocaleDateString(
                       "en-US",
                       {
                         year: "numeric",
@@ -622,14 +380,14 @@ export default function PurchaseOrder() {
                 variant="secondary"
                 className="bg-slate-100 text-slate-700 hover:bg-slate-200"
               >
-                {approvedRequests.length} requests
+                {requests.length} requests
               </Badge>
             </div>
           </DialogHeader>
 
           {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-            {approvedRequests.length === 0 ? (
+            {requests.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8 text-slate-400" />
@@ -662,13 +420,13 @@ export default function PurchaseOrder() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {approvedRequests.map((request) => (
+                    {requests.map((request) => (
                       <TableRow
                         key={request.id}
                         className="group hover:bg-slate-50 transition-colors"
                       >
                         <TableCell className="font-medium text-sm text-slate-700 py-4">
-                          {request.id}
+                          {request.request_number}
                         </TableCell>
                         <TableCell className="text-sm font-medium text-slate-900 py-4">
                           {request.title}
@@ -678,7 +436,7 @@ export default function PurchaseOrder() {
                             variant="outline"
                             className="text-xs border-slate-300 text-slate-600"
                           >
-                            {request.type}
+                            {request.service_category}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right py-4">

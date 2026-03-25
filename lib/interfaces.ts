@@ -347,6 +347,12 @@ export interface ServiceOrderProps {
   units: Unit[];
 }
 
+export interface PurchaseOrderProps {
+  requests: Request[];
+  orders: Order[];
+  units: Unit[];
+}
+
 export interface RequestDetailsPageProps {
   request: Request;
   accounts: Account[];
@@ -381,6 +387,8 @@ export interface Order {
   requested_by: string;
   order_prepared_by: string;
   journal_entries?: JournalEntry[];
+  approved_by?: string;
+  approved_on?: string;
 }
 
 export interface ReviewOrderProps {
