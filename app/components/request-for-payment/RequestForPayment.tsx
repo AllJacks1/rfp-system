@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/table";
 import { useReactToPrint } from "react-to-print";
 import { PrintRequestForPayment } from "@/app/components/request-for-payment/PrintRequestForPayment";
+import { Item, Order, RequestForPaymentProps } from "@/lib/interfaces";
 
 // Types
 interface LineItem {
@@ -81,58 +82,6 @@ interface RFP {
   description: string;
   vendor: string;
 }
-
-interface Order {
-  id: string;
-  poTitle: string;
-  poType: string;
-  status: "approved";
-  dateApproved: string;
-  requestor: string;
-  department: string;
-  vendor: string;
-  totalAmount: string;
-  description: string;
-}
-
-const mockPurchaseOrders: Order[] = [
-  {
-    id: "PO-2024-001",
-    poTitle: "Q1 Software License Payment",
-    poType: "Software License",
-    status: "approved",
-    dateApproved: "2024-03-10",
-    requestor: "John Smith",
-    department: "Engineering",
-    vendor: "Microsoft / AWS",
-    totalAmount: "$12,500",
-    description: "Payment for annual Microsoft 365 and AWS subscriptions",
-  },
-  {
-    id: "PO-2024-002",
-    poTitle: "Office Rent - March 2024",
-    poType: "Rent",
-    status: "approved",
-    dateApproved: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Administration",
-    vendor: "Prime Properties LLC",
-    totalAmount: "$25,000",
-    description: "Monthly office space rental payment",
-  },
-  {
-    id: "PO-2024-003",
-    poTitle: "Marketing Campaign Payment",
-    poType: "Marketing Services",
-    status: "approved",
-    dateApproved: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Marketing",
-    vendor: "Digital Marketing Pro",
-    totalAmount: "$15,000",
-    description: "Payment for Q1 digital marketing campaign execution",
-  },
-];
 
 const mockRFPs: RFP[] = [
   {
@@ -682,7 +631,7 @@ const mockRFPs: RFP[] = [
   },
 ];
 
-export default function RequestForPayment() {
+export default function RequestForPayment({ orders }: RequestForPaymentProps) {
   const [rfps, setRfps] = useState<RFP[]>(mockRFPs);
   const [selectedRfp, setSelectedRfp] = useState<RFP | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -743,6 +692,14 @@ export default function RequestForPayment() {
         </span>
       </div>
     );
+  };
+
+  const calculateTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return sum + qty * price;
+    }, 0);
   };
 
   const handleView = (rfp: RFP) => {
@@ -903,6 +860,33 @@ export default function RequestForPayment() {
     { value: "rejected", label: "Rejected" },
   ];
 
+  const formatCurrency = (
+    value: string | number | undefined | null,
+  ): string => {
+    if (value === undefined || value === null || value === "") return "₱0.00";
+    if (typeof value === "number")
+      return isNaN(value)
+        ? "₱0.00"
+        : new Intl.NumberFormat("en-PH", {
+            style: "currency",
+            currency: "PHP",
+          }).format(value);
+
+    const cleanedValue = value
+      .toString()
+      .replace(/[₱$,\s]/g, "")
+      .trim();
+    if (!cleanedValue) return "₱0.00";
+
+    const numValue = parseFloat(cleanedValue);
+    return isNaN(numValue)
+      ? "₱0.00"
+      : new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(numValue);
+  };
+
   return (
     <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
       {/* Header */}
@@ -970,7 +954,7 @@ export default function RequestForPayment() {
             className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Create from PO
+            Create RFP from Aprroved POs and SOs
           </Button>
         }
         actions={(row) => (
@@ -1321,10 +1305,10 @@ export default function RequestForPayment() {
         onOpenChange={setApprovedPODialogOpen}
       >
         <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-6 py-5 border-b bg-slate-50">
+          <DialogHeader className="px-6 py-5 border-b border-[#E2E8F0] bg-[#F8FAFC]">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold text-slate-900">
+                <DialogTitle className="text-lg font-bold text-slate-900">
                   Approved Purchase Orders
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-500 mt-1">
@@ -1333,90 +1317,100 @@ export default function RequestForPayment() {
               </div>
               <Badge
                 variant="secondary"
-                className="bg-slate-200 text-slate-700 font-semibold"
+                className="bg-[#EEF2FF] text-[#2B3A9F] border border-[#2B3A9F]/20 font-semibold"
               >
-                {mockPurchaseOrders.length} available
+                {orders.length} available
               </Badge>
             </div>
           </DialogHeader>
 
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow className="hover:bg-transparent border-b border-slate-200">
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-30">
-                      PO Reference
-                    </TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4">
-                      Description
-                    </TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 w-30">
-                      Type
-                    </TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-35">
-                      Amount
-                    </TableHead>
-                    <TableHead className="font-semibold text-xs text-slate-600 py-4 text-right w-35">
-                      Action
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockPurchaseOrders.map((po) => (
-                    <TableRow key={po.id} className="group hover:bg-slate-50">
-                      <TableCell className="py-4">
-                        <span className="font-mono text-sm font-semibold text-slate-900">
-                          {po.id}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-900">
-                            {po.poTitle}
-                          </span>
-                          <span className="text-xs text-slate-500 truncate max-w-62.5">
-                            {po.description}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <Badge
-                          variant="outline"
-                          className="text-xs border-slate-300 text-slate-600 font-medium"
-                        >
-                          {po.poType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-4 text-right">
-                        <span className="font-mono text-sm font-semibold text-slate-900">
-                          {po.totalAmount}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-4 text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleCreateRFP(po)}
-                          className="bg-slate-900 hover:bg-slate-800 text-white gap-2"
-                        >
-                          Create RFP
-                          <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+            {orders.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-[#EEF2FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-[#2B3A9F]" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                  No approved orders
+                </h3>
+                <p className="text-sm text-slate-500">
+                  There are no approved purchase orders available at this time.
+                </p>
+              </div>
+            ) : (
+              <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-[#F8FAFC]">
+                    <TableRow className="border-b border-[#E2E8F0] hover:bg-transparent">
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 w-40">
+                        PO Reference
+                      </TableHead>
+                      <TableHead className="font-bold text-xs text-slate-600 py-4">
+                        Description
+                      </TableHead>
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 w-40">
+                        Type
+                      </TableHead>
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 text-right w-48">
+                        Amount
+                      </TableHead>
+                      <TableHead className="font-bold text-xs text-slate-600 py-4 text-right w-48">
+                        Action
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow
+                        key={order.id}
+                        className="group hover:bg-[#F8FAFC] transition-colors border-b border-[#E2E8F0] last:border-b-0"
+                      >
+                        <TableCell className="font-mono text-sm text-[#2B3A9F] font-semibold py-4">
+                          {order.order_number}
+                        </TableCell>
+                        <TableCell className="text-sm font-semibold text-slate-900 py-4">
+                          <span className="truncate max-w-62.5 block">
+                            {order.description}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600 py-4">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-[#E2E8F0] text-slate-600 bg-white"
+                          >
+                            {order.service_category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right py-4">
+                          <span className="font-mono text-sm font-semibold text-slate-900">
+                            {formatCurrency(calculateTotal(order.items))}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right py-4">
+                          <Button
+                            size="sm"
+                            onClick={() => handleCreateRFP(order)}
+                            className="bg-[#2B3A9F] hover:bg-[#1E2A7A] text-white gap-2 shadow-md shadow-[#2B3A9F]/20 transition-all hover:shadow-lg"
+                          >
+                            Create RFP
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
+          <DialogFooter className="px-6 py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
             <Button
               variant="outline"
               onClick={() => setApprovedPODialogOpen(false)}
-              className="border-slate-300"
+              className="border-[#E2E8F0] text-slate-700 hover:bg-white"
             >
-              Cancel
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

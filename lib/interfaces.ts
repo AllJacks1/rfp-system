@@ -529,3 +529,7 @@ export interface PurchaseItem {
 export interface PurchaseRequestPageProps {
   requests: Request[];
 }
+
+export interface RequestForPaymentProps {
+  orders: Order[]
+}
