@@ -712,11 +712,8 @@ export default function RequestForPayment({ orders }: RequestForPaymentProps) {
   };
 
   const handleCreateRFP = (order: Order) => {
-    console.log("Creating RFP from PO:", order.id);
     setApprovedPODialogOpen(false);
-    router.push(
-      `/home/finance/request-for-payment/create-rfp?orderId=${order.id}`,
-    );
+    router.push(`/home/finance/request-for-payment/create-rfp/${order.id}`);
   };
 
   const formatDate = (dateString: string) => {

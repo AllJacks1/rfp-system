@@ -533,3 +533,7 @@ export interface PurchaseRequestPageProps {
 export interface RequestForPaymentProps {
   orders: Order[]
 }
+
+export interface CreateRequestForPaymentPageProps {
+  order: Order | null;
+}

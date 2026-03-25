@@ -27,6 +27,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  CreateRequestForPaymentPageProps,
+  Item,
+  statusConfig,
+} from "@/lib/interfaces";
+import {
   AlertCircle,
   ArrowLeft,
   Banknote,
@@ -44,7 +49,6 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
@@ -71,66 +75,6 @@ interface LineItem {
   totalAmount: string;
   chargeTo: string;
 }
-
-const mockPurchaseOrders: Order[] = [
-  {
-    id: "PO-2024-001",
-    poTitle: "Q1 Software License Payment",
-    poType: "Software License",
-    status: "approved",
-    dateApproved: "2024-03-10",
-    requestor: "John Smith",
-    department: "Engineering",
-    paymentType: "FTR",
-    vendor: "Microsoft / AWS",
-    totalAmount: "$12,500",
-    description: "Payment for annual Microsoft 365 and AWS subscriptions",
-  },
-  {
-    id: "PO-2024-002",
-    poTitle: "Office Rent - March 2024",
-    poType: "Rent",
-    status: "approved",
-    dateApproved: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Administration",
-    paymentType: "FTR",
-    vendor: "Prime Properties LLC",
-    totalAmount: "$25,000",
-    description: "Monthly office space rental payment",
-  },
-  {
-    id: "PO-2024-003",
-    poTitle: "Marketing Campaign Payment",
-    poType: "Marketing Services",
-    status: "approved",
-    dateApproved: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Marketing",
-    paymentType: "Cheque",
-    vendor: "Digital Marketing Pro",
-    totalAmount: "$15,000",
-    description: "Payment for Q1 digital marketing campaign execution",
-  },
-];
-
-const statusConfig = {
-  submitted: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: AlertCircle,
-    label: "Submitted",
-  },
-  approved: {
-    color: "bg-green-100 text-green-800 border-green-200",
-    icon: CheckCircle2,
-    label: "Approved",
-  },
-  rejected: {
-    color: "bg-red-100 text-red-800 border-red-200",
-    icon: XCircle,
-    label: "Rejected",
-  },
-};
 
 const companies = [
   { value: "technova", label: "TechNova Solutions" },
@@ -169,14 +113,9 @@ function formatCurrency(value: string | number): string {
   }).format(num);
 }
 
-export default function CreateRequestForPayment() {
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get("orderId");
-
-  const order = useMemo(() => {
-    return mockPurchaseOrders.find((r) => r.id === orderId);
-  }, [orderId]);
-
+export default function CreateRequestForPayment({
+  order,
+}: CreateRequestForPaymentPageProps) {
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [particulars, setParticulars] = useState("");
@@ -192,7 +131,7 @@ export default function CreateRequestForPayment() {
 
   const handlePrint = useReactToPrint({
     contentRef,
-    documentTitle: `Request_${orderId || "Details"}`,
+    documentTitle: `${order?.order_number || "Details"}`,
     pageStyle: `
       @media print {
         @page { size: A4; margin: 10mm; }
@@ -240,6 +179,14 @@ export default function CreateRequestForPayment() {
     return (q * p).toFixed(2);
   }, [qty, price]);
 
+  const calculateTotal = (items: Item[]): number => {
+    return items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return sum + qty * price;
+    }, 0);
+  };
+
   if (!order) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-6xl">
@@ -248,9 +195,7 @@ export default function CreateRequestForPayment() {
             <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Request Not Found</h2>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              {orderId
-                ? `No order found with ID: ${orderId}`
-                : "No order ID provided"}
+              No order found.
             </p>
             <Link href="/home/finance/request-for-payment">
               <Button>
@@ -298,9 +243,7 @@ export default function CreateRequestForPayment() {
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex-1">
-                  <CardTitle className="text-xl mb-2">
-                    {order.poTitle}
-                  </CardTitle>
+                  <CardTitle className="text-xl mb-2">{order.title}</CardTitle>
                   <CardDescription className="text-base">
                     {order.description}
                   </CardDescription>
@@ -318,7 +261,7 @@ export default function CreateRequestForPayment() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailItem
                   label="Request Type"
-                  value={order.poType}
+                  value={order.service_category}
                   icon={Package}
                 />
                 <DetailItem
@@ -326,9 +269,9 @@ export default function CreateRequestForPayment() {
                   value={order.department}
                   icon={Building2}
                 />
-                <DetailItem
+                {/* <DetailItem
                   label="Date Approved"
-                  value={new Date(order.dateApproved).toLocaleDateString(
+                  value={new Date(order.approved_on).toLocaleDateString(
                     "en-US",
                     {
                       weekday: "long",
@@ -338,20 +281,20 @@ export default function CreateRequestForPayment() {
                     },
                   )}
                   icon={Calendar}
-                />
+                /> */}
                 <DetailItem
                   label="Ordered By"
-                  value={order.requestor}
+                  value={order.requested_by}
                   icon={User}
                 />
                 <DetailItem
                   label="Payable To"
-                  value={order.vendor}
+                  value={order.preferred_vendor}
                   icon={User}
                 />
                 <DetailItem
                   label="Total Payable"
-                  value={order.totalAmount}
+                  value={calculateTotal(order.items).toString()}
                   icon={Banknote}
                 />
               </div>
@@ -583,7 +526,7 @@ export default function CreateRequestForPayment() {
                         <TableCell className="text-right font-mono text-lg text-slate-900">
                           {formatCurrency(totalLineItems)}
                         </TableCell>
-                        <TableCell ></TableCell>
+                        <TableCell></TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -607,7 +550,7 @@ export default function CreateRequestForPayment() {
                   PO Total Payable
                 </span>
                 <span className="font-mono font-semibold text-slate-900">
-                  {formatCurrency(order.totalAmount)}
+                  {formatCurrency(calculateTotal(order.items))}
                 </span>
               </div>
 
@@ -623,8 +566,9 @@ export default function CreateRequestForPayment() {
 
               {/* Difference - Conditional styling */}
               {(() => {
-                const poTotal =
-                  parseFloat(order.totalAmount.replace(/[$,]/g, "")) || 0;
+                const poTotal = Number(
+                  formatCurrency(calculateTotal(order.items)) || 0,
+                );
                 const difference = poTotal - totalLineItems;
                 const isMatched = Math.abs(difference) < 0.01;
                 const isOver = difference < 0;
@@ -693,8 +637,9 @@ export default function CreateRequestForPayment() {
 
               {/* Alert message when not matched */}
               {(() => {
-                const poTotal =
-                  parseFloat(order.totalAmount.replace(/[$,]/g, "")) || 0;
+                const poTotal = Number(
+                  formatCurrency(calculateTotal(order.items)) || 0,
+                );
                 const difference = poTotal - totalLineItems;
                 const isMatched = Math.abs(difference) < 0.01;
 
