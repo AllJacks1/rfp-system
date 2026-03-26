@@ -29,7 +29,6 @@ async function getServiceOrders(supabase: any): Promise<Order[]> {
   }
 
   const orders = data || [];
-  console.log(orders);
 
   // 1️⃣ Collect all file IDs from service_requests
   const allFileIds = orders

@@ -547,7 +547,7 @@ export default function CreateRequestForPayment({
               {/* PO Total Payable - From original order */}
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-sm font-medium text-slate-700">
-                  PO Total Payable
+                  Total Payable
                 </span>
                 <span className="font-mono font-semibold text-slate-900">
                   {formatCurrency(calculateTotal(order.items))}

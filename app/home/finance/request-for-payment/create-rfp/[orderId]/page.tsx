@@ -16,72 +16,91 @@ async function getServiceOrder(
       `
       *,
       service_requests(
-      service_category:types(name),
-      company:companies(name),
-      department:departments(name),
-      vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
-      payment_method:payment_methods(name),
-      requested_by:users(first_name, last_name),
-      order_prepared_by:users(first_name, last_name)
+        *,
+        service_category:types(name),
+        company:companies(name),
+        department:departments(name),
+        vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
+        payment_method:payment_methods(name),
+        requested_by:users(first_name, last_name),
+        order_prepared_by:users(first_name, last_name)
       )
     `,
     )
     .eq("id", id)
-    .single(); // Use .single() instead of data?.[0]
+    .maybeSingle();
 
   if (error) {
-    console.error("Error fetching request:", error);
+    console.error("Error fetching service order:", error);
     return null;
   }
 
-  if (!data) return null;
+  if (!data || !data.service_requests) return null;
 
-  // Load supporting documents
-  const allFileIds = (data.supporting_documents || []).filter(Boolean);
+  const sr = data.service_requests;
+
+  // Fetch supporting documents
+  const fileIds: number[] = (sr.supporting_documents || []).filter(Boolean);
   let fileMap: Record<number, any> = {};
 
-  if (allFileIds.length > 0) {
-    const { data: files } = await supabase
+  if (fileIds.length) {
+    const { data: files, error: fileError } = await supabase
       .from("files")
       .select("file_id, type, url")
-      .in("file_id", allFileIds);
+      .in("file_id", fileIds);
 
-    fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
+    if (fileError) {
+      console.error("Error loading files:", fileError);
+    }
+
+    fileMap = Object.fromEntries(
+      (files || []).map((file: any) => [file.file_id, file]),
+    );
   }
 
-  // Flatten and return
   return {
     id: data.id,
     order_number: data.order_number,
-    title: data.title,
-    description: data.description,
-    service_category: data.service_category?.name || "",
-    priority_level: data.priority_level,
-    company: data.company?.name || "",
-    department: data.department?.name || "",
-    preferred_date: data.preferred_date,
-    expected_completion: data.expected_completion,
-    preferred_vendor: data.preferred_vendor,
-    contact_person: data.contact_person,
-    required_by: data.required_by,
-    payment_method: data.payment_method?.name || "",
+
+    title: sr.title,
+    description: sr.description,
+
+    service_category: sr.service_category?.name ?? "",
+    priority_level: sr.priority_level,
+
+    company: sr.company?.name ?? "",
+    department: sr.department?.name ?? "",
+
+    preferred_date: sr.preferred_date,
+    expected_completion: sr.expected_completion,
+    preferred_vendor: sr.preferred_vendor,
+    contact_person: sr.contact_person,
+    required_by: sr.required_by,
+
+    payment_method: sr.payment_method?.name ?? "",
+
     status: data.status,
-    vehicle: data.vehicle || null,
-    supporting_documents: allFileIds
-      .map((id: number) => fileMap[id]?.url)
+
+    vehicle: sr.vehicle ?? null,
+
+    supporting_documents: fileIds
+      .map((fileId) => fileMap[fileId]?.url)
       .filter(Boolean),
-    items: (data.items || []).map((i: any) => ({
-      name: i.name,
-      description: i.description,
-      unit: i.unit,
-      quantity: String(i.quantity),
-      unitPrice: String(i.unitPrice),
+
+    items: (sr.items || []).map((item: any) => ({
+      name: item.name,
+      description: item.description,
+      unit: item.unit,
+      quantity: String(item.quantity),
+      unitPrice: String(item.unitPrice),
     })),
-    requested_by: data.requested_by
-      ? `${data.requested_by.first_name} ${data.requested_by.last_name}`
+
+    requested_by: sr.requested_by
+      ? `${sr.requested_by.first_name} ${sr.requested_by.last_name}`
       : "",
-    order_prepared_by: data.order_prepared_by
-      ? `${data.order_prepared_by.first_name} ${data.order_prepared_by.last_name}`
+
+    order_prepared_by: sr.order_prepared_by
+      ? `${sr.order_prepared_by.first_name} ${sr.order_prepared_by.last_name}`
       : "",
   };
 }
@@ -95,71 +114,92 @@ async function getPurchaseOrder(
     .select(
       `
       *,
-      purchase_requests(purchase_category:types(name),
-      company:companies(name),
-      department:departments(name),
-      vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
-      payment_method:payment_methods(name),
-      requested_by:users(first_name, last_name),
-      order_prepared_by:users(first_name, last_name))
+      purchase_requests(
+        *,
+        purchase_category:types(name),
+        company:companies(name),
+        department:departments(name),
+        vehicle:vehicles(vehicle_id, plate_number, car_type, owners_first_name, owners_last_name),
+        payment_method:payment_methods(name),
+        requested_by:users(first_name, last_name),
+        order_prepared_by:users(first_name, last_name)
+      )
     `,
     )
     .eq("id", id)
-    .single(); // Use .single() instead of data?.[0]
+    .maybeSingle();
 
   if (error) {
-    console.error("Error fetching request:", error);
+    console.error("Error fetching purchase order:", error);
     return null;
   }
 
-  if (!data) return null;
+  if (!data || !data.purchase_requests) return null;
 
-  // Load supporting documents
-  const allFileIds = (data.supporting_documents || []).filter(Boolean);
+  const pr = data.purchase_requests;
+
+  // Supporting documents
+  const fileIds: number[] = (pr.supporting_documents || []).filter(Boolean);
   let fileMap: Record<number, any> = {};
 
-  if (allFileIds.length > 0) {
-    const { data: files } = await supabase
+  if (fileIds.length) {
+    const { data: files, error: fileError } = await supabase
       .from("files")
       .select("file_id, type, url")
-      .in("file_id", allFileIds);
+      .in("file_id", fileIds);
 
-    fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
+    if (fileError) {
+      console.error("Error loading files:", fileError);
+    }
+
+    fileMap = Object.fromEntries(
+      (files || []).map((file: any) => [file.file_id, file]),
+    );
   }
 
-  // Flatten and return
   return {
     id: data.id,
     order_number: data.order_number,
-    title: data.title,
-    description: data.description,
-    service_category: data.purchase_category?.name || "",
-    priority_level: data.priority_level,
-    company: data.company?.name || "",
-    department: data.department?.name || "",
-    preferred_date: data.preferred_date,
-    expected_completion: data.expected_completion,
-    preferred_vendor: data.preferred_vendor,
-    contact_person: data.contact_person,
-    required_by: data.required_by,
-    payment_method: data.payment_method?.name || "",
+
+    title: pr.title,
+    description: pr.description,
+
+    service_category: pr.purchase_category?.name ?? "",
+    priority_level: pr.priority_level,
+
+    company: pr.company?.name ?? "",
+    department: pr.department?.name ?? "",
+
+    preferred_date: pr.preferred_date,
+    expected_completion: pr.expected_completion,
+    preferred_vendor: pr.preferred_vendor,
+    contact_person: pr.contact_person,
+    required_by: pr.required_by,
+
+    payment_method: pr.payment_method?.name ?? "",
+
     status: data.status,
-    vehicle: data.vehicle || null,
-    supporting_documents: allFileIds
-      .map((id: number) => fileMap[id]?.url)
+
+    vehicle: pr.vehicle ?? null,
+
+    supporting_documents: fileIds
+      .map((fileId) => fileMap[fileId]?.url)
       .filter(Boolean),
-    items: (data.items || []).map((i: any) => ({
-      name: i.name,
-      description: i.description,
-      unit: i.unit,
-      quantity: String(i.quantity),
-      unitPrice: String(i.unitPrice),
+
+    items: (pr.items || []).map((item: any) => ({
+      name: item.name,
+      description: item.description,
+      unit: item.unit,
+      quantity: String(item.quantity),
+      unitPrice: String(item.unitPrice),
     })),
-    requested_by: data.requested_by
-      ? `${data.requested_by.first_name} ${data.requested_by.last_name}`
+
+    requested_by: pr.requested_by
+      ? `${pr.requested_by.first_name} ${pr.requested_by.last_name}`
       : "",
-    order_prepared_by: data.order_prepared_by
-      ? `${data.order_prepared_by.first_name} ${data.order_prepared_by.last_name}`
+
+    order_prepared_by: pr.order_prepared_by
+      ? `${pr.order_prepared_by.first_name} ${pr.order_prepared_by.last_name}`
       : "",
   };
 }
@@ -172,7 +212,6 @@ async function getOrder(supabase: any, id: string): Promise<Order | null> {
     const purchaseOrder = await getPurchaseOrder(supabase, id);
     if (purchaseOrder) return purchaseOrder;
 
-    console.log("fck")
     return null;
   } catch (err) {
     console.error("Error fetching order:", err);
@@ -190,7 +229,7 @@ export default async function CreateRequestForPaymentPage({
 
   return (
     <div>
-      <CreateRequestForPayment order={order}/>
+      <CreateRequestForPayment order={order} />
     </div>
   );
 }
