@@ -21,6 +21,7 @@ import {
   DollarSign,
   Eye,
   ArrowRight,
+  CreditCard,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -32,48 +33,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
+import {
+  LiquidationPageProps,
+  RequestForPaymentInterface,
+} from "@/lib/interfaces";
 
-// Types
-interface LineItem {
-  id: string;
-  referenceDocument: string;
-  particulars: string;
-  qty: number;
-  price: number;
-  totalAmount: number;
-  chargeTo: string;
-}
-
-interface JournalEntry {
-  id: number;
-  accountTitle: string;
-  amount: number;
-  entryType: "debit" | "credit";
-}
-
-interface RFP {
-  id: string;
-  orderId: string;
-  rfpTitle: string;
-  payableTo: string;
-  paymentType: "Cheque" | "Cash" | "Bank Transfer" | "Fund Transfer";
-  dueDate: string;
-  requestDate: string;
-  contactNumber: string;
-  department: string;
-  lineItems: LineItem[];
-  requestor: string;
-  totalPayable: number;
-  journalEntry: JournalEntry[];
-  invoiceNumber?: string;
-  approvedBy?: string;
-  approvedDate?: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  amount: string;
-  description: string;
-  vendor: string;
-}
 interface Liquidation {
   id: string;
   liquidationTitle: string;
@@ -204,258 +168,7 @@ const mockLiquidations: Liquidation[] = [
   },
 ];
 
-const approvedRFPs: RFP[] = [
-  {
-    id: "RFP-2024-002",
-    orderId: "PO-2024-002",
-    rfpTitle: "Office Rent - March 2024",
-    payableTo: "Prime Properties LLC",
-    paymentType: "Cheque",
-    dueDate: "2024-03-15",
-    requestDate: "2024-03-09",
-    contactNumber: "+63 912 345 6790",
-    department: "Administration",
-    lineItems: [
-      {
-        id: "LI-003",
-        referenceDocument: "INV-2024-002",
-        particulars: "Office Rent - March",
-        qty: 1,
-        price: 25000,
-        totalAmount: 25000,
-        chargeTo: "Rent Expense",
-      },
-    ],
-    requestor: "Sarah Johnson",
-    totalPayable: 25000,
-    journalEntry: [
-      {
-        id: 4,
-        accountTitle: "Rent Expense",
-        amount: 25000,
-        entryType: "debit",
-      },
-      {
-        id: 5,
-        accountTitle: "Accounts Payable",
-        amount: 25000,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    amount: "$25,000",
-    description: "Monthly office space rental payment",
-    vendor: "Prime Properties LLC",
-    invoiceNumber: "INV-2024-002",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-09",
-  },
-  {
-    id: "RFP-2024-004",
-    orderId: "PO-2024-004",
-    rfpTitle: "Consulting Fees - Q1",
-    payableTo: "McKinsey & Company",
-    paymentType: "Bank Transfer",
-    dueDate: "2024-03-25",
-    requestDate: "2024-03-07",
-    contactNumber: "+63 912 345 6792",
-    department: "Strategy",
-    lineItems: [
-      {
-        id: "LI-006",
-        referenceDocument: "INV-2024-004",
-        particulars: "Strategy Consulting Services",
-        qty: 1,
-        price: 45000,
-        totalAmount: 45000,
-        chargeTo: "Consulting Expense",
-      },
-    ],
-    requestor: "Emily Davis",
-    totalPayable: 45000,
-    journalEntry: [
-      {
-        id: 8,
-        accountTitle: "Consulting Expense",
-        amount: 45000,
-        entryType: "debit",
-      },
-      {
-        id: 9,
-        accountTitle: "Accounts Payable",
-        amount: 45000,
-        entryType: "credit",
-      },
-    ],
-    status: "rejected",
-    dateSubmitted: "2024-03-07",
-    amount: "$45,000",
-    description: "Strategy consulting fees for market expansion project",
-    vendor: "McKinsey & Company",
-    invoiceNumber: "INV-2024-004",
-    approvedBy: "Lisa Wong",
-    approvedDate: "2024-03-07",
-  },
-  {
-    id: "RFP-2024-005",
-    orderId: "PO-2024-005",
-    rfpTitle: "IT Equipment Maintenance",
-    payableTo: "TechSupport Inc.",
-    paymentType: "Cheque",
-    dueDate: "2024-03-18",
-    requestDate: "2024-03-06",
-    contactNumber: "+63 912 345 6793",
-    department: "Engineering",
-    lineItems: [
-      {
-        id: "LI-007",
-        referenceDocument: "INV-2024-005",
-        particulars: "Server Maintenance",
-        qty: 1,
-        price: 2000,
-        totalAmount: 2000,
-        chargeTo: "IT Maintenance Expense",
-      },
-      {
-        id: "LI-008",
-        referenceDocument: "INV-2024-005",
-        particulars: "Network Equipment Check",
-        qty: 1,
-        price: 1500,
-        totalAmount: 1500,
-        chargeTo: "IT Maintenance Expense",
-      },
-    ],
-    requestor: "Robert Wilson",
-    totalPayable: 3500,
-    journalEntry: [
-      {
-        id: 10,
-        accountTitle: "IT Maintenance Expense",
-        amount: 3500,
-        entryType: "debit",
-      },
-      {
-        id: 11,
-        accountTitle: "Accounts Payable",
-        amount: 3500,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-06",
-    amount: "$3,500",
-    description: "Quarterly server and network equipment maintenance",
-    vendor: "TechSupport Inc.",
-    invoiceNumber: "INV-2024-005",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-06",
-  },
-  {
-    id: "RFP-2024-006",
-    orderId: "PO-2024-006",
-    rfpTitle: "Employee Training Program",
-    payableTo: "FranklinCovey",
-    paymentType: "Bank Transfer",
-    dueDate: "2024-03-22",
-    requestDate: "2024-03-05",
-    contactNumber: "+63 912 345 6794",
-    department: "HR",
-    lineItems: [
-      {
-        id: "LI-009",
-        referenceDocument: "INV-2024-006",
-        particulars: "Leadership Development Workshop",
-        qty: 10,
-        price: 800,
-        totalAmount: 8000,
-        chargeTo: "Training Expense",
-      },
-    ],
-    requestor: "Lisa Anderson",
-    totalPayable: 8000,
-    journalEntry: [
-      {
-        id: 12,
-        accountTitle: "Training Expense",
-        amount: 8000,
-        entryType: "debit",
-      },
-      {
-        id: 13,
-        accountTitle: "Accounts Payable",
-        amount: 8000,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-05",
-    amount: "$8,000",
-    description: "Payment for leadership development workshop",
-    vendor: "FranklinCovey",
-    invoiceNumber: "INV-2024-006",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-04",
-  },
-  {
-    id: "RFP-2024-007",
-    orderId: "PO-2024-007",
-    rfpTitle: "Travel Expenses - Sales Team",
-    payableTo: "Various Airlines/Hotels",
-    paymentType: "Cash",
-    dueDate: "2024-03-12",
-    requestDate: "2024-03-04",
-    contactNumber: "+63 912 345 6795",
-    department: "Sales",
-    lineItems: [
-      {
-        id: "LI-010",
-        referenceDocument: "INV-2024-007",
-        particulars: "Airfare - Client Visit",
-        qty: 2,
-        price: 1500,
-        totalAmount: 3000,
-        chargeTo: "Travel Expense",
-      },
-      {
-        id: "LI-011",
-        referenceDocument: "INV-2024-007",
-        particulars: "Hotel Accommodation",
-        qty: 2,
-        price: 1100,
-        totalAmount: 2200,
-        chargeTo: "Travel Expense",
-      },
-    ],
-    requestor: "David Brown",
-    totalPayable: 5200,
-    journalEntry: [
-      {
-        id: 14,
-        accountTitle: "Travel Expense",
-        amount: 5200,
-        entryType: "debit",
-      },
-      {
-        id: 15,
-        accountTitle: "Cash on Hand",
-        amount: 5200,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-04",
-    amount: "$5,200",
-    description: "Client visit travel expenses for March",
-    vendor: "Various Airlines/Hotels",
-    invoiceNumber: "INV-2024-007",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-04",
-  },
-];
-
-export default function Liquidation() {
+export default function Liquidation({ rfps }: LiquidationPageProps) {
   const [liquidations, setLiquidations] =
     useState<Liquidation[]>(mockLiquidations);
   const [selectedLiquidation, setSelectedLiquidation] =
@@ -593,7 +306,7 @@ export default function Liquidation() {
     { value: "rejected", label: "Rejected" },
   ];
 
-  const handleCreateLiquidation = (rfp: RFP) => {
+  const handleCreateLiquidation = (rfp: RequestForPaymentInterface) => {
     console.log("Creating RFP from PO:", rfp.id);
     setApprovedRFPDialogOpen(false);
     router.push(`/home/finance/liquidation/liquidate?rfpId=${rfp.id}`);
@@ -836,30 +549,30 @@ export default function Liquidation() {
         open={approvedRFPDialogOpen}
         onOpenChange={setApprovedRFPDialogOpen}
       >
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden">
           {/* Header - Clean slate with subtle border */}
           <DialogHeader className="px-6 py-5 border-b bg-slate-50/50">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle className="text-lg font-semibold text-slate-900 tracking-tight">
-                  Approved RPF Requests
+                  Approved RFP Requests
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-500 mt-1">
-                  Select an approved RPF request to liquidate
+                  Select an approved RFP request to liquidate
                 </DialogDescription>
               </div>
               <Badge
                 variant="secondary"
-                className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
               >
-                {approvedRFPs.length} requests
+                {rfps.length} approved
               </Badge>
             </div>
           </DialogHeader>
 
           {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-            {approvedRFPs.length === 0 ? (
+            {rfps.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8 text-slate-400" />
@@ -868,43 +581,97 @@ export default function Liquidation() {
                   No approved requests
                 </h3>
                 <p className="text-sm text-slate-500">
-                  There are no approved purchase requests available at this
-                  time.
+                  There are no approved RFP requests available at this time.
                 </p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-xl overflow-hidden">
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-45">
-                        RFP ID
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-40">
+                        RFP Number
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4">
-                        Title
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-48">
+                        Payable To
                       </TableHead>
-                      <TableHead className="font-semibold text-xs text-slate-600 py-4 text-start w-40">
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-32">
+                        Payment Method
+                      </TableHead>
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-32 text-right">
+                        Amount
+                      </TableHead>
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-28 text-center">
+                        Items
+                      </TableHead>
+                      <TableHead className="font-semibold text-xs text-slate-600 py-4 w-36 text-right">
                         Action
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {approvedRFPs.map((rfp) => (
+                    {rfps.map((rfp) => (
                       <TableRow
                         key={rfp.id}
-                        className="group hover:bg-slate-50 transition-colors"
+                        className="group hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
                       >
-                        <TableCell className="font-medium text-sm text-slate-700 py-4">
-                          {rfp.id}
+                        {/* RFP Number */}
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
+                              {rfp.rfp_number}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              PO: {rfp.order_number}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-slate-900 py-4">
-                          {rfp.rfpTitle}
+
+                        {/* Payable To */}
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-900 line-clamp-1">
+                              {rfp.payable_to}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {rfp.department}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-right py-4">
+
+                        {/* Payment Method */}
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-1.5">
+                            <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-sm text-slate-700">
+                              {rfp.payment_method}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* Amount */}
+                        <TableCell className="py-4 text-right">
+                          <span className="font-mono text-sm font-semibold text-slate-900">
+                            {new Intl.NumberFormat("en-PH", {
+                              style: "currency",
+                              currency: "PHP",
+                            }).format(Number(rfp.total_payable) || 0)}
+                          </span>
+                        </TableCell>
+
+                        {/* Item Count */}
+                        <TableCell className="py-4 text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            {rfp.line_items?.length || 0} items
+                          </span>
+                        </TableCell>
+
+                        {/* Action */}
+                        <TableCell className="py-4 text-right">
                           <Button
                             size="sm"
                             onClick={() => handleCreateLiquidation(rfp)}
-                            className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white gap-2"
+                            className="bg-[#2B3A9F] hover:bg-[#1E2A7A] text-white gap-2 shadow-sm transition-all"
                           >
                             Liquidate
                             <ArrowRight className="w-4 h-4" />
@@ -920,15 +687,13 @@ export default function Liquidation() {
 
           {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-slate-50">
-            <div className="mb-4 mr-4">
-              <Button
-                variant="outline"
-                onClick={() => setApprovedRFPDialogOpen(false)}
-                className="border-slate-300 text-slate-700 hover:bg-slate-100"
-              >
-                Close
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => setApprovedRFPDialogOpen(false)}
+              className="border-slate-300 text-slate-700 hover:bg-slate-100"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

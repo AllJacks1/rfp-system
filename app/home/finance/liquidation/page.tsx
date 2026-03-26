@@ -1,7 +1,29 @@
 import Liquidation from '@/app/components/liquidation/Liquidation'
+import { createClient } from '@/lib/supabase/server';
 
-export default function LiquidationPage() {
+async function getApprovedRFPs(supabase: any) {
+  const { data, error } = await supabase
+    .from("requests_for_payment")
+    .select("*")
+    .eq("status", "approved")
+    .order("rfp_number", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching RFPs:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export default async function LiquidationPage() {
+  const supabase = await createClient();
+
+  const rfps = await getApprovedRFPs(supabase);
+
+  console.log(JSON.stringify(rfps))
+
   return (
-    <div><Liquidation/></div>
+    <div><Liquidation rfps={rfps}/></div>
   )
 }
