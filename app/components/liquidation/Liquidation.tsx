@@ -309,7 +309,7 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
   const handleCreateLiquidation = (rfp: RequestForPaymentInterface) => {
     console.log("Creating RFP from PO:", rfp.id);
     setApprovedRFPDialogOpen(false);
-    router.push(`/home/finance/liquidation/liquidate?rfpId=${rfp.id}`);
+    router.push(`/home/finance/liquidation/liquidate/${rfp.id}`);
   };
 
   return (

@@ -33,54 +33,11 @@ import {
   Building2,
   CreditCard,
   Hash,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-
-// Types
-interface LineItem {
-  id: string;
-  referenceDocument: string;
-  particulars: string;
-  qty: number;
-  price: number;
-  totalAmount: number;
-  chargeTo: string;
-}
-
-interface JournalEntry {
-  id: number;
-  accountTitle: string;
-  amount: number;
-  entryType: "debit" | "credit";
-}
-
-interface RFP {
-  id: string;
-  orderId: string;
-  rfpTitle: string;
-  payableTo: string;
-  paymentType: "Cheque" | "Cash" | "Bank Transfer" | "Fund Transfer";
-  dueDate: string;
-  requestDate: string;
-  contactNumber: string;
-  department: string;
-  lineItems: LineItem[];
-  requestor: string;
-  totalPayable: number;
-  journalEntry: JournalEntry[];
-  invoiceNumber?: string;
-  approvedBy?: string;
-  approvedDate?: string;
-  status: "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  amount: string;
-  description: string;
-  vendor: string;
-}
-
+import { CreateLiquidationPageProps } from "@/lib/interfaces";
 interface LiquidationEntry {
   id: string;
   date: string;
@@ -90,111 +47,6 @@ interface LiquidationEntry {
   glAccount: string;
   amount: number;
 }
-
-// Mock Data
-const approvedRFPs: RFP[] = [
-  {
-    id: "RFP-2024-002",
-    orderId: "PO-2024-002",
-    rfpTitle: "Office Rent - March 2024",
-    payableTo: "Prime Properties LLC",
-    paymentType: "Cheque",
-    dueDate: "2024-03-15",
-    requestDate: "2024-03-09",
-    contactNumber: "+63 912 345 6790",
-    department: "Administration",
-    lineItems: [
-      {
-        id: "LI-003",
-        referenceDocument: "INV-2024-002",
-        particulars: "Office Rent - March",
-        qty: 1,
-        price: 25000,
-        totalAmount: 25000,
-        chargeTo: "Rent Expense",
-      },
-    ],
-    requestor: "Sarah Johnson",
-    totalPayable: 25000,
-    journalEntry: [
-      {
-        id: 4,
-        accountTitle: "Rent Expense",
-        amount: 25000,
-        entryType: "debit",
-      },
-      {
-        id: 5,
-        accountTitle: "Accounts Payable",
-        amount: 25000,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-09",
-    amount: "$25,000",
-    description: "Monthly office space rental payment",
-    vendor: "Prime Properties LLC",
-    invoiceNumber: "INV-2024-002",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-09",
-  },
-  {
-    id: "RFP-2024-005",
-    orderId: "PO-2024-005",
-    rfpTitle: "IT Equipment Maintenance",
-    payableTo: "TechSupport Inc.",
-    paymentType: "Cheque",
-    dueDate: "2024-03-18",
-    requestDate: "2024-03-06",
-    contactNumber: "+63 912 345 6793",
-    department: "Engineering",
-    lineItems: [
-      {
-        id: "LI-007",
-        referenceDocument: "INV-2024-005",
-        particulars: "Server Maintenance",
-        qty: 1,
-        price: 2000,
-        totalAmount: 2000,
-        chargeTo: "IT Maintenance Expense",
-      },
-      {
-        id: "LI-008",
-        referenceDocument: "INV-2024-005",
-        particulars: "Network Equipment Check",
-        qty: 1,
-        price: 1500,
-        totalAmount: 1500,
-        chargeTo: "IT Maintenance Expense",
-      },
-    ],
-    requestor: "Robert Wilson",
-    totalPayable: 3500,
-    journalEntry: [
-      {
-        id: 10,
-        accountTitle: "IT Maintenance Expense",
-        amount: 3500,
-        entryType: "debit",
-      },
-      {
-        id: 11,
-        accountTitle: "Accounts Payable",
-        amount: 3500,
-        entryType: "credit",
-      },
-    ],
-    status: "approved",
-    dateSubmitted: "2024-03-06",
-    amount: "$3,500",
-    description: "Quarterly server and network equipment maintenance",
-    vendor: "TechSupport Inc.",
-    invoiceNumber: "INV-2024-005",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-06",
-  },
-];
 
 // Mock dropdown data
 const plateNumbers = ["ABC-123", "XYZ-789", "DEF-456", "GHI-321"];
@@ -207,14 +59,38 @@ const glAccounts = [
   "Parking Fees",
 ];
 
-export default function CreateLiquidation() {
-  const searchParams = useSearchParams();
-  const rfpId = searchParams.get("rfpId");
+// ✅ Safe number parsing for string amounts from database
+const parseAmount = (value: string | number | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return isNaN(value) ? 0 : value;
+  const cleaned = value.toString().replace(/[₱$,\s]/g, "");
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
 
-  const rfp = useMemo(() => {
-    return approvedRFPs.find((r) => r.id === rfpId);
-  }, [rfpId]);
+const formatCurrency = (value: number | string | null | undefined): string => {
+  const num = parseAmount(value);
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(num);
+};
 
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return "-";
+  try {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
   // Form state
   const [date, setDate] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
@@ -255,8 +131,10 @@ export default function CreateLiquidation() {
   };
 
   const totalLiquidated = entries.reduce((sum, e) => sum + e.amount, 0);
-  const remainingBalance = (rfp?.totalPayable || 0) - totalLiquidated;
+  const originalAmount = parseAmount(rfp?.total_payable);
+  const remainingBalance = originalAmount - totalLiquidated;
   const isBalanced = remainingBalance === 0;
+  const isOverLiquidated = remainingBalance < 0;
 
   if (!rfp) {
     return (
@@ -271,14 +149,12 @@ export default function CreateLiquidation() {
                 Request Not Found
               </h2>
               <p className="text-slate-500 text-center max-w-md mb-6">
-                {rfpId
-                  ? `No request found with ID: ${rfpId}`
-                  : "No request ID provided"}
+                No RFP request provided. Please select an approved RFP to liquidate.
               </p>
               <Link href="/home/finance/liquidation">
                 <Button className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Requests
+                  Back to Liquidation
                 </Button>
               </Link>
             </CardContent>
@@ -308,44 +184,47 @@ export default function CreateLiquidation() {
                 Create Liquidation
               </h1>
               <p className="text-sm text-slate-500">
-                Liquidating {rfp.id} • {rfp.rfpTitle}
+                Liquidating {rfp.rfp_number} • {rfp.payable_to}
               </p>
             </div>
           </div>
           <Badge
             variant="secondary"
-            className="bg-[#2B3A9F]/10 text-[#2B3A9F] border-[#2B3A9F]/20 font-semibold"
+            className="bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold"
           >
-            {rfp.paymentType}
+            {rfp.status === "approved" ? "Approved" : rfp.status}
           </Badge>
         </div>
 
-        {/* RFP Summary Card */}
+        {/* RFP Summary Card - Updated to match actual data structure */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#2B3A9F]" />
-              Original Request Details
+              Original RFP Details
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Requested By */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 uppercase font-medium">
-                  Requestor
+                  Requested By
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center text-[10px] font-bold text-[#2B3A9F]">
-                    {rfp.requestor
+                    {rfp.requested_by
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
                   </div>
                   <span className="text-sm font-semibold text-slate-900">
-                    {rfp.requestor}
+                    {rfp.requested_by}
                   </span>
                 </div>
               </div>
+
+              {/* Department */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 uppercase font-medium">
                   Department
@@ -357,6 +236,8 @@ export default function CreateLiquidation() {
                   </span>
                 </div>
               </div>
+
+              {/* Original Amount */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 uppercase font-medium">
                   Original Amount
@@ -364,28 +245,95 @@ export default function CreateLiquidation() {
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-slate-400" />
                   <span className="text-sm font-mono font-semibold text-slate-900">
-                    {formatCurrency(rfp.totalPayable)}
+                    {formatCurrency(rfp.total_payable)}
                   </span>
                 </div>
               </div>
+
+              {/* Payment Method */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 uppercase font-medium">
-                  Remaining
+                  Payment Method
                 </p>
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-slate-400" />
-                  <span
-                    className={`text-sm font-mono font-semibold ${
-                      remainingBalance < 0
-                        ? "text-rose-600"
-                        : remainingBalance === 0
-                          ? "text-emerald-600"
-                          : "text-amber-600"
-                    }`}
-                  >
-                    {formatCurrency(remainingBalance)}
+                  <span className="text-sm text-slate-700">
+                    {rfp.payment_method}
                   </span>
                 </div>
+              </div>
+
+              {/* Payable To */}
+              <div className="space-y-1 md:col-span-2">
+                <p className="text-xs text-slate-500 uppercase font-medium">
+                  Payable To
+                </p>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm font-semibold text-slate-900">
+                    {rfp.payable_to}
+                  </span>
+                </div>
+              </div>
+
+              {/* Request Date */}
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 uppercase font-medium">
+                  Request Date
+                </p>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">
+                    {formatDate(rfp.request_date)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Due Date */}
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 uppercase font-medium">
+                  Due Date
+                </p>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">
+                    {formatDate(rfp.due_date)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Remaining Balance Alert */}
+            <div className={`mt-4 p-3 rounded-lg border ${
+              isBalanced 
+                ? "bg-emerald-50 border-emerald-200" 
+                : isOverLiquidated 
+                  ? "bg-rose-50 border-rose-200" 
+                  : "bg-amber-50 border-amber-200"
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-semibold ${
+                  isBalanced 
+                    ? "text-emerald-700" 
+                    : isOverLiquidated 
+                      ? "text-rose-700" 
+                      : "text-amber-700"
+                }`}>
+                  {isBalanced 
+                    ? "✓ Fully Liquidated" 
+                    : isOverLiquidated 
+                      ? "⚠ Over Liquidated" 
+                      : "⏳ Remaining to Liquidate"}
+                </span>
+                <span className={`font-mono font-bold ${
+                  isBalanced 
+                    ? "text-emerald-700" 
+                    : isOverLiquidated 
+                      ? "text-rose-700" 
+                      : "text-amber-700"
+                }`}>
+                  {formatCurrency(Math.abs(remainingBalance))}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -504,6 +452,7 @@ export default function CreateLiquidation() {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  max={remainingBalance > 0 ? remainingBalance : undefined}
                   className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]"
                 />
               </div>
@@ -518,7 +467,8 @@ export default function CreateLiquidation() {
                   !supplier ||
                   !glAccount ||
                   !amount ||
-                  parseFloat(amount) <= 0
+                  parseFloat(amount) <= 0 ||
+                  (remainingBalance > 0 && parseFloat(amount) > remainingBalance)
                 }
                 className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/20"
               >
@@ -537,7 +487,7 @@ export default function CreateLiquidation() {
                 </Label>
                 {entries.length > 0 && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-slate-500">Total:</span>
+                    <span className="text-slate-500">Total Liquidated:</span>
                     <span className="font-mono font-semibold text-[#2B3A9F]">
                       {formatCurrency(totalLiquidated)}
                     </span>
@@ -549,7 +499,7 @@ export default function CreateLiquidation() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50 hover:bg-slate-50">
-                      <TableHead className="w-25 text-xs font-bold text-slate-700">
+                      <TableHead className="w-24 text-xs font-bold text-slate-700">
                         Date
                       </TableHead>
                       <TableHead className="text-xs font-bold text-slate-700">
@@ -567,7 +517,7 @@ export default function CreateLiquidation() {
                       <TableHead className="text-right text-xs font-bold text-slate-700">
                         Amount
                       </TableHead>
-                      <TableHead className="w-12.5"></TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -580,8 +530,7 @@ export default function CreateLiquidation() {
                           <div className="flex flex-col items-center gap-2">
                             <AlertCircle className="h-8 w-8 text-slate-300" />
                             <p className="text-sm">
-                              No entries yet. Fill the form above to add
-                              expenses.
+                              No entries yet. Fill the form above to add expenses.
                             </p>
                           </div>
                         </TableCell>
@@ -645,7 +594,7 @@ export default function CreateLiquidation() {
                             Original RFP Amount
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm text-slate-900">
-                            {formatCurrency(rfp.totalPayable)}
+                            {formatCurrency(originalAmount)}
                           </TableCell>
                           <TableCell></TableCell>
                         </TableRow>
@@ -653,7 +602,7 @@ export default function CreateLiquidation() {
                           className={`${
                             isBalanced
                               ? "bg-emerald-50"
-                              : remainingBalance < 0
+                              : isOverLiquidated
                                 ? "bg-rose-50"
                                 : "bg-amber-50"
                           }`}
@@ -666,14 +615,14 @@ export default function CreateLiquidation() {
                               className={
                                 isBalanced
                                   ? "text-emerald-700"
-                                  : remainingBalance < 0
+                                  : isOverLiquidated
                                     ? "text-rose-700"
                                     : "text-amber-700"
                               }
                             >
                               {isBalanced
                                 ? "Balance"
-                                : remainingBalance < 0
+                                : isOverLiquidated
                                   ? "Over Liquidated"
                                   : "Remaining Balance"}
                             </span>
@@ -682,11 +631,10 @@ export default function CreateLiquidation() {
                             className={`text-right font-mono text-sm font-bold ${
                               isBalanced
                                 ? "text-emerald-700"
-                                : remainingBalance < 0
+                                : isOverLiquidated
                                   ? "text-rose-700"
                                   : "text-amber-700"
-                            }`}
-                          >
+                            }`}>
                             {formatCurrency(Math.abs(remainingBalance))}
                           </TableCell>
                           <TableCell></TableCell>
@@ -709,7 +657,7 @@ export default function CreateLiquidation() {
                 Clear All
               </Button>
               <Button
-                disabled={entries.length === 0}
+                disabled={entries.length === 0 || !isBalanced}
                 className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/20"
               >
                 <Save className="h-4 w-4 mr-2" />
@@ -721,13 +669,4 @@ export default function CreateLiquidation() {
       </div>
     </div>
   );
-}
-
-// Utility
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-  }).format(value);
 }

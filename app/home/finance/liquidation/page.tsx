@@ -21,8 +21,6 @@ export default async function LiquidationPage() {
 
   const rfps = await getApprovedRFPs(supabase);
 
-  console.log(JSON.stringify(rfps))
-
   return (
     <div><Liquidation rfps={rfps}/></div>
   )

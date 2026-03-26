@@ -596,6 +596,10 @@ export interface RequestForPaymentInterface {
   line_items: RFPLineItem[];
 }
 
-export interface LiquidationPageProps{
+export interface LiquidationPageProps {
   rfps: RequestForPaymentInterface[];
+}
+
+export interface CreateLiquidationPageProps {
+  rfp: RequestForPaymentInterface;
 }
