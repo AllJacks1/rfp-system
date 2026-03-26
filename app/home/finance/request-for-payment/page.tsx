@@ -1,6 +1,7 @@
 import RequestForPayment from "@/app/components/request-for-payment/RequestForPayment";
 import { Order } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 async function getServiceOrders(supabase: any): Promise<Order[]> {
   const { data, error } = await supabase
@@ -236,6 +237,47 @@ async function getRPFs(supabase: any) {
   return data || [];
 }
 
+async function approveRFP(id: string) {
+  "use server";
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("requests_for_payment")
+    .update({
+      status: "approved",
+      approved_date: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error approving RFP:", error);
+    throw new Error("Failed to approve RFP");
+  }
+
+  revalidatePath("/request-for-payment");
+}
+
+async function rejectRFP(id: string) {
+  "use server";
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("requests_for_payment")
+    .update({
+      status: "rejected",
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error rejecting RFP:", error);
+    throw new Error("Failed to reject RFP");
+  }
+
+  revalidatePath("/request-for-payment");
+}
+
 export default async function RequestForPaymentPage() {
   const supabase = await createClient();
 
@@ -244,7 +286,12 @@ export default async function RequestForPaymentPage() {
 
   return (
     <div>
-      <RequestForPayment orders={orders} rfps={rfps}/>
+      <RequestForPayment
+        orders={orders}
+        rfps={rfps}
+        onApprove={approveRFP}
+        onReject={rejectRFP}
+      />
     </div>
   );
 }

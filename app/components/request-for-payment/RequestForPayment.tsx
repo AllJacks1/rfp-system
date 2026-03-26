@@ -27,6 +27,8 @@ import {
   Hash,
   CreditCard,
   Printer,
+  Check,
+  X,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -39,74 +41,40 @@ import {
 } from "@/components/ui/table";
 import { useReactToPrint } from "react-to-print";
 import { PrintRequestForPayment } from "@/app/components/request-for-payment/PrintRequestForPayment";
+import { cn } from "@/lib/utils";
+import {
+  RequestForPaymentInterface,
+  RequestForPaymentProps,
+} from "@/lib/interfaces";
 
-// ✅ Updated interfaces to match your actual data structure
-interface LineItem {
-  id?: string;
-  qty: number;
-  price: number;
-  charge_to: string;
-  particulars: string;
-  total_amount: number;
-  invoice_number: string;
-}
-
-export interface RequestForPaymentInterface {
-  id: string;
-  created_at: string;
-  order_id: string;
-  order_number: string;
-  payable_to: string;
-  payment_method: "Cash" | "Check" | "Bank Transfer" | "Credit Card" | string;
-  due_date: string;
-  request_date: string;
-  contact_number: string;
-  department: string;
-  line_items: LineItem[];
-  requested_by: string;
-  total_payable: string | number;
-  approved_by: string | null;
-  approved_date: string | null;
-  status: "for approval" | "approved" | "rejected" | string;
-  rfp_number: string;
-  // Optional fields for compatibility
-  rfpTitle?: string;
-  description?: string;
-  vendor?: string;
-  invoiceNumber?: string;
-  journalEntry?: Array<{
-    id: string;
-    accountTitle: string;
-    entryType: "debit" | "credit";
-    amount: number;
-  }>;
-}
-
-interface RequestForPaymentProps {
-  rfps: RequestForPaymentInterface[];
-  orders?: Array<{
-    id: string;
-    order_number: string;
-    description: string;
-    service_category: string;
-    items: Array<{
-      quantity: string | number;
-      unitPrice: string | number;
-    }>;
-  }>;
-}
-
-export default function RequestForPayment({ rfps, orders = [] }: RequestForPaymentProps) {
-  const [selectedRfp, setSelectedRfp] = useState<RequestForPaymentInterface | null>(null);
+export default function RequestForPayment({
+  rfps,
+  orders = [],
+  onApprove,
+  onReject,
+}: RequestForPaymentProps) {
+  const [rfpList, setRfpList] = useState<RequestForPaymentInterface[]>(rfps);
+  const [selectedRfp, setSelectedRfp] =
+    useState<RequestForPaymentInterface | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [approvedPODialogOpen, setApprovedPODialogOpen] = useState(false);
+  // ✅ Action confirmation dialog states
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<"approved" | "rejected" | null>(
+    null,
+  );
+  // ✅ Loading states for approve/reject actions
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const router = useRouter();
 
   const printContentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: printContentRef,
-    documentTitle: selectedRfp ? `RFP_${selectedRfp.rfp_number}` : "RFP_Details",
+    documentTitle: selectedRfp
+      ? `RFP_${selectedRfp.rfp_number}`
+      : "RFP_Details",
     pageStyle: `
       @media print {
         @page { size: A4; margin: 15mm; }
@@ -119,55 +87,25 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
 
   // ✅ Updated status config to handle "for approval" status
   const getStatusBadge = (status: string) => {
-    const config: Record<string, {
-      bg: string;
-      text: string;
-      border: string;
-      icon: React.ElementType;
-      label: string;
-    }> = {
-      "for approval": {
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        border: "border-amber-200",
-        icon: Clock,
-        label: "For Approval",
-      },
-      submitted: {
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        border: "border-amber-200",
-        icon: Clock,
-        label: "Pending Review",
-      },
-      approved: {
-        bg: "bg-emerald-50",
-        text: "text-emerald-700",
-        border: "border-emerald-200",
-        icon: CheckCircle,
-        label: "Approved",
-      },
-      rejected: {
-        bg: "bg-rose-50",
-        text: "text-rose-700",
-        border: "border-rose-200",
-        icon: XCircle,
-        label: "Rejected",
-      },
+    const styles: Record<string, string> = {
+      "for approval": "bg-amber-50 text-amber-700 border-amber-200",
+      submitted: "bg-amber-50 text-amber-700 border-amber-200",
+      approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      rejected: "bg-rose-50 text-rose-700 border-rose-200",
     };
 
-    const style = config[status] || config["for approval"];
-    const Icon = style.icon;
-
     return (
-      <div
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${style.bg} ${style.text} ${style.border}`}
+      <Badge
+        className={cn(
+          styles[status] || "bg-slate-50 text-slate-700 border-slate-200",
+          "border font-semibold",
+        )}
+        variant="secondary"
       >
-        <Icon className="h-3.5 w-3.5" />
-        <span className="text-xs font-semibold uppercase tracking-wide">
-          {style.label}
-        </span>
-      </div>
+        {status === "for approval"
+          ? "For Approval"
+          : status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
     );
   };
 
@@ -179,7 +117,9 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const formatCurrency = (value: string | number | null | undefined): string => {
+  const formatCurrency = (
+    value: string | number | null | undefined,
+  ): string => {
     const num = parseAmount(value);
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -209,44 +149,95 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
     setApprovedPODialogOpen(true);
   };
 
-  const handleCreateRFP = (order: NonNullable<RequestForPaymentProps["orders"]>[number]) => {
+  const handleCreateRFP = (
+    order: NonNullable<RequestForPaymentProps["orders"]>[number],
+  ) => {
     setApprovedPODialogOpen(false);
     router.push(`/home/finance/request-for-payment/create-rfp/${order.id}`);
   };
 
-  // ✅ Stats using actual data fields
+  // ✅ Handle action click from table row
+  const handleActionClick = (
+    rfp: RequestForPaymentInterface,
+    action: "approved" | "rejected",
+  ) => {
+    setSelectedRfp(rfp);
+    setActionType(action);
+    setActionDialogOpen(true);
+  };
+
+  // ✅ Handle confirm action
+  const handleConfirmAction = async () => {
+    if (!selectedRfp || !actionType) return;
+
+    if (actionType === "approved" && onApprove) {
+      try {
+        setIsApproving(true);
+        await onApprove(selectedRfp.id);
+        // Update local state
+        setRfpList((prev) =>
+          prev.map((r) =>
+            r.id === selectedRfp.id ? { ...r, status: "approved" } : r,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to approve RFP:", error);
+      } finally {
+        setIsApproving(false);
+      }
+    } else if (actionType === "rejected" && onReject) {
+      try {
+        setIsRejecting(true);
+        await onReject(selectedRfp.id);
+        // Update local state
+        setRfpList((prev) =>
+          prev.map((r) =>
+            r.id === selectedRfp.id ? { ...r, status: "rejected" } : r,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to reject RFP:", error);
+      } finally {
+        setIsRejecting(false);
+      }
+    }
+
+    setActionDialogOpen(false);
+    setSelectedRfp(null);
+    setActionType(null);
+  };
+
+  // ✅ Stats using actual data fields - Updated to match ReviewOrder style
   const stats = [
     {
       title: "Total Requests",
-      value: rfps.length,
+      value: rfpList.length,
       icon: FileText,
-      color: "text-slate-700",
-      bgColor: "bg-slate-100",
-      borderColor: "border-slate-200",
+      color: "text-[#2B3A9F]",
+      bgColor: "bg-[#EEF2FF]",
     },
     {
-      title: "Pending Review",
-      value: rfps.filter((r) => r.status === "for approval" || r.status === "submitted").length,
+      title: "For Approval",
+      value: rfpList.filter(
+        (r) => r.status === "for approval" || r.status === "submitted",
+      ).length,
       icon: Clock,
-      color: "text-amber-700",
+      color: "text-amber-600",
       bgColor: "bg-amber-50",
-      borderColor: "border-amber-200",
     },
     {
       title: "Approved",
-      value: rfps.filter((r) => r.status === "approved").length,
+      value: rfpList.filter((r) => r.status === "approved").length,
       icon: CheckCircle,
-      color: "text-emerald-700",
+      color: "text-emerald-600",
       bgColor: "bg-emerald-50",
-      borderColor: "border-emerald-200",
     },
     {
       title: "Rejected",
-      value: rfps.filter((r) => r.status === "rejected").length,
+      value: rfpList.filter((r) => r.status === "rejected").length,
       icon: XCircle,
-      color: "text-rose-700",
+      color: "text-rose-600",
       bgColor: "bg-rose-50",
-      borderColor: "border-rose-200",
     },
   ];
 
@@ -254,14 +245,16 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
   const columns: Column<RequestForPaymentInterface>[] = [
     {
       key: "rfp_number",
-      header: "RFP Reference",
+      header: "RFP #",
       width: "w-[160px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-mono text-sm font-semibold text-slate-900">
+          <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
             {row.rfp_number}
           </span>
-          <span className="text-[10px] text-slate-500">PO: {row.order_number}</span>
+          <span className="text-[10px] text-slate-500">
+            PO: {row.order_number}
+          </span>
         </div>
       ),
     },
@@ -271,12 +264,10 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
       width: "min-w-[200px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium text-slate-900 text-sm">
+          <span className="font-semibold text-slate-900 text-sm line-clamp-1">
             {row.payable_to}
           </span>
-          <span className="text-xs text-slate-500 truncate max-w-[200px]">
-            {row.department}
-          </span>
+          <span className="text-xs text-slate-500">{row.department}</span>
         </div>
       ),
     },
@@ -327,7 +318,7 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
     {
       key: "status",
       header: "Status",
-      width: "w-[130px]",
+      width: "w-[120px]",
       render: (row) => getStatusBadge(row.status),
     },
     {
@@ -335,9 +326,9 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
       header: "Date Created",
       width: "w-[120px]",
       render: (row) => (
-        <div className="flex items-center gap-1.5 text-slate-600">
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
           <Calendar className="h-3.5 w-3.5 text-slate-400" />
-          <span className="text-sm">{formatDate(row.created_at)}</span>
+          {formatDate(row.created_at)}
         </div>
       ),
     },
@@ -350,35 +341,36 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
   ];
 
   return (
-    <div className="min-h-screen p-6 md:p-8 bg-slate-50/50">
-      {/* Header */}
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Requests for Payment
-          </h1>
-          <p className="text-sm text-slate-500">
-            Manage payment authorizations and track RFP status
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8">
+      {/* Header - Updated to match ReviewOrder */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+          Requests for Payment
+        </h1>
+        <p className="text-slate-500">
+          Manage payment authorizations and track RFP status
+        </p>
       </div>
 
-      {/* Stats */}
+      {/* Stats Grid - Updated to match ReviewOrder */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
-          <Card key={stat.title} className="shadow-sm bg-white">
-            <CardContent className="p-5">
+          <Card
+            key={stat.title}
+            className="border-[#E2E8F0] shadow-sm bg-white hover:shadow-md transition-shadow"
+          >
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <p className="text-sm font-medium text-slate-500 mb-1">
                     {stat.title}
                   </p>
                   <p className="text-3xl font-bold text-slate-900">
                     {stat.value}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${stat.bgColor} ${stat.color}`}>
-                  <stat.icon className="h-5 w-5" />
+                <div className={cn("p-3 rounded-xl", stat.bgColor)}>
+                  <stat.icon className={cn("h-6 w-6", stat.color)} />
                 </div>
               </div>
             </CardContent>
@@ -386,13 +378,13 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
         ))}
       </div>
 
-      {/* Data Table */}
-      <DataTableCard
-        data={rfps}
+      {/* Data Table - Updated styling and actions */}
+      <DataTableCard<RequestForPaymentInterface>
+        data={rfpList}
         columns={columns}
         keyExtractor={(row) => row.id}
         title="Payment Requests"
-        subtitle={`${rfps.length} total requests in the system`}
+        subtitle={`${rfpList.length} total requests in the system`}
         searchPlaceholder="Search by RFP number, payable to, requestor, or department..."
         searchable
         searchKeys={[
@@ -417,20 +409,46 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
             Create RFP from Approved POs
           </Button>
         }
+        // ✅ Updated actions with conditional Approve/Reject buttons
         actions={(row) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleView(row)}
-            className="h-8 px-3 text-xs"
-          >
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            View Details
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleView(row)}
+              className="h-8 px-3 text-xs font-medium border-[#E2E8F0] text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#EEF2FF] transition-all"
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              View
+            </Button>
+            {/* ✅ Conditional Approve/Reject buttons */}
+            {(row.status === "for approval" || row.status === "submitted") && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleActionClick(row, "approved")}
+                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleActionClick(row, "rejected")}
+                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
         )}
       />
 
-      {/* View Dialog */}
+      {/* View Dialog - Updated styling */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden max-h-[90vh]">
           {/* Screen Header */}
@@ -474,7 +492,7 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
               <div className="p-6 space-y-6">
                 {/* Payee & Payment Info */}
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <User className="h-3.5 w-3.5" />
                       Payee Information
@@ -507,7 +525,7 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <CreditCard className="h-3.5 w-3.5" />
                       Payment Details
@@ -543,7 +561,7 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
                 </div>
 
                 {/* Requestor Info */}
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <Building2 className="h-3.5 w-3.5" />
                     Request Information
@@ -583,10 +601,10 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
                       <FileText className="h-3.5 w-3.5" />
                       Itemized Expenses
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
                       <Table>
-                        <TableHeader>
-                          <TableRow className="bg-slate-50">
+                        <TableHeader className="bg-[#F8FAFC]">
+                          <TableRow className="border-b border-[#E2E8F0]">
                             <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-32">
                               Invoice #
                             </TableHead>
@@ -609,7 +627,10 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
                         </TableHeader>
                         <TableBody>
                           {selectedRfp.line_items.map((item, idx) => (
-                            <TableRow key={item.id || idx} className="text-[11px]">
+                            <TableRow
+                              key={item.invoice_number || idx}
+                              className="text-[11px] border-b border-[#E2E8F0] last:border-b-0 hover:bg-[#F8FAFC] transition-colors"
+                            >
                               <TableCell className="font-mono text-slate-600">
                                 {item.invoice_number}
                               </TableCell>
@@ -650,9 +671,12 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
 
                 {/* Approval Info */}
                 {selectedRfp.approved_by && (
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                      {selectedRfp.status === "approved" ? "Approval" : "Rejection"} Details
+                      {selectedRfp.status === "approved"
+                        ? "Approval"
+                        : "Rejection"}{" "}
+                      Details
                     </h4>
                     <div className="flex items-center justify-between">
                       <div>
@@ -660,7 +684,9 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
                           {selectedRfp.approved_by}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {selectedRfp.status === "approved" ? "Approved on" : "Rejected on"}{" "}
+                          {selectedRfp.status === "approved"
+                            ? "Approved on"
+                            : "Rejected on"}{" "}
                           {formatDate(selectedRfp.approved_date)}
                         </p>
                       </div>
@@ -676,25 +702,100 @@ export default function RequestForPayment({ rfps, orders = [] }: RequestForPayme
             </div>
           )}
 
-          {/* Footer */}
-          <DialogFooter className="px-6 py-4 border-t bg-slate-50 no-print">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setViewDialogOpen(false)}
-                className="border-slate-300"
-              >
-                Close
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handlePrint()}
-                className="border-slate-300"
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Print / PDF
-              </Button>
-            </div>
+          {/* Footer - Updated to match ReviewOrder */}
+          <DialogFooter className="px-6 py-4 border-t border-[#E2E8F0] bg-slate-50 no-print gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700 hover:bg-[#F8FAFC]"
+            >
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handlePrint()}
+              className="border-[#E2E8F0] hover:bg-[#EEF2FF] hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 transition-all"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print / PDF
+            </Button>
+            {/* ✅ Also add Approve/Reject in View Dialog footer */}
+            {selectedRfp &&
+              (selectedRfp.status === "for approval" ||
+                selectedRfp.status === "submitted") && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedRfp, "rejected");
+                    }}
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedRfp, "approved");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                </>
+              )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Confirmation Dialog - Matching ReviewOrder */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              {actionType === "approved" ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-rose-600" />
+              )}
+              {actionType === "approved" ? "Approve RFP" : "Reject RFP"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Are you sure you want to {actionType}{" "}
+              <span className="font-semibold text-slate-900">
+                {selectedRfp?.rfp_number}
+              </span>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setActionDialogOpen(false)}
+              className="border-[#E2E8F0] text-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmAction}
+              disabled={isApproving || isRejecting}
+              className={
+                actionType === "approved"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-rose-600 hover:bg-rose-700 text-white"
+              }
+            >
+              {isApproving || isRejecting ? (
+                <Clock className="h-4 w-4 animate-spin" />
+              ) : actionType === "approved" ? (
+                "Approve"
+              ) : (
+                "Reject"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

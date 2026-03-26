@@ -533,6 +533,8 @@ export interface PurchaseRequestPageProps {
 export interface RequestForPaymentProps {
   orders: Order[]
   rfps: RequestForPaymentInterface[];
+  onApprove?: (id: string) => Promise<void> | void;
+  onReject?: (id: string) => Promise<void> | void;
 }
 
 export interface CreateRequestForPaymentPageProps {
