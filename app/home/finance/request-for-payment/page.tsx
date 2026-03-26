@@ -224,14 +224,27 @@ async function getOrders(supabase: any): Promise<Order[]> {
   return merged;
 }
 
+async function getRPFs(supabase: any) {
+  const { data, error } = await supabase
+    .from("requests_for_payment")
+    .select("*")
+    .order("rfp_number", { ascending: true });
+  if (error) {
+    console.error("Error fetching RFPs:", error);
+    return [];
+  }
+  return data || [];
+}
+
 export default async function RequestForPaymentPage() {
   const supabase = await createClient();
 
   const orders = await getOrders(supabase);
+  const rfps = await getRPFs(supabase);
 
   return (
     <div>
-      <RequestForPayment orders={orders} />
+      <RequestForPayment orders={orders} rfps={rfps}/>
     </div>
   );
 }

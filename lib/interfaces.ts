@@ -532,6 +532,7 @@ export interface PurchaseRequestPageProps {
 
 export interface RequestForPaymentProps {
   orders: Order[]
+  rfps: RequestForPaymentInterface[];
 }
 
 export interface CreateRequestForPaymentPageProps {
@@ -552,4 +553,43 @@ export interface LineItem {
   price: string;
   totalAmount: string;
   chargeTo: string;
+}
+
+export interface RFPLineItem {
+  invoice_number: string;
+  particulars: string;
+  qty: number;
+  price: number;
+  total_amount: number;
+  charge_to: string;
+}
+
+export interface RequestForPaymentInterface {
+  id: string;
+  created_at: string;
+
+  order_id: string;
+  order_number: string;
+
+  rfp_number: string;
+
+  payable_to: string;
+  payment_method: string;
+
+  due_date: string;
+  request_date: string;
+
+  contact_number: string;
+  department: string;
+
+  requested_by: string;
+
+  approved_by: string | null;
+  approved_date: string | null;
+
+  status: string;
+
+  total_payable: string;
+
+  line_items: RFPLineItem[];
 }
