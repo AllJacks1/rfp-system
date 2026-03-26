@@ -537,3 +537,13 @@ export interface RequestForPaymentProps {
 export interface CreateRequestForPaymentPageProps {
   order: Order | null;
 }
+
+export interface LineItem {
+  id: string;
+  invoice_number: string;
+  particulars: string;
+  qty: string;
+  price: string;
+  totalAmount: string;
+  chargeTo: string;
+}

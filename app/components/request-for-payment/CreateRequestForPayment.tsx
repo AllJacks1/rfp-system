@@ -30,6 +30,7 @@ import {
 import {
   CreateRequestForPaymentPageProps,
   Item,
+  LineItem,
   statusConfig,
 } from "@/lib/interfaces";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ import {
   Calendar,
   CheckCircle2,
   FileText,
+  Landmark,
   Package,
   Phone,
   Plus,
@@ -52,16 +54,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-
-interface LineItem {
-  id: string;
-  invoice_number: string;
-  particulars: string;
-  qty: string;
-  price: string;
-  totalAmount: string;
-  chargeTo: string;
-}
+import { createClient } from "@/lib/supabase/client";
 
 const companies = [
   { value: "technova", label: "TechNova Solutions" },
@@ -197,6 +190,63 @@ export default function CreateRequestForPayment({
   const isMatched = Math.abs(difference) < 0.01;
   const isOver = difference < 0;
 
+  async function handleCreateRFP() {
+    const supabase = createClient();
+
+    if (!order) return;
+
+    if (lineItems.length === 0) {
+      alert("Please add at least one line item");
+      return;
+    }
+
+    if (!dueDate) {
+      alert("Please select a due date");
+      return;
+    }
+
+    try {
+      // Convert line items to JSON structure
+      const itemsPayload = lineItems.map((item) => ({
+        invoice_number: item.invoice_number,
+        particulars: item.particulars,
+        qty: parseFloat(item.qty),
+        price: parseFloat(item.price),
+        total_amount: parseFloat(item.totalAmount),
+        charge_to: item.chargeTo,
+      }));
+
+      const { error } = await supabase.from("requests_for_payment").insert({
+        order_id: order.id,
+        order_number: order.order_number ?? order.id,
+        payable_to: order.preferred_vendor,
+        payment_method: order.payment_method,
+        due_date: dueDate,
+        request_date: order.preferred_date,
+        contact_number: vendorContact,
+        department: order.department,
+        line_items: itemsPayload, // JSONB column
+        requested_by: order.requested_by,
+        total_payable: totalLineItems.toString(),
+      });
+
+      if (error) throw error;
+
+      alert("Request for Payment created successfully");
+
+      // Optional reset
+      setLineItems([]);
+      setVendorContact("");
+      setDueDate("");
+
+      // Redirect
+      //window.location.href = "/home/finance/request-for-payment";
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create request for payment");
+    }
+  }
+
   if (!order) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] py-8 px-4">
@@ -313,6 +363,11 @@ export default function CreateRequestForPayment({
                     value={formatCurrency(poTotal)}
                     icon={Banknote}
                     highlight
+                  />
+                  <DetailItem
+                    label="Payment Method"
+                    value={order.payment_method}
+                    icon={Landmark}
                   />
                 </div>
               </CardContent>
@@ -746,6 +801,7 @@ export default function CreateRequestForPayment({
                 <Button
                   disabled={lineItems.length === 0}
                   className="w-full bg-[#2B3A9F] hover:bg-[#1E2A7A] text-white h-11 shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/30 disabled:shadow-none disabled:bg-[#CBD5E1] disabled:text-[#64748B]"
+                  onClick={handleCreateRFP}
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save & Submit
