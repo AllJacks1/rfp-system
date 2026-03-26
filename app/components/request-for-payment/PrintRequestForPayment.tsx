@@ -11,7 +11,7 @@ import Image from "next/image";
 
 interface LineItem {
   id: string;
-  referenceDocument: string;
+  invoiceNumber: string;
   particulars: string;
   qty: number;
   price: number;
@@ -185,7 +185,7 @@ export const PrintRequestForPayment = ({ rfp }: { rfp: RFP }) => {
             <TableHeader>
               <TableRow className="bg-gray-100 border-b border-gray-400">
                 <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1 text-center w-6">#</TableHead>
-                <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1">Description / Ref</TableHead>
+                <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1">Invoice Number</TableHead>
                 <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1 text-center w-8">Qty</TableHead>
                 <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1 text-right w-16">Price</TableHead>
                 <TableHead className="text-[6pt] font-bold text-black uppercase py-1 px-1 text-right w-16">Amount</TableHead>
@@ -198,7 +198,7 @@ export const PrintRequestForPayment = ({ rfp }: { rfp: RFP }) => {
                   <TableCell className="py-0.5 px-1 text-center text-gray-700">{index + 1}</TableCell>
                   <TableCell className="py-0.5 px-1">
                     <p className="font-semibold text-[8pt] leading-tight">{item.particulars}</p>
-                    <p className="text-[6pt] text-gray-600 leading-none">Ref: {item.referenceDocument}</p>
+                    <p className="text-[6pt] text-gray-600 leading-none">Ref: {item.invoiceNumber}</p>
                   </TableCell>
                   <TableCell className="py-0.5 px-1 text-center">{item.qty}</TableCell>
                   <TableCell className="py-0.5 px-1 text-right font-mono text-[7pt]">{formatCurrency(item.price)}</TableCell>

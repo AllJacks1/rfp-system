@@ -44,7 +44,7 @@ import { Item, Order, RequestForPaymentProps } from "@/lib/interfaces";
 // Types
 interface LineItem {
   id: string;
-  referenceDocument: string;
+  invoiceNumber: string;
   particulars: string;
   qty: number;
   price: number;
@@ -97,7 +97,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-001",
-        referenceDocument: "INV-2024-001-A",
+        invoiceNumber: "INV-2024-001-A",
         particulars:
           "Microsoft 365 Enterprise E5 Annual Subscription - 500 users",
         qty: 500,
@@ -107,7 +107,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-002",
-        referenceDocument: "INV-2024-001-B",
+        invoiceNumber: "INV-2024-001-B",
         particulars: "AWS EC2 Reserved Instances - 3 Year Term",
         qty: 1,
         price: 125000,
@@ -116,7 +116,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-003",
-        referenceDocument: "INV-2024-001-B",
+        invoiceNumber: "INV-2024-001-B",
         particulars: "AWS RDS Database Storage - Annual Commitment",
         qty: 1,
         price: 45000,
@@ -125,7 +125,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-004",
-        referenceDocument: "INV-2024-001-B",
+        invoiceNumber: "INV-2024-001-B",
         particulars: "AWS S3 Data Transfer & Storage - 50TB Tier",
         qty: 1,
         price: 28000,
@@ -134,7 +134,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-005",
-        referenceDocument: "INV-2024-001-C",
+        invoiceNumber: "INV-2024-001-C",
         particulars: "Oracle Database Enterprise Edition License - Perpetual",
         qty: 4,
         price: 87500,
@@ -143,7 +143,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-006",
-        referenceDocument: "INV-2024-001-C",
+        invoiceNumber: "INV-2024-001-C",
         particulars: "Oracle Annual Technical Support - 22% of License",
         qty: 4,
         price: 19250,
@@ -152,7 +152,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-007",
-        referenceDocument: "INV-2024-001-D",
+        invoiceNumber: "INV-2024-001-D",
         particulars: "Salesforce Sales Cloud Enterprise - 200 licenses",
         qty: 200,
         price: 1800,
@@ -161,7 +161,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-008",
-        referenceDocument: "INV-2024-001-D",
+        invoiceNumber: "INV-2024-001-D",
         particulars: "Salesforce Service Cloud Add-on - 50 licenses",
         qty: 50,
         price: 1200,
@@ -170,7 +170,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-009",
-        referenceDocument: "INV-2024-001-E",
+        invoiceNumber: "INV-2024-001-E",
         particulars: "Adobe Creative Cloud Enterprise - 75 licenses",
         qty: 75,
         price: 840,
@@ -179,7 +179,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-010",
-        referenceDocument: "INV-2024-001-E",
+        invoiceNumber: "INV-2024-001-E",
         particulars: "Adobe Acrobat Pro DC - 200 licenses",
         qty: 200,
         price: 240,
@@ -188,7 +188,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-011",
-        referenceDocument: "INV-2024-001-F",
+        invoiceNumber: "INV-2024-001-F",
         particulars: "SAP S/4HANA Cloud Subscription - Professional Edition",
         qty: 1,
         price: 185000,
@@ -197,7 +197,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-012",
-        referenceDocument: "INV-2024-001-F",
+        invoiceNumber: "INV-2024-001-F",
         particulars: "SAP Implementation Services - Phase 1",
         qty: 1,
         price: 95000,
@@ -206,7 +206,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-013",
-        referenceDocument: "INV-2024-001-G",
+        invoiceNumber: "INV-2024-001-G",
         particulars: "GitHub Enterprise Cloud - 150 developers",
         qty: 150,
         price: 252,
@@ -215,7 +215,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-014",
-        referenceDocument: "INV-2024-001-H",
+        invoiceNumber: "INV-2024-001-H",
         particulars: "Atlassian Jira & Confluence Data Center - 500 users",
         qty: 500,
         price: 96,
@@ -224,7 +224,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-015",
-        referenceDocument: "INV-2024-001-I",
+        invoiceNumber: "INV-2024-001-I",
         particulars: "Datadog Cloud Monitoring - Enterprise Plan Annual",
         qty: 1,
         price: 42000,
@@ -233,7 +233,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-016",
-        referenceDocument: "INV-2024-001-J",
+        invoiceNumber: "INV-2024-001-J",
         particulars: "Okta Identity Cloud - Universal Directory Tier",
         qty: 1,
         price: 36000,
@@ -242,7 +242,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-017",
-        referenceDocument: "INV-2024-001-K",
+        invoiceNumber: "INV-2024-001-K",
         particulars: "Cloudflare Enterprise CDN & Security - Annual",
         qty: 1,
         price: 28000,
@@ -251,7 +251,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-018",
-        referenceDocument: "INV-2024-001-L",
+        invoiceNumber: "INV-2024-001-L",
         particulars: "Twilio Communication APIs - Prepaid Credits",
         qty: 1,
         price: 15000,
@@ -343,7 +343,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-003",
-        referenceDocument: "INV-2024-002",
+        invoiceNumber: "INV-2024-002",
         particulars: "Office Rent - March",
         qty: 1,
         price: 25000,
@@ -389,7 +389,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-004",
-        referenceDocument: "INV-2024-003",
+        invoiceNumber: "INV-2024-003",
         particulars: "Digital Ads Management",
         qty: 1,
         price: 9000,
@@ -398,7 +398,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-005",
-        referenceDocument: "INV-2024-003",
+        invoiceNumber: "INV-2024-003",
         particulars: "Social Media Campaign",
         qty: 1,
         price: 6000,
@@ -442,7 +442,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-006",
-        referenceDocument: "INV-2024-004",
+        invoiceNumber: "INV-2024-004",
         particulars: "Strategy Consulting Services",
         qty: 1,
         price: 45000,
@@ -488,7 +488,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-007",
-        referenceDocument: "INV-2024-005",
+        invoiceNumber: "INV-2024-005",
         particulars: "Server Maintenance",
         qty: 1,
         price: 2000,
@@ -497,7 +497,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-008",
-        referenceDocument: "INV-2024-005",
+        invoiceNumber: "INV-2024-005",
         particulars: "Network Equipment Check",
         qty: 1,
         price: 1500,
@@ -543,7 +543,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-009",
-        referenceDocument: "INV-2024-006",
+        invoiceNumber: "INV-2024-006",
         particulars: "Leadership Development Workshop",
         qty: 10,
         price: 800,
@@ -587,7 +587,7 @@ const mockRFPs: RFP[] = [
     lineItems: [
       {
         id: "LI-010",
-        referenceDocument: "INV-2024-007",
+        invoiceNumber: "INV-2024-007",
         particulars: "Airfare - Client Visit",
         qty: 2,
         price: 1500,
@@ -596,7 +596,7 @@ const mockRFPs: RFP[] = [
       },
       {
         id: "LI-011",
-        referenceDocument: "INV-2024-007",
+        invoiceNumber: "INV-2024-007",
         particulars: "Hotel Accommodation",
         qty: 2,
         price: 1100,
@@ -1128,7 +1128,7 @@ export default function RequestForPayment({ orders }: RequestForPaymentProps) {
                         <TableHeader>
                           <TableRow className="bg-slate-50">
                             <TableHead className="text-[10px] font-bold text-slate-600 uppercase w-25">
-                              Ref Doc
+                              Invoice #
                             </TableHead>
                             <TableHead className="text-[10px] font-bold text-slate-600 uppercase">
                               Particulars
@@ -1151,7 +1151,7 @@ export default function RequestForPayment({ orders }: RequestForPaymentProps) {
                           {selectedRfp.lineItems.map((item) => (
                             <TableRow key={item.id} className="text-[11px]">
                               <TableCell className="font-mono text-slate-600">
-                                {item.referenceDocument}
+                                {item.invoiceNumber}
                               </TableCell>
                               <TableCell className="text-slate-900">
                                 {item.particulars}
