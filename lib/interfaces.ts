@@ -536,6 +536,12 @@ export interface RequestForPaymentProps {
 
 export interface CreateRequestForPaymentPageProps {
   order: Order | null;
+  chargeToOptions: ChargeToOptions[];
+}
+
+export interface ChargeToOptions {
+  label: string;
+  value: string;
 }
 
 export interface LineItem {

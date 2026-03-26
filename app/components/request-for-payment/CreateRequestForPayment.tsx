@@ -55,14 +55,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const companies = [
-  { value: "technova", label: "TechNova Solutions" },
-  { value: "astrasolutions", label: "Astra Solutions" },
-  { value: "primeproperties", label: "Prime Properties LLC" },
-  { value: "microsoft", label: "Microsoft Corporation" },
-  { value: "aws", label: "Amazon Web Services" },
-];
+import { SearchableCombobox } from "../inputs/SearchableCombobox";
 
 function DetailItem({
   label,
@@ -124,6 +117,7 @@ function formatCurrency(value: string | number): string {
 
 export default function CreateRequestForPayment({
   order,
+  chargeToOptions,
 }: CreateRequestForPaymentPageProps) {
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -519,24 +513,18 @@ export default function CreateRequestForPayment({
                   <div className="md:col-span-9 space-y-2.5">
                     <Label className="text-sm font-bold text-[#475569] flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-[#2B3A9F]" />
-                      Charge To (Company)
+                      Charge To
                     </Label>
-                    <Select value={chargeTo} onValueChange={setChargeTo}>
-                      <SelectTrigger className="w-full bg-white border-[#E2E8F0] focus:ring-[#2B3A9F] focus:border-[#2B3A9F] h-11 transition-colors">
-                        <SelectValue placeholder="Select company..." />
-                      </SelectTrigger>
-                      <SelectContent className="border-[#E2E8F0]">
-                        {companies.map((company) => (
-                          <SelectItem
-                            key={company.value}
-                            value={company.value}
-                            className="focus:bg-[#EEF2FF] focus:text-[#2B3A9F]"
-                          >
-                            {company.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                    <SearchableCombobox
+                      value={chargeTo}
+                      options={chargeToOptions}
+                      displayKey="label"
+                      valueKey="value"
+                      placeholder="Select who to charge..."
+                      searchPlaceholder="Search company or owner..."
+                      onSelect={(value) => setChargeTo(value)}
+                    />
                   </div>
 
                   {/* Add Button - 3 cols */}
@@ -621,9 +609,9 @@ export default function CreateRequestForPayment({
                             </TableCell>
                             <TableCell className="text-[#64748B]">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F1F5F9] text-[#475569] border border-[#E2E8F0]">
-                                {companies.find(
-                                  (c) => c.value === item.chargeTo,
-                                )?.label || item.chargeTo}
+                                {chargeToOptions.find(
+                                  (option) => option.value === item.chargeTo,
+                                )?.value || item.chargeTo}
                               </span>
                             </TableCell>
                             <TableCell>

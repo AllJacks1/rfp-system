@@ -1,5 +1,5 @@
 import CreateRequestForPayment from "@/app/components/request-for-payment/CreateRequestForPayment";
-import { Order, Request } from "@/lib/interfaces";
+import { ChargeToOptions, Order, Request } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
 
 interface PageProps {
@@ -219,6 +219,41 @@ async function getOrder(supabase: any, id: string): Promise<Order | null> {
   }
 }
 
+async function getChargeToOptions(supabase: any): Promise<ChargeToOptions[]> {
+  // Fetch companies
+  const { data: companiesData, error: companiesError } = await supabase
+    .from("companies")
+    .select("name")
+    .order("name", { ascending: true });
+
+  if (companiesError) {
+    console.error("Error fetching companies:", companiesError);
+  }
+
+  const companies = (companiesData || []).map((company: any) => ({
+    label: company.name,
+    value: company.name,
+  }));
+
+  // Fetch vehicle owners
+  const { data: ownersData, error: ownersError } = await supabase
+    .from("vehicles")
+    .select("owners_first_name, owners_last_name")
+    .order("owners_first_name", { ascending: true });
+
+  if (ownersError) {
+    console.error("Error fetching vehicle owners:", ownersError);
+  }
+
+  const owners = (ownersData || []).map((owner: any) => ({
+    label: `${owner.owners_first_name} ${owner.owners_last_name}`,
+    value: `${owner.owners_first_name} ${owner.owners_last_name}`,
+  }));
+
+  // Merge both arrays
+  return [...companies, ...owners];
+}
+
 export default async function CreateRequestForPaymentPage({
   params,
 }: PageProps) {
@@ -226,10 +261,11 @@ export default async function CreateRequestForPaymentPage({
   const supabase = await createClient();
 
   const order = await getOrder(supabase, orderId);
+  const options = await getChargeToOptions(supabase)
 
   return (
     <div>
-      <CreateRequestForPayment order={order} />
+      <CreateRequestForPayment order={order} chargeToOptions={options}/>
     </div>
   );
 }
