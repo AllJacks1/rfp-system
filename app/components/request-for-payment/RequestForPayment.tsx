@@ -853,34 +853,45 @@ export default function RequestForPayment({
         </DialogContent>
       </Dialog>
 
-      {/* Approved POs Dialog */}
-      {orders.length > 0 && (
-        <Dialog
-          open={approvedPODialogOpen}
-          onOpenChange={setApprovedPODialogOpen}
-        >
-          <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-            <DialogHeader className="px-6 py-5 border-b border-slate-200 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-lg font-bold text-slate-900">
-                    Approved Purchase Orders
-                  </DialogTitle>
-                  <DialogDescription className="text-sm text-slate-500 mt-1">
-                    Select an approved PO to generate a new payment request
-                  </DialogDescription>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="bg-indigo-50 text-[#2B3A9F] border border-[#2B3A9F]/20 font-semibold"
-                >
-                  {orders.length} available
-                </Badge>
+      <Dialog
+        open={approvedPODialogOpen}
+        onOpenChange={setApprovedPODialogOpen}
+      >
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-lg font-bold text-slate-900">
+                  Approved Orders
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-500 mt-1">
+                  Select an approved SO or PO to generate a new payment request
+                </DialogDescription>
               </div>
-            </DialogHeader>
+              <Badge
+                variant="secondary"
+                className="bg-indigo-50 text-[#2B3A9F] border border-[#2B3A9F]/20 font-semibold"
+              >
+                {orders.length} available
+              </Badge>
+            </div>
+          </DialogHeader>
 
-            <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              {orders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-[#EEF2FF] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-[#2B3A9F]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                    No approved orders
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    There are no approved orders available at this time.
+                  </p>
+                </div>
+              ) : (
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="border-b border-slate-200 hover:bg-transparent">
@@ -934,21 +945,21 @@ export default function RequestForPayment({
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              )}
             </div>
+          </div>
 
-            <DialogFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-              <Button
-                variant="outline"
-                onClick={() => setApprovedPODialogOpen(false)}
-                className="border-slate-200 text-slate-700 hover:bg-white"
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+          <DialogFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <Button
+              variant="outline"
+              onClick={() => setApprovedPODialogOpen(false)}
+              className="border-slate-200 text-slate-700 hover:bg-white"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Print Styles */}
       <style jsx global>{`

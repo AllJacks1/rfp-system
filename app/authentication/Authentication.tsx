@@ -46,7 +46,7 @@ export default function Authentication() {
       // 2️⃣ Fetch internal user
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("user_id")
+        .select("user_id, first_name, middle_name, last_name")
         .eq("auth_user_id", uuid)
         .single();
 
@@ -58,6 +58,7 @@ export default function Authentication() {
       await supabase.auth.updateUser({
         data: {
           user_id: userData.user_id,
+          full_name: `${userData.first_name} ${userData.last_name}`,
         },
       });
 
