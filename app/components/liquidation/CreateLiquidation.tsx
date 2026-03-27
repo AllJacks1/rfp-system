@@ -38,6 +38,8 @@ import {
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CreateLiquidationPageProps } from "@/lib/interfaces";
+import { SearchableCombobox } from "../inputs/SearchableCombobox";
+import { createClient } from "@/lib/supabase/client";
 interface LiquidationEntry {
   id: string;
   date: string;
@@ -90,7 +92,12 @@ const formatDate = (dateString: string | null | undefined): string => {
   }
 };
 
-export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
+export default function CreateLiquidation({
+  rfp,
+  vehicles,
+  accounts,
+  vendors,
+}: CreateLiquidationPageProps) {
   // Form state
   const [date, setDate] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
@@ -103,7 +110,7 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
   const [entries, setEntries] = useState<LiquidationEntry[]>([]);
 
   const handleAddEntry = () => {
-    if (!date || !amount || !plateNumber || !supplier || !glAccount) return;
+    if (!date || !amount || !supplier || !glAccount) return;
 
     const newEntry: LiquidationEntry = {
       id: `ENTRY-${Date.now()}`,
@@ -130,11 +137,74 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
     setEntries(entries.filter((e) => e.id !== id));
   };
 
+  const selectedPlateNumber = vehicles?.find(
+    (p) => p.vehicle_id === plateNumber,
+  );
+
   const totalLiquidated = entries.reduce((sum, e) => sum + e.amount, 0);
   const originalAmount = parseAmount(rfp?.total_payable);
   const remainingBalance = originalAmount - totalLiquidated;
   const isBalanced = remainingBalance === 0;
   const isOverLiquidated = remainingBalance < 0;
+
+  const handleLiquidate = async () => {
+    const supabase = createClient();
+    if (entries.length === 0) return;
+
+    try {
+      // Convert entries into JSON snapshot
+      const liquidationEntries = entries.map((entry) => {
+        const vehicle = vehicles?.find(
+          (v) => v.vehicle_id === entry.plateNumber,
+        );
+
+        return {
+          date: entry.date,
+          plate_number: vehicle?.plate_number || entry.plateNumber || null,
+          car_type: vehicle?.car_type || null,
+          owners_first_name: vehicle?.owners_first_name || null,
+          owners_last_name: vehicle?.owners_last_name || null,
+
+          supplier: entry.supplier,
+          description: entry.description,
+          gl_account: entry.glAccount,
+          amount: entry.amount,
+        };
+      });
+
+      const { error } = await supabase.from("liquidations").insert({
+        rfp_id: rfp.id,
+        rfp_number: rfp.rfp_number,
+
+        requested_by: rfp.requested_by,
+        department: rfp.department,
+        payable_to: rfp.payable_to,
+        payment_method: rfp.payment_method,
+
+        original_amount: originalAmount,
+        total_liquidated: totalLiquidated,
+        remaining_balance: remainingBalance,
+
+        liquidation_entries: liquidationEntries, // JSONB
+
+        status: "liquidated",
+      });
+
+      if (error) throw error;
+
+      // Update RFP status
+      const { error: rfpError } = await supabase
+        .from("requests_for_payment")
+        .update({ status: "liquidated" })
+        .eq("id", rfp.id);
+
+      if (rfpError) throw rfpError;
+
+      //router.push("/home/finance/liquidation");
+    } catch (error) {
+      console.error("Liquidation failed:", error);
+    }
+  };
 
   if (!rfp) {
     return (
@@ -149,7 +219,8 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                 Request Not Found
               </h2>
               <p className="text-slate-500 text-center max-w-md mb-6">
-                No RFP request provided. Please select an approved RFP to liquidate.
+                No RFP request provided. Please select an approved RFP to
+                liquidate.
               </p>
               <Link href="/home/finance/liquidation">
                 <Button className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white">
@@ -304,34 +375,40 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
             </div>
 
             {/* Remaining Balance Alert */}
-            <div className={`mt-4 p-3 rounded-lg border ${
-              isBalanced 
-                ? "bg-emerald-50 border-emerald-200" 
-                : isOverLiquidated 
-                  ? "bg-rose-50 border-rose-200" 
-                  : "bg-amber-50 border-amber-200"
-            }`}>
+            <div
+              className={`mt-4 p-3 rounded-lg border ${
+                isBalanced
+                  ? "bg-emerald-50 border-emerald-200"
+                  : isOverLiquidated
+                    ? "bg-rose-50 border-rose-200"
+                    : "bg-amber-50 border-amber-200"
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <span className={`text-sm font-semibold ${
-                  isBalanced 
-                    ? "text-emerald-700" 
-                    : isOverLiquidated 
-                      ? "text-rose-700" 
-                      : "text-amber-700"
-                }`}>
-                  {isBalanced 
-                    ? "✓ Fully Liquidated" 
-                    : isOverLiquidated 
-                      ? "⚠ Over Liquidated" 
+                <span
+                  className={`text-sm font-semibold ${
+                    isBalanced
+                      ? "text-emerald-700"
+                      : isOverLiquidated
+                        ? "text-rose-700"
+                        : "text-amber-700"
+                  }`}
+                >
+                  {isBalanced
+                    ? "✓ Fully Liquidated"
+                    : isOverLiquidated
+                      ? "⚠ Over Liquidated"
                       : "⏳ Remaining to Liquidate"}
                 </span>
-                <span className={`font-mono font-bold ${
-                  isBalanced 
-                    ? "text-emerald-700" 
-                    : isOverLiquidated 
-                      ? "text-rose-700" 
-                      : "text-amber-700"
-                }`}>
+                <span
+                  className={`font-mono font-bold ${
+                    isBalanced
+                      ? "text-emerald-700"
+                      : isOverLiquidated
+                        ? "text-rose-700"
+                        : "text-amber-700"
+                  }`}
+                >
                   {formatCurrency(Math.abs(remainingBalance))}
                 </span>
               </div>
@@ -342,15 +419,15 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
         {/* Entry Form */}
         <Card className="border-l-4 border-l-[#2B3A9F] shadow-sm">
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-[#2B3A9F]/10 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-[#2B3A9F]/10 rounded-lg">
                 <Plus className="h-5 w-5 text-[#2B3A9F]" />
               </div>
               <div>
-                <CardTitle className="text-lg text-slate-900">
+                <CardTitle className="text-lg font-semibold text-slate-900">
                   Add Liquidation Entry
                 </CardTitle>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 mt-0.5">
                   Record expenses against this request
                 </p>
               </div>
@@ -358,166 +435,217 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  Date
-                </Label>
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]"
-                />
+            {/* Input Form Section */}
+            <div className="bg-slate-50/80 p-5 rounded-xl border border-slate-200 space-y-5">
+              {/* Primary Fields - 3 columns */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-slate-400" />
+                    Date
+                  </Label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="bg-white border-slate-300 focus:border-[#2B3A9F] focus:ring-2 focus:ring-[#2B3A9F]/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                    Supplier
+                  </Label>
+                  <SearchableCombobox
+                    value={supplier}
+                    onSelect={(value, item) => setSupplier(value)}
+                    options={vendors.map((v) => ({
+                      id: v.vendor_id,
+                      name: v.name,
+                    }))}
+                    placeholder="Select supplier"
+                    searchPlaceholder="Search suppliers..."
+                    emptyMessage="No suppliers found."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-slate-400" />
+                    Description
+                  </Label>
+                  <Input
+                    placeholder="e.g., Fuel for client meeting"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="bg-white border-slate-300 focus:border-[#2B3A9F] focus:ring-2 focus:ring-[#2B3A9F]/20"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Car className="h-3.5 w-3.5 text-slate-400" />
-                  Plate Number
-                </Label>
-                <Select value={plateNumber} onValueChange={setPlateNumber}>
-                  <SelectTrigger className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]">
-                    <SelectValue placeholder="Select plate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {plateNumbers.map((plate) => (
-                      <SelectItem key={plate} value={plate}>
-                        {plate}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Secondary Fields - 3 columns */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-slate-400" />
+                    GL Account
+                  </Label>
+                  <SearchableCombobox
+                    value={glAccount}
+                    onSelect={(value, item) => setGlAccount(value)}
+                    options={accounts.map((acc) => ({
+                      id: acc.account_id,
+                      name: acc.name,
+                    }))}
+                    placeholder="Select account"
+                    searchPlaceholder="Search accounts..."
+                    emptyMessage="No accounts found."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-slate-400" />
+                    Amount
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    max={remainingBalance > 0 ? remainingBalance : undefined}
+                    className="bg-white border-slate-300 focus:border-[#2B3A9F] focus:ring-2 focus:ring-[#2B3A9F]/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <Car className="h-4 w-4 text-slate-400" />
+                    Plate Number{" "}
+                    <span className="text-slate-400 font-normal">
+                      (optional)
+                    </span>
+                  </Label>
+                  <SearchableCombobox
+                    value={plateNumber}
+                    onSelect={(value, item) => setPlateNumber(value)}
+                    options={vehicles.map((v) => ({
+                      id: v.vehicle_id,
+                      name: v.plate_number,
+                      subtitle: v.car_type,
+                    }))}
+                    placeholder="Select plate"
+                    searchPlaceholder="Search plate numbers..."
+                    emptyMessage="No vehicles found."
+                    optional
+                    optionalLabel="No vehicle"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                  Supplier
-                </Label>
-                <Select value={supplier} onValueChange={setSupplier}>
-                  <SelectTrigger className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]">
-                    <SelectValue placeholder="Select supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((sup) => (
-                      <SelectItem key={sup} value={sup}>
-                        {sup}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Vehicle Details - Auto-populated */}
+              {selectedPlateNumber && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-600">
+                      Car Type
+                    </Label>
+                    <div className="h-10 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-700 text-sm flex items-center">
+                      {selectedPlateNumber.car_type}
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <FileText className="h-3.5 w-3.5 text-slate-400" />
-                  Description
-                </Label>
-                <Input
-                  placeholder="e.g., Fuel for client meeting"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-600">
+                      Owner&apos;s First Name
+                    </Label>
+                    <div className="h-10 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-700 text-sm flex items-center">
+                      {selectedPlateNumber.owners_first_name}
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Hash className="h-3.5 w-3.5 text-slate-400" />
-                  GL Account
-                </Label>
-                <Select value={glAccount} onValueChange={setGlAccount}>
-                  <SelectTrigger className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]">
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {glAccounts.map((acc) => (
-                      <SelectItem key={acc} value={acc}>
-                        {acc}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-                  Amount
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  max={remainingBalance > 0 ? remainingBalance : undefined}
-                  className="border-slate-300 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-600">
+                      Owner&apos;s Last Name
+                    </Label>
+                    <div className="h-10 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-700 text-sm flex items-center">
+                      {selectedPlateNumber.owners_last_name}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Add Entry Button */}
             <div className="flex justify-end">
               <Button
                 onClick={handleAddEntry}
                 disabled={
                   !date ||
-                  !plateNumber ||
                   !supplier ||
                   !glAccount ||
                   !amount ||
                   parseFloat(amount) <= 0 ||
-                  (remainingBalance > 0 && parseFloat(amount) > remainingBalance)
+                  (remainingBalance > 0 &&
+                    parseFloat(amount) > remainingBalance)
                 }
-                className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/20"
+                className="bg-[#2B3A9F] hover:bg-[#1e2a7a] text-white shadow-md shadow-[#2B3A9F]/20 transition-all"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Entry
               </Button>
             </div>
 
-            <Separator className="my-4" />
+            <Separator className="bg-slate-200" />
 
-            {/* Entries Table */}
-            <div className="space-y-3">
+            {/* Entries Table Section */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold text-slate-700">
-                  Liquidation Entries ({entries.length})
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-semibold text-slate-800">
+                    Liquidation Entries
+                  </Label>
+                  <Badge
+                    variant="secondary"
+                    className="bg-slate-100 text-slate-700 font-medium"
+                  >
+                    {entries.length}
+                  </Badge>
+                </div>
                 {entries.length > 0 && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-slate-500">Total Liquidated:</span>
-                    <span className="font-mono font-semibold text-[#2B3A9F]">
+                    <span className="font-mono font-semibold text-[#2B3A9F] text-base">
                       {formatCurrency(totalLiquidated)}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="rounded-lg border overflow-hidden bg-white">
+              <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 hover:bg-slate-50">
-                      <TableHead className="w-24 text-xs font-bold text-slate-700">
+                    <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200">
+                      <TableHead className="w-28 text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Date
                       </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-700">
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Plate No.
                       </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-700">
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Supplier
                       </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-700">
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Description
                       </TableHead>
-                      <TableHead className="text-xs font-bold text-slate-700">
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         GL Account
                       </TableHead>
-                      <TableHead className="text-right text-xs font-bold text-slate-700">
+                      <TableHead className="text-right text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Amount
                       </TableHead>
-                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -525,12 +653,15 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                       <TableRow>
                         <TableCell
                           colSpan={7}
-                          className="text-center py-8 text-slate-400"
+                          className="text-center py-12 text-slate-400"
                         >
-                          <div className="flex flex-col items-center gap-2">
-                            <AlertCircle className="h-8 w-8 text-slate-300" />
-                            <p className="text-sm">
-                              No entries yet. Fill the form above to add expenses.
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="p-3 bg-slate-50 rounded-full">
+                              <AlertCircle className="h-6 w-6 text-slate-300" />
+                            </div>
+                            <p className="text-sm text-slate-500">
+                              No entries yet. Fill the form above to add
+                              expenses.
                             </p>
                           </div>
                         </TableCell>
@@ -539,19 +670,19 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                       entries.map((entry) => (
                         <TableRow
                           key={entry.id}
-                          className="group hover:bg-slate-50/50"
+                          className="group hover:bg-slate-50/80 border-b border-slate-100 last:border-0"
                         >
-                          <TableCell className="text-sm text-slate-700">
+                          <TableCell className="text-sm text-slate-700 font-medium">
                             {entry.date}
                           </TableCell>
                           <TableCell className="font-mono text-sm text-slate-900">
-                            {entry.plateNumber}
+                            {entry.plateNumber || "—"}
                           </TableCell>
                           <TableCell className="text-sm text-slate-700">
                             {entry.supplier}
                           </TableCell>
                           <TableCell className="text-sm text-slate-600">
-                            {entry.description}
+                            {entry.description || "—"}
                           </TableCell>
                           <TableCell className="text-xs text-slate-500">
                             {entry.glAccount}
@@ -564,7 +695,7 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteEntry(entry.id)}
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 hover:text-rose-600"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-50 hover:text-rose-600"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -574,14 +705,14 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                     )}
                     {entries.length > 0 && (
                       <>
-                        <TableRow className="bg-slate-50 font-semibold border-t-2">
+                        <TableRow className="bg-slate-50/90 border-t-2 border-slate-200">
                           <TableCell
                             colSpan={5}
-                            className="text-right text-sm text-slate-700"
+                            className="text-right text-sm font-semibold text-slate-700 py-3"
                           >
                             Total Liquidated
                           </TableCell>
-                          <TableCell className="text-right font-mono text-sm font-bold text-[#2B3A9F]">
+                          <TableCell className="text-right font-mono text-sm font-bold text-[#2B3A9F] py-3">
                             {formatCurrency(totalLiquidated)}
                           </TableCell>
                           <TableCell></TableCell>
@@ -589,27 +720,27 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                         <TableRow className="bg-slate-50/50">
                           <TableCell
                             colSpan={5}
-                            className="text-right text-sm text-slate-700"
+                            className="text-right text-sm text-slate-600 py-3"
                           >
                             Original RFP Amount
                           </TableCell>
-                          <TableCell className="text-right font-mono text-sm text-slate-900">
+                          <TableCell className="text-right font-mono text-sm text-slate-900 py-3">
                             {formatCurrency(originalAmount)}
                           </TableCell>
                           <TableCell></TableCell>
                         </TableRow>
                         <TableRow
-                          className={`${
+                          className={`border-t-2 ${
                             isBalanced
-                              ? "bg-emerald-50"
+                              ? "bg-emerald-50/80 border-emerald-200"
                               : isOverLiquidated
-                                ? "bg-rose-50"
-                                : "bg-amber-50"
+                                ? "bg-rose-50/80 border-rose-200"
+                                : "bg-amber-50/80 border-amber-200"
                           }`}
                         >
                           <TableCell
                             colSpan={5}
-                            className="text-right text-sm font-bold"
+                            className="text-right text-sm font-bold py-3"
                           >
                             <span
                               className={
@@ -628,13 +759,14 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
                             </span>
                           </TableCell>
                           <TableCell
-                            className={`text-right font-mono text-sm font-bold ${
+                            className={`text-right font-mono text-sm font-bold py-3 ${
                               isBalanced
                                 ? "text-emerald-700"
                                 : isOverLiquidated
                                   ? "text-rose-700"
                                   : "text-amber-700"
-                            }`}>
+                            }`}
+                          >
                             {formatCurrency(Math.abs(remainingBalance))}
                           </TableCell>
                           <TableCell></TableCell>
@@ -646,19 +778,20 @@ export default function CreateLiquidation({ rfp }: CreateLiquidationPageProps) {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            {/* Footer Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
                 variant="outline"
                 onClick={() => setEntries([])}
                 disabled={entries.length === 0}
-                className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
               >
                 Clear All
               </Button>
               <Button
+                onClick={handleLiquidate}
                 disabled={entries.length === 0 || !isBalanced}
-                className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/20"
+                className="bg-[#2B3A9F] hover:bg-[#1e2a7a] text-white shadow-md shadow-[#2B3A9F]/20 transition-all disabled:opacity-50"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Submit Liquidation

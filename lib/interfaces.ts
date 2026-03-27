@@ -602,4 +602,7 @@ export interface LiquidationPageProps {
 
 export interface CreateLiquidationPageProps {
   rfp: RequestForPaymentInterface;
+  vehicles: Vehicle[];
+  accounts: Account[];
+  vendors: Vendor[];
 }
