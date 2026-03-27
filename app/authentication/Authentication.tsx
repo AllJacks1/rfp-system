@@ -28,44 +28,51 @@ export default function Authentication() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 1️⃣ Login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      console.error("Login error:", error.message);
-      alert(error.message);
+      if (error) throw error;
+
+      const uuid = data.user?.id;
+
+      if (!uuid) {
+        throw new Error("User UUID not found");
+      }
+
+      // 2️⃣ Fetch internal user
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("user_id")
+        .eq("auth_user_id", uuid)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error("Internal user record not found");
+      }
+
+      // 3️⃣ Store in Supabase session metadata (for server components)
+      await supabase.auth.updateUser({
+        data: {
+          user_id: userData.user_id,
+        },
+      });
+
+      // 4️⃣ Cache locally for client components
+      localStorage.setItem("userProfile", JSON.stringify(userData));
+
+      // 5️⃣ Redirect
+      router.push("/home");
+      router.refresh();
+    } catch (err: any) {
+      console.error("Login error:", err.message);
+      alert(err.message);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const uuid = data.user?.id;
-
-    if (!uuid) {
-      alert("User UUID not found");
-      setIsLoading(false);
-      return;
-    }
-
-    // Fetch your internal user record
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("user_id")
-      .eq("auth_user_id", uuid)
-      .single();
-
-    if (userError) {
-      console.error("User fetch error:", userError);
-      setIsLoading(false);
-      return;
-    }
-
-    // Cache it
-    localStorage.setItem("userProfile", JSON.stringify(userData));
-
-    router.push("/home");
-    router.refresh();
   }
 
   return (
