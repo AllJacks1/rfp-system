@@ -516,6 +516,7 @@ export interface CreatePurchaseRequestFormProps {
   vendors: Vendor[],
   paymentMethods: PaymentMethod[],
   units: Unit[],
+  module: string,
 }
 
 export interface PurchaseItem {
@@ -530,6 +531,7 @@ export interface PurchaseItem {
 
 export interface PurchaseRequestPageProps {
   requests: Request[];
+  module: string;
 }
 
 export interface RequestForPaymentProps {

@@ -98,7 +98,7 @@ export default async function PurchaseRequestPage() {
 
   return (
     <div>
-      <PurchaseRequest requests={requests} />
+      <PurchaseRequest requests={requests} module="finance"/>
     </div>
   );
 }

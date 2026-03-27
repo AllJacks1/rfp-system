@@ -40,6 +40,7 @@ import { Item, PurchaseRequestPageProps, Request } from "@/lib/interfaces";
 
 export default function PurchaseRequest({
   requests,
+  module,
 }: PurchaseRequestPageProps) {
   const router = useRouter();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -200,7 +201,7 @@ export default function PurchaseRequest({
           <Button
             className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white shadow-lg shadow-[#2B3A9F]/25 transition-all hover:shadow-xl hover:shadow-[#2B3A9F]/20"
             onClick={() =>
-              router.push("/home/finance/purchase-requests/create-pr")
+              router.push(`/home/${module}/purchase-requests/create-pr`)
             }
           >
             <Plus className="mr-2 h-4 w-4" />

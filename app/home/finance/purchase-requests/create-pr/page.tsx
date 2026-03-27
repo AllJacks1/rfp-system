@@ -169,6 +169,7 @@ export default async function CreatePurchaseRequestPage() {
         vendors={vendors}
         paymentMethods={paymentMethods}
         units={units}
+        module="finance"
       />
     </div>
   );

@@ -70,6 +70,7 @@ export default function CreatePurchaseRequestForm({
   vendors,
   paymentMethods,
   units,
+  module,
 }: CreatePurchaseRequestFormProps) {
   // === FORM STATE ===
   const [title, setTitle] = useState("");
@@ -463,7 +464,7 @@ export default function CreatePurchaseRequestForm({
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
           <div className="flex items-center gap-3">
-            <Link href="/home/finance/purchase-requests">
+            <Link href={`/home/${module}/purchase-requests`}>
               <Button variant="outline" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
