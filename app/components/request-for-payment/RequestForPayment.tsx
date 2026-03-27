@@ -29,6 +29,7 @@ import {
   Printer,
   Check,
   X,
+  Wallet, // Added for liquidated status
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -85,23 +86,33 @@ export default function RequestForPayment({
     `,
   });
 
-  // ✅ Updated status config to handle "for approval" status
+  // ✅ Updated status config to handle "liquidated" status
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       "for approval": "bg-amber-50 text-amber-700 border-amber-200",
       submitted: "bg-amber-50 text-amber-700 border-amber-200",
       approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
       rejected: "bg-rose-50 text-rose-700 border-rose-200",
+      liquidated: "bg-blue-50 text-blue-700 border-blue-200", // Added liquidated style
+    };
+
+    const icons: Record<string, React.ReactNode> = {
+      "for approval": <Clock className="h-3 w-3 mr-1" />,
+      submitted: <Clock className="h-3 w-3 mr-1" />,
+      approved: <CheckCircle className="h-3 w-3 mr-1" />,
+      rejected: <XCircle className="h-3 w-3 mr-1" />,
+      liquidated: <Wallet className="h-3 w-3 mr-1" />, // Added liquidated icon
     };
 
     return (
       <Badge
         className={cn(
           styles[status] || "bg-slate-50 text-slate-700 border-slate-200",
-          "border font-semibold",
+          "border font-semibold flex items-center",
         )}
         variant="secondary"
       >
+        {icons[status]}
         {status === "for approval"
           ? "For Approval"
           : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -207,7 +218,7 @@ export default function RequestForPayment({
     setActionType(null);
   };
 
-  // ✅ Stats using actual data fields - Updated to match ReviewOrder style
+  // ✅ Stats using actual data fields - Updated to include liquidated
   const stats = [
     {
       title: "Total Requests",
@@ -231,6 +242,13 @@ export default function RequestForPayment({
       icon: CheckCircle,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
+    },
+    {
+      title: "Liquidated",
+      value: rfpList.filter((r) => r.status === "liquidated").length,
+      icon: Wallet,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
     },
     {
       title: "Rejected",
@@ -318,7 +336,7 @@ export default function RequestForPayment({
     {
       key: "status",
       header: "Status",
-      width: "w-[120px]",
+      width: "w-[140px]",
       render: (row) => getStatusBadge(row.status),
     },
     {
@@ -337,6 +355,7 @@ export default function RequestForPayment({
   const filterOptions = [
     { value: "for approval", label: "For Approval" },
     { value: "approved", label: "Approved" },
+    { value: "liquidated", label: "Liquidated" }, // Added liquidated filter
     { value: "rejected", label: "Rejected" },
   ];
 
@@ -352,8 +371,8 @@ export default function RequestForPayment({
         </p>
       </div>
 
-      {/* Stats Grid - Updated to match ReviewOrder */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats Grid - Updated to 5 columns on large screens */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {stats.map((stat) => (
           <Card
             key={stat.title}
@@ -410,6 +429,7 @@ export default function RequestForPayment({
           </Button>
         }
         // ✅ Updated actions with conditional Approve/Reject buttons
+        // Liquidated RFPs don't show approve/reject actions
         actions={(row) => (
           <div className="flex gap-2">
             <Button
@@ -421,7 +441,7 @@ export default function RequestForPayment({
               <Eye className="h-3.5 w-3.5 mr-1.5" />
               View
             </Button>
-            {/* ✅ Conditional Approve/Reject buttons */}
+            {/* ✅ Conditional Approve/Reject buttons - exclude liquidated */}
             {(row.status === "for approval" || row.status === "submitted") && (
               <>
                 <Button
@@ -443,6 +463,20 @@ export default function RequestForPayment({
                   Reject
                 </Button>
               </>
+            )}
+            {/* Optional: Add a liquidation action for approved RFPs */}
+            {row.status === "approved" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  router.push(`/home/finance/liquidation/${row.id}`)
+                }
+                className="h-8 px-3 text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all"
+              >
+                <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                Liquidate
+              </Button>
             )}
           </div>
         )}
@@ -675,7 +709,9 @@ export default function RequestForPayment({
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                       {selectedRfp.status === "approved"
                         ? "Approval"
-                        : "Rejection"}{" "}
+                        : selectedRfp.status === "rejected"
+                          ? "Rejection"
+                          : "Processing"}{" "}
                       Details
                     </h4>
                     <div className="flex items-center justify-between">
@@ -686,14 +722,18 @@ export default function RequestForPayment({
                         <p className="text-xs text-slate-500">
                           {selectedRfp.status === "approved"
                             ? "Approved on"
-                            : "Rejected on"}{" "}
+                            : selectedRfp.status === "rejected"
+                              ? "Rejected on"
+                              : "Processed on"}{" "}
                           {formatDate(selectedRfp.approved_date)}
                         </p>
                       </div>
                       {selectedRfp.status === "approved" ? (
                         <CheckCircle className="h-8 w-8 text-emerald-600" />
-                      ) : (
+                      ) : selectedRfp.status === "rejected" ? (
                         <XCircle className="h-8 w-8 text-rose-600" />
+                      ) : (
+                        <Wallet className="h-8 w-8 text-blue-600" />
                       )}
                     </div>
                   </div>
@@ -747,6 +787,19 @@ export default function RequestForPayment({
                   </Button>
                 </>
               )}
+            {/* Liquidate button for approved RFPs */}
+            {selectedRfp && selectedRfp.status === "approved" && (
+              <Button
+                onClick={() => {
+                  setViewDialogOpen(false);
+                  router.push(`/home/finance/liquidation/${selectedRfp.id}`);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Wallet className="h-4 w-4 mr-2" />
+                Liquidate
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
