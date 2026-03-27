@@ -539,11 +539,13 @@ export interface RequestForPaymentProps {
   rfps: RequestForPaymentInterface[];
   onApprove?: (id: string) => Promise<void> | void;
   onReject?: (id: string) => Promise<void> | void;
+  module: string;
 }
 
 export interface CreateRequestForPaymentPageProps {
   order: Order | null;
   chargeToOptions: ChargeToOptions[];
+  module: string;
 }
 
 export interface ChargeToOptions {

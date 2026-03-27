@@ -256,7 +256,7 @@ export default async function RequestForPaymentPage() {
 
   return (
     <div>
-      <RequestForPayment orders={orders} rfps={rfps} />
+      <RequestForPayment orders={orders} rfps={rfps} module="employee-portal/requests"/>
     </div>
   );
 }

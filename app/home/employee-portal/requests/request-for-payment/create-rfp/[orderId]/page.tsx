@@ -1,5 +1,5 @@
 import CreateRequestForPayment from "@/app/components/request-for-payment/CreateRequestForPayment";
-import { ChargeToOptions, Order, Request } from "@/lib/interfaces";
+import { ChargeToOptions, Order } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/server";
 
 interface PageProps {
@@ -261,11 +261,11 @@ export default async function CreateRequestForPaymentPage({
   const supabase = await createClient();
 
   const order = await getOrder(supabase, orderId);
-  const options = await getChargeToOptions(supabase)
+  const options = await getChargeToOptions(supabase);
 
   return (
     <div>
-      <CreateRequestForPayment order={order} chargeToOptions={options} module="finance"/>
+      <CreateRequestForPayment order={order} chargeToOptions={options} module="employee-portal/requests" />
     </div>
   );
 }

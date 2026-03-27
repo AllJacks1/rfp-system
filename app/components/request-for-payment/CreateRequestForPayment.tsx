@@ -111,6 +111,7 @@ function formatCurrency(value: string | number): string {
 export default function CreateRequestForPayment({
   order,
   chargeToOptions,
+  module,
 }: CreateRequestForPaymentPageProps) {
   // Line Items State
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -270,7 +271,7 @@ export default function CreateRequestForPayment({
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 print:hidden">
           <div className="flex items-center gap-4">
-            <Link href="/home/finance/request-for-payment">
+            <Link href={`/home/${module}/request-for-payment`}>
               <Button
                 variant="outline"
                 size="icon"

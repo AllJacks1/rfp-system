@@ -291,6 +291,7 @@ export default async function RequestForPaymentPage() {
         rfps={rfps}
         onApprove={approveRFP}
         onReject={rejectRFP}
+        module="finance"
       />
     </div>
   );

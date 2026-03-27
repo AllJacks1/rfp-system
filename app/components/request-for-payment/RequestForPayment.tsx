@@ -53,6 +53,7 @@ export default function RequestForPayment({
   orders = [],
   onApprove,
   onReject,
+  module,
 }: RequestForPaymentProps) {
   const [rfpList, setRfpList] = useState<RequestForPaymentInterface[]>(rfps);
   const [selectedRfp, setSelectedRfp] =
@@ -164,7 +165,7 @@ export default function RequestForPayment({
     order: NonNullable<RequestForPaymentProps["orders"]>[number],
   ) => {
     setApprovedPODialogOpen(false);
-    router.push(`/home/finance/request-for-payment/create-rfp/${order.id}`);
+    router.push(`/home/${module}/request-for-payment/create-rfp/${order.id}`);
   };
 
   // ✅ Handle action click from table row
