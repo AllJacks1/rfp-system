@@ -300,6 +300,7 @@ export interface CreateServiceRequestFormProps {
   vendors: Vendor[],
   paymentMethods: PaymentMethod[],
   units: Unit[],
+  module: string;
 }
 
 export interface Request {
@@ -504,6 +505,7 @@ export const priorityConfig: Record<
 
 export interface ServiceRequestPageProps {
   requests: Request[];
+  module: string;
 }
 
 export interface CreatePurchaseRequestFormProps {

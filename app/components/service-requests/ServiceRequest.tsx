@@ -44,7 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default function ServiceRequest({ requests }: ServiceRequestPageProps) {
+export default function ServiceRequest({ requests, module }: ServiceRequestPageProps) {
   const router = useRouter();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -213,7 +213,7 @@ export default function ServiceRequest({ requests }: ServiceRequestPageProps) {
           <Button
             className="bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white"
             onClick={() =>
-              router.push("/home/finance/service-requests/create-sr")
+              router.push(`/home/${module}/service-requests/create-sr`)
             }
           >
             <Plus className="mr-2 h-4 w-4" />

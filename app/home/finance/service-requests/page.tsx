@@ -97,7 +97,7 @@ export default async function ServiceRequestPage() {
   const requests = await getRequests(supabase);
   return (
     <div>
-      <ServiceRequest requests={requests}/>
+      <ServiceRequest requests={requests} module="finance"/>
     </div>
   );
 }

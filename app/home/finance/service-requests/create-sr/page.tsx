@@ -169,6 +169,7 @@ export default async function CreateServiceRequestPage() {
         vendors={vendors}
         paymentMethods={paymentMethods}
         units={units}
+        module="finance"
       />
     </div>
   );

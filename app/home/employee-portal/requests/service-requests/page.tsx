@@ -108,5 +108,5 @@ export default async function ServiceRequestPage() {
 
   const requests = await getRequests(supabase, userId);
 
-  return <ServiceRequest requests={requests} />;
+  return <ServiceRequest requests={requests} module="employee-portal/requests"/>;
 }
