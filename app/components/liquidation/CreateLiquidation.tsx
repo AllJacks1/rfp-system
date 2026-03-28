@@ -185,9 +185,9 @@ export default function CreateLiquidation({
         total_liquidated: totalLiquidated,
         remaining_balance: remainingBalance,
 
-        liquidation_entries: liquidationEntries, // JSONB
+        liquidation_entries: liquidationEntries, 
 
-        status: "liquidated",
+        status: "submitted",
       });
 
       if (error) throw error;

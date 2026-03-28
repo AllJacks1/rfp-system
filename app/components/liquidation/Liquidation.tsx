@@ -22,6 +22,12 @@ import {
   Eye,
   ArrowRight,
   CreditCard,
+  Calendar,
+  User,
+  Building2,
+  Receipt,
+  Check,
+  X,
 } from "lucide-react";
 import { DataTableCard, Column } from "@/app/components/cards/DataTableCard";
 import {
@@ -33,171 +39,92 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
+  LiquidationEntry,
+  LiquidationInterface,
   LiquidationPageProps,
   RequestForPaymentInterface,
 } from "@/lib/interfaces";
 
-interface Liquidation {
-  id: string;
-  liquidationTitle: string;
-  liquidationType: string;
-  status: "for_liquidation" | "submitted" | "approved" | "rejected";
-  dateSubmitted: string;
-  requestor: string;
-  department: string;
-  originalAmount: string;
-  liquidatedAmount: string;
-  description: string;
-  rfpReference: string;
-  approvedBy?: string;
-  approvedDate?: string;
-}
-
-// Mock Data for Liquidation
-const mockLiquidations: Liquidation[] = [
-  {
-    id: "LIQ-2024-001",
-    liquidationTitle: "Q1 Travel Expenses Liquidation",
-    liquidationType: "Travel",
-    status: "for_liquidation",
-    dateSubmitted: "2024-03-10",
-    requestor: "John Smith",
-    department: "Sales",
-    originalAmount: "$5,000",
-    liquidatedAmount: "$4,750",
-    description: "Liquidation for client visit travel expenses - under budget",
-    rfpReference: "RFP-2024-007",
-  },
-  {
-    id: "LIQ-2024-002",
-    liquidationTitle: "Marketing Campaign Liquidation",
-    liquidationType: "Marketing",
-    status: "submitted",
-    dateSubmitted: "2024-03-09",
-    requestor: "Sarah Johnson",
-    department: "Marketing",
-    originalAmount: "$15,000",
-    liquidatedAmount: "$14,200",
-    description: "Digital campaign liquidation - unused funds returned",
-    rfpReference: "RFP-2024-003",
-  },
-  {
-    id: "LIQ-2024-003",
-    liquidationTitle: "Office Supplies Liquidation",
-    liquidationType: "Office Supplies",
-    status: "approved",
-    dateSubmitted: "2024-03-08",
-    requestor: "Mike Chen",
-    department: "Administration",
-    originalAmount: "$1,000",
-    liquidatedAmount: "$850",
-    description: "Quarterly supplies liquidation - bulk discount applied",
-    rfpReference: "RFP-2024-002",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-08",
-  },
-  {
-    id: "LIQ-2024-004",
-    liquidationTitle: "IT Equipment Liquidation",
-    liquidationType: "IT Equipment",
-    status: "for_liquidation",
-    dateSubmitted: "2024-03-07",
-    requestor: "Emily Davis",
-    department: "Engineering",
-    originalAmount: "$12,500",
-    liquidatedAmount: "$12,500",
-    description: "Full liquidation - all equipment received as ordered",
-    rfpReference: "RFP-2024-001",
-  },
-  {
-    id: "LIQ-2024-005",
-    liquidationTitle: "Training Program Liquidation",
-    liquidationType: "Training",
-    status: "rejected",
-    dateSubmitted: "2024-03-06",
-    requestor: "Robert Wilson",
-    department: "HR",
-    originalAmount: "$8,000",
-    liquidatedAmount: "$9,200",
-    description: "Over budget - additional participants attended",
-    rfpReference: "RFP-2024-006",
-    approvedBy: "Lisa Wong",
-    approvedDate: "2024-03-06",
-  },
-  {
-    id: "LIQ-2024-006",
-    liquidationTitle: "Consulting Fees Liquidation",
-    liquidationType: "Consulting",
-    status: "approved",
-    dateSubmitted: "2024-03-05",
-    requestor: "Lisa Anderson",
-    department: "Strategy",
-    originalAmount: "$20,000",
-    liquidatedAmount: "$18,500",
-    description: "Project completed under budget - early delivery bonus",
-    rfpReference: "RFP-2024-004",
-    approvedBy: "Michael Brown",
-    approvedDate: "2024-03-05",
-  },
-  {
-    id: "LIQ-2024-007",
-    liquidationTitle: "Event Management Liquidation",
-    liquidationType: "Events",
-    status: "submitted",
-    dateSubmitted: "2024-03-04",
-    requestor: "David Brown",
-    department: "Marketing",
-    originalAmount: "$25,000",
-    liquidatedAmount: "$23,800",
-    description: "Annual retreat liquidation - vendor discount applied",
-    rfpReference: "RFP-2024-008",
-  },
-  {
-    id: "LIQ-2024-008",
-    liquidationTitle: "Legal Services Liquidation",
-    liquidationType: "Legal",
-    status: "for_liquidation",
-    dateSubmitted: "2024-03-03",
-    requestor: "Jennifer Lee",
-    department: "Legal",
-    originalAmount: "$18,000",
-    liquidatedAmount: "$16,500",
-    description: "Contract review completed - fewer hours than estimated",
-    rfpReference: "RFP-2024-008",
-  },
-];
-
-export default function Liquidation({ rfps }: LiquidationPageProps) {
+export default function Liquidation({
+  rfps,
+  liquidatedRFPs: initialLiquidations,
+  onApprove,
+  onReject,
+}: LiquidationPageProps) {
   const [liquidations, setLiquidations] =
-    useState<Liquidation[]>(mockLiquidations);
+    useState<LiquidationInterface[]>(initialLiquidations);
   const [selectedLiquidation, setSelectedLiquidation] =
-    useState<Liquidation | null>(null);
+    useState<LiquidationInterface | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [approvedRFPDialogOpen, setApprovedRFPDialogOpen] = useState(false);
+  // Action confirmation dialog states
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<"approved" | "rejected" | null>(
+    null,
+  );
+  // Loading states
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
   const router = useRouter();
 
-  const getStatusBadge = (status: Liquidation["status"]) => {
-    const styles = {
-      for_liquidation: "bg-indigo-100 text-indigo-700 hover:bg-indigo-100",
-      submitted: "bg-amber-100 text-amber-700 hover:bg-amber-100",
-      approved: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
-      rejected: "bg-rose-100 text-rose-700 hover:bg-rose-100",
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<
+      string,
+      { bg: string; text: string; border: string; label: string }
+    > = {
+      liquidated: {
+        bg: "bg-emerald-50",
+        text: "text-emerald-700",
+        border: "border-emerald-200",
+        label: "Liquidated",
+      },
+      for_liquidation: {
+        bg: "bg-indigo-50",
+        text: "text-indigo-700",
+        border: "border-indigo-200",
+        label: "For Liquidation",
+      },
+      submitted: {
+        bg: "bg-amber-50",
+        text: "text-amber-700",
+        border: "border-amber-200",
+        label: "Submitted",
+      },
+      approved: {
+        bg: "bg-blue-50",
+        text: "text-blue-700",
+        border: "border-blue-200",
+        label: "Approved",
+      },
+      rejected: {
+        bg: "bg-rose-50",
+        text: "text-rose-700",
+        border: "border-rose-200",
+        label: "Rejected",
+      },
     };
-    const labels = {
-      for_liquidation: "For Liquidation",
-      submitted: "Submitted",
-      approved: "Approved",
-      rejected: "Rejected",
-    };
+
+    const config = statusConfig[status] || statusConfig.submitted;
+
     return (
-      <Badge className={styles[status]} variant="secondary">
-        {labels[status]}
+      <Badge
+        className={cn(
+          config.bg,
+          config.text,
+          "border",
+          config.border,
+          "font-semibold",
+        )}
+        variant="secondary"
+      >
+        {config.label}
       </Badge>
     );
   };
 
-  const handleView = (liquidation: Liquidation) => {
+  const handleView = (liquidation: LiquidationInterface) => {
     setSelectedLiquidation(liquidation);
     setViewDialogOpen(true);
   };
@@ -206,7 +133,77 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
     setApprovedRFPDialogOpen(true);
   };
 
-  // Stats calculation - 5 stats for Liquidation
+  // Parse liquidation entries from JSON string
+  const parseEntries = (
+    entriesJson: string | LiquidationEntry[],
+  ): LiquidationEntry[] => {
+    if (Array.isArray(entriesJson)) return entriesJson;
+    try {
+      return JSON.parse(entriesJson);
+    } catch {
+      return [];
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(num || 0);
+  };
+
+  // Handle action click from table row
+  const handleActionClick = (
+    liquidation: LiquidationInterface,
+    action: "approved" | "rejected",
+  ) => {
+    setSelectedLiquidation(liquidation);
+    setActionType(action);
+    setActionDialogOpen(true);
+  };
+
+  // Handle confirm action
+  const handleConfirmAction = async () => {
+    if (!selectedLiquidation || !actionType) return;
+
+    if (actionType === "approved" && onApprove) {
+      try {
+        setIsApproving(true);
+        await onApprove(selectedLiquidation.id);
+        // Update local state
+        setLiquidations((prev) =>
+          prev.map((l) =>
+            l.id === selectedLiquidation.id ? { ...l, status: "approved" } : l,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to approve liquidation:", error);
+      } finally {
+        setIsApproving(false);
+      }
+    } else if (actionType === "rejected" && onReject) {
+      try {
+        setIsRejecting(true);
+        await onReject(selectedLiquidation.id);
+        // Update local state
+        setLiquidations((prev) =>
+          prev.map((l) =>
+            l.id === selectedLiquidation.id ? { ...l, status: "rejected" } : l,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to reject liquidation:", error);
+      } finally {
+        setIsRejecting(false);
+      }
+    }
+
+    setActionDialogOpen(false);
+  };
+
+  // Stats calculation
   const stats = [
     {
       title: "Total Requests",
@@ -230,8 +227,8 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
       bgColor: "bg-amber-50",
     },
     {
-      title: "Approved",
-      value: liquidations.filter((l) => l.status === "approved").length,
+      title: "Liquidated",
+      value: liquidations.filter((l) => l.status === "liquidated").length,
       icon: CheckCircle,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
@@ -245,69 +242,126 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
     },
   ];
 
-  // Define columns for Liquidation
-  const columns: Column<Liquidation>[] = [
-    { key: "id", header: "Liquidation ID", width: "w-[150px]" },
+  // Define columns matching LiquidationInterface
+  const columns: Column<LiquidationInterface>[] = [
     {
-      key: "liquidationTitle",
-      header: "Liquidation Title",
-      width: "min-w-[200px]",
-    },
-    { key: "liquidationType", header: "Type", width: "w-[140px]" },
-    {
-      key: "requestor",
-      header: "Requestor",
-      width: "w-[140px]",
+      key: "liquidation_number",
+      header: "Liquidation No.",
+      width: "w-[160px]",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium">{row.requestor}</span>
+          <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
+            {row.liquidation_number}
+          </span>
+          <span className="text-[10px] text-slate-500">
+            RFP: {row.rfp_number}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "payable_to",
+      header: "Payable To",
+      width: "min-w-[180px]",
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-900">{row.payable_to}</span>
           <span className="text-xs text-slate-500">{row.department}</span>
         </div>
       ),
     },
     {
-      key: "originalAmount",
-      header: "Original",
-      width: "w-[100px]",
+      key: "payment_method",
+      header: "Payment Method",
+      width: "w-[130px]",
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-slate-400 line-through text-xs">
-            {row.originalAmount}
-          </span>
-          <span className="font-medium text-emerald-600">
-            {row.liquidatedAmount}
+        <div className="flex items-center gap-1.5">
+          <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-sm text-slate-700">{row.payment_method}</span>
+        </div>
+      ),
+    },
+    {
+      key: "amounts",
+      header: "Amounts",
+      width: "w-[140px]",
+      render: (row) => {
+        const original = parseFloat(row.original_amount);
+        const liquidated = parseFloat(row.total_liquidated);
+        const hasVariance = original !== liquidated;
+
+        return (
+          <div className="flex flex-col">
+            <span
+              className={cn(
+                "font-mono text-sm font-semibold",
+                hasVariance ? "text-amber-600" : "text-emerald-600",
+              )}
+            >
+              {formatCurrency(row.total_liquidated)}
+            </span>
+            {hasVariance && (
+              <span className="text-xs text-slate-400 line-through">
+                Orig: {formatCurrency(row.original_amount)}
+              </span>
+            )}
+            {parseFloat(row.remaining_balance) > 0 && (
+              <span className="text-[10px] text-rose-500">
+                Bal: {formatCurrency(row.remaining_balance)}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "w-[120px]",
+      render: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: "dateSubmitted",
+      header: "Date Created",
+      width: "w-[130px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-sm">
+            {new Date(row.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
           </span>
         </div>
       ),
     },
     {
-      key: "status",
-      header: "Status",
-      width: "w-[130px]",
-      render: (row) => getStatusBadge(row.status),
-    },
-    {
-      key: "dateSubmitted",
-      header: "Date Submitted",
-      width: "w-[130px]",
-      render: (row) =>
-        new Date(row.dateSubmitted).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
+      key: "requestor",
+      header: "Requestor",
+      width: "w-[140px]",
+      render: (row) => (
+        <div className="flex items-center gap-1.5">
+          <User className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-sm text-slate-700 truncate">
+            {row.requested_by}
+          </span>
+        </div>
+      ),
     },
   ];
 
   const filterOptions = [
     { value: "for_liquidation", label: "For Liquidation" },
     { value: "submitted", label: "Submitted" },
+    { value: "liquidated", label: "Liquidated" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
   ];
 
   const handleCreateLiquidation = (rfp: RequestForPaymentInterface) => {
-    console.log("Creating RFP from PO:", rfp.id);
+    console.log("Creating liquidation from RFP:", rfp.id);
     setApprovedRFPDialogOpen(false);
     router.push(`/home/finance/liquidation/liquidate/${rfp.id}`);
   };
@@ -345,22 +399,22 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
         ))}
       </div>
 
-      {/* Data Table Card - Only View Action */}
+      {/* Data Table Card */}
       <DataTableCard
         data={liquidations}
         columns={columns}
         keyExtractor={(row) => row.id}
         title="All Liquidated Requests"
-        subtitle="View and manage your liquidation requests"
+        subtitle={`${liquidations.length} total liquidation requests in the system`}
         searchPlaceholder="Search liquidations..."
         searchable
         searchKeys={[
-          "id",
-          "liquidationTitle",
-          "liquidationType",
-          "requestor",
+          "liquidation_number",
+          "rfp_number",
+          "requested_by",
           "department",
-          "rfpReference",
+          "payable_to",
+          "payment_method",
         ]}
         filterable
         filterKey="status"
@@ -376,181 +430,383 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
             Review RFP requests
           </Button>
         }
+        // Actions with conditional Approve/Reject buttons
         actions={(row) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleView(row)}
-            className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#2B3A9F]/5"
-          >
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            View
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleView(row)}
+              className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:text-[#2B3A9F] hover:border-[#2B3A9F]/30 hover:bg-[#2B3A9F]/5"
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              View
+            </Button>
+            {/* Conditional Approve/Reject buttons - only for submitted/for_liquidation status */}
+            {(row.status === "submitted" ||
+              row.status === "for_liquidation") && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleActionClick(row, "approved")}
+                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleActionClick(row, "rejected")}
+                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
         )}
       />
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-slate-900">
               Liquidation Details
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Full details for {selectedLiquidation?.id}
+              {selectedLiquidation?.liquidation_number}
             </DialogDescription>
           </DialogHeader>
+
           {selectedLiquidation && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
+              {/* Status Banner */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <span className="text-sm font-medium text-slate-600">
+                  Status
+                </span>
+                {getStatusBadge(selectedLiquidation.status)}
+              </div>
+
+              {/* Main Info Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Liquidation ID
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Liquidation Number
                   </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedLiquidation.id}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Status</p>
-                  <div className="mt-1">
-                    {getStatusBadge(selectedLiquidation.status)}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Liquidation Type
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedLiquidation.liquidationType}
+                  <p className="font-mono text-sm font-semibold text-[#2B3A9F]">
+                    {selectedLiquidation.liquidation_number}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     RFP Reference
                   </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedLiquidation.rfpReference}
+                  <p className="font-mono text-sm font-semibold text-slate-900">
+                    {selectedLiquidation.rfp_number}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Original Amount
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Payable To
                   </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedLiquidation.originalAmount}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-900">
+                      {selectedLiquidation.payable_to}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Liquidated Amount
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Payment Method
                   </p>
-                  <p
-                    className={`text-sm font-semibold ${
-                      parseFloat(
-                        selectedLiquidation.liquidatedAmount.replace(
-                          /[^0-9.-]+/g,
-                          "",
-                        ),
-                      ) <=
-                      parseFloat(
-                        selectedLiquidation.originalAmount.replace(
-                          /[^0-9.-]+/g,
-                          "",
-                        ),
-                      )
-                        ? "text-emerald-600"
-                        : "text-rose-600"
-                    }`}
-                  >
-                    {selectedLiquidation.liquidatedAmount}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <CreditCard className="h-4 w-4 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-900">
+                      {selectedLiquidation.payment_method}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Requestor
                   </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {selectedLiquidation.requestor}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-4 w-4 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-900">
+                      {selectedLiquidation.requested_by}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Department
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
                     {selectedLiquidation.department}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Date Submitted
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Date Created
                   </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(
-                      selectedLiquidation.dateSubmitted,
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-                {selectedLiquidation.approvedBy && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {selectedLiquidation.status === "approved"
-                        ? "Approved By"
-                        : "Rejected By"}
-                    </p>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-slate-400" />
                     <p className="text-sm font-semibold text-slate-900">
-                      {selectedLiquidation.approvedBy}
+                      {new Date(
+                        selectedLiquidation.created_at,
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </p>
                   </div>
-                )}
+                </div>
               </div>
+
+              {/* Financial Summary */}
+              <div className="border rounded-lg p-4 bg-slate-50/50">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-[#2B3A9F]" />
+                  Financial Summary
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 bg-white rounded-lg border">
+                    <p className="text-xs text-slate-500 mb-1">
+                      Original Amount
+                    </p>
+                    <p className="font-mono text-sm font-semibold text-slate-900">
+                      {formatCurrency(selectedLiquidation.original_amount)}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg border">
+                    <p className="text-xs text-slate-500 mb-1">Liquidated</p>
+                    <p
+                      className={cn(
+                        "font-mono text-sm font-semibold",
+                        parseFloat(selectedLiquidation.total_liquidated) <=
+                          parseFloat(selectedLiquidation.original_amount)
+                          ? "text-emerald-600"
+                          : "text-rose-600",
+                      )}
+                    >
+                      {formatCurrency(selectedLiquidation.total_liquidated)}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg border">
+                    <p className="text-xs text-slate-500 mb-1">Remaining</p>
+                    <p
+                      className={cn(
+                        "font-mono text-sm font-semibold",
+                        parseFloat(selectedLiquidation.remaining_balance) === 0
+                          ? "text-emerald-600"
+                          : "text-amber-600",
+                      )}
+                    >
+                      {formatCurrency(selectedLiquidation.remaining_balance)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Liquidation Entries */}
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">
-                  Description
-                </p>
-                <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">
-                  {selectedLiquidation.description}
-                </p>
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">
+                  Liquidation Entries (
+                  {parseEntries(selectedLiquidation.liquidation_entries).length}
+                  )
+                </h4>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-xs font-medium text-slate-600">
+                          Date
+                        </TableHead>
+                        <TableHead className="text-xs font-medium text-slate-600">
+                          Description
+                        </TableHead>
+                        <TableHead className="text-xs font-medium text-slate-600 text-right">
+                          Amount
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {parseEntries(
+                        selectedLiquidation.liquidation_entries,
+                      ).map((entry, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="text-sm">
+                            {new Date(entry.date).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-700">
+                            {entry.description}
+                            {entry.supplier && (
+                              <span className="text-xs text-slate-500 block">
+                                Supplier ID: {entry.supplier}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm font-mono font-semibold text-right">
+                            {formatCurrency(entry.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-              {selectedLiquidation.approvedDate && (
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
+
+              {/* Approval Info - shown if approved/rejected */}
+              {selectedLiquidation.approved_by && (
+                <div className="bg-slate-50 p-4 rounded-lg border">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     {selectedLiquidation.status === "approved"
-                      ? "Approved Date"
-                      : "Rejected Date"}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {new Date(
-                      selectedLiquidation.approvedDate,
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
+                      ? "Approval"
+                      : selectedLiquidation.status === "rejected"
+                        ? "Rejection"
+                        : "Processing"}{" "}
+                    Details
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">
+                        {selectedLiquidation.approved_by}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {selectedLiquidation.status === "approved"
+                          ? "Approved on"
+                          : selectedLiquidation.status === "rejected"
+                            ? "Rejected on"
+                            : "Processed on"}{" "}
+                        {selectedLiquidation.approved_date
+                          ? new Date(
+                              selectedLiquidation.approved_date,
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+                    {selectedLiquidation.status === "approved" ? (
+                      <CheckCircle className="h-8 w-8 text-emerald-600" />
+                    ) : selectedLiquidation.status === "rejected" ? (
+                      <XCircle className="h-8 w-8 text-rose-600" />
+                    ) : null}
+                  </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setViewDialogOpen(false)}
+              className="border-slate-200 text-slate-700"
+            >
               Close
+            </Button>
+            {/* Approve/Reject buttons in View Dialog footer */}
+            {selectedLiquidation &&
+              (selectedLiquidation.status === "submitted" ||
+                selectedLiquidation.status === "for_liquidation") && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedLiquidation, "rejected");
+                    }}
+                    className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleActionClick(selectedLiquidation, "approved");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                </>
+              )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Confirmation Dialog */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              {actionType === "approved" ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-rose-600" />
+              )}
+              {actionType === "approved"
+                ? "Approve Liquidation"
+                : "Reject Liquidation"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Are you sure you want to {actionType}{" "}
+              <span className="font-semibold text-slate-900">
+                {selectedLiquidation?.liquidation_number}
+              </span>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setActionDialogOpen(false)}
+              className="border-slate-200 text-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmAction}
+              disabled={isApproving || isRejecting}
+              className={
+                actionType === "approved"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-rose-600 hover:bg-rose-700 text-white"
+              }
+            >
+              {isApproving || isRejecting ? (
+                <Clock className="h-4 w-4 animate-spin" />
+              ) : actionType === "approved" ? (
+                "Approve"
+              ) : (
+                "Reject"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Approved RFP Dialog */}
       <Dialog
         open={approvedRFPDialogOpen}
         onOpenChange={setApprovedRFPDialogOpen}
       >
         <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-          {/* Header - Clean slate with subtle border */}
           <DialogHeader className="px-6 py-5 border-b bg-slate-50/50">
             <div className="flex items-center justify-between">
               <div>
@@ -570,7 +826,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
             </div>
           </DialogHeader>
 
-          {/* Content */}
           <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
             {rfps.length === 0 ? (
               <div className="text-center py-12">
@@ -615,7 +870,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
                         key={rfp.id}
                         className="group hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
                       >
-                        {/* RFP Number */}
                         <TableCell className="py-4">
                           <div className="flex flex-col">
                             <span className="font-mono text-sm font-semibold text-[#2B3A9F]">
@@ -626,8 +880,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
                             </span>
                           </div>
                         </TableCell>
-
-                        {/* Payable To */}
                         <TableCell className="py-4">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-slate-900 line-clamp-1">
@@ -638,8 +890,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
                             </span>
                           </div>
                         </TableCell>
-
-                        {/* Payment Method */}
                         <TableCell className="py-4">
                           <div className="flex items-center gap-1.5">
                             <CreditCard className="h-3.5 w-3.5 text-slate-400" />
@@ -648,8 +898,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
                             </span>
                           </div>
                         </TableCell>
-
-                        {/* Amount */}
                         <TableCell className="py-4 text-right">
                           <span className="font-mono text-sm font-semibold text-slate-900">
                             {new Intl.NumberFormat("en-PH", {
@@ -658,15 +906,11 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
                             }).format(Number(rfp.total_payable) || 0)}
                           </span>
                         </TableCell>
-
-                        {/* Item Count */}
                         <TableCell className="py-4 text-center">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
                             {rfp.line_items?.length || 0} items
                           </span>
                         </TableCell>
-
-                        {/* Action */}
                         <TableCell className="py-4 text-right">
                           <Button
                             size="sm"
@@ -685,7 +929,6 @@ export default function Liquidation({ rfps }: LiquidationPageProps) {
             )}
           </div>
 
-          {/* Footer */}
           <DialogFooter className="px-6 py-4 border-t bg-slate-50">
             <Button
               variant="outline"

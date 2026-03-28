@@ -604,6 +604,9 @@ export interface RequestForPaymentInterface {
 
 export interface LiquidationPageProps {
   rfps: RequestForPaymentInterface[];
+  liquidatedRFPs: LiquidationInterface[];
+  onApprove?: (id: string) => Promise<void> | void;
+  onReject?: (id: string) => Promise<void> | void;
 }
 
 export interface CreateLiquidationPageProps {
@@ -612,3 +615,34 @@ export interface CreateLiquidationPageProps {
   accounts: Account[];
   vendors: Vendor[];
 }
+
+export type LiquidationEntry = {
+  date: string;
+  plate_number: string | null;
+  car_type: string | null;
+  owners_first_name: string | null;
+  owners_last_name: string | null;
+  supplier: number;
+  description: string;
+  gl_account: number;
+  amount: number;
+};
+
+export type LiquidationInterface = {
+  id: string;
+  created_at: string;
+  liquidation_number: string;
+  rfp_id: string;
+  rfp_number: string;
+  requested_by: string;
+  department: string;
+  payable_to: string;
+  payment_method: string;
+  original_amount: string;
+  total_liquidated: string;
+  remaining_balance: string;
+  liquidation_entries: LiquidationEntry[];
+  status: string;
+  approved_date: string | null;
+  approved_by: string | null;
+};
