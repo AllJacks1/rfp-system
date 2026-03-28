@@ -17,6 +17,21 @@ async function getApprovedRFPs(supabase: any, requestor: string) {
   return data || [];
 }
 
+async function getLiquidatedRFPs(supabase: any, requestor: string) {
+  const { data, error } = await supabase
+    .from("liquidations")
+    .select("*")
+    .eq("requested_by", requestor)
+    .order("liquidation_number", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching liquidated RFPs:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export default async function LiquidationPage() {
   const supabase = await createClient();
 
@@ -27,10 +42,11 @@ export default async function LiquidationPage() {
   const requestor = user?.user_metadata?.full_name;
 
   const rfps = await getApprovedRFPs(supabase, requestor);
+  const liquidations = await getLiquidatedRFPs(supabase, requestor);
 
   return (
     <div>
-      <Liquidation rfps={rfps} />
+      <Liquidation rfps={rfps} liquidatedRFPs={liquidations} />
     </div>
   );
 }
