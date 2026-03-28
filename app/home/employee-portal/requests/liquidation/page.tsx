@@ -46,7 +46,7 @@ export default async function LiquidationPage() {
 
   return (
     <div>
-      <Liquidation rfps={rfps} liquidatedRFPs={liquidations} />
+      <Liquidation rfps={rfps} liquidatedRFPs={liquidations} module="employee-portal/requests"/>
     </div>
   );
 }

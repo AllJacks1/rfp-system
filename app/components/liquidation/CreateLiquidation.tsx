@@ -97,6 +97,7 @@ export default function CreateLiquidation({
   vehicles,
   accounts,
   vendors,
+  module,
 }: CreateLiquidationPageProps) {
   // Form state
   const [date, setDate] = useState("");
@@ -185,7 +186,7 @@ export default function CreateLiquidation({
         total_liquidated: totalLiquidated,
         remaining_balance: remainingBalance,
 
-        liquidation_entries: liquidationEntries, 
+        liquidation_entries: liquidationEntries,
 
         status: "submitted",
       });
@@ -241,7 +242,7 @@ export default function CreateLiquidation({
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <Link href="/home/finance/liquidation">
+            <Link href={`/home/${module}/liquidation`}>
               <Button
                 variant="outline"
                 size="icon"

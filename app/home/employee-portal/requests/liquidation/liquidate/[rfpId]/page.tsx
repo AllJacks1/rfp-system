@@ -79,7 +79,7 @@ export default async function CreateLiquidationPage({ params }: PageProps) {
         vehicles={vehicles}
         accounts={accounts}
         vendors={vendors}
-        module="finance"
+        module="employee-portal/requests"
       />
     </div>
   );

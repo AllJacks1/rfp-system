@@ -94,6 +94,7 @@ export default async function LiquidationPage() {
         liquidatedRFPs={liquidatedRFPs}
         onApprove={approveLiquidation}
         onReject={rejectLiquidation}
+        module="finance"
       />
     </div>
   );

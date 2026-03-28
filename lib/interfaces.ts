@@ -607,6 +607,7 @@ export interface LiquidationPageProps {
   liquidatedRFPs: LiquidationInterface[];
   onApprove?: (id: string) => Promise<void> | void;
   onReject?: (id: string) => Promise<void> | void;
+  module: string;
 }
 
 export interface CreateLiquidationPageProps {
@@ -614,6 +615,7 @@ export interface CreateLiquidationPageProps {
   vehicles: Vehicle[];
   accounts: Account[];
   vendors: Vendor[];
+  module: string;
 }
 
 export type LiquidationEntry = {
