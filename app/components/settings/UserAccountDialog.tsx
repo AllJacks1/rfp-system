@@ -528,25 +528,27 @@ export default function UserAccountDialog({
       {/* View Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent
-          className="sm:max-w-[600px] p-0 overflow-hidden"
+          className="w-[95vw] max-w-[95vw] sm:max-w-[600px] lg:max-w-[800px] xl:max-w-[900px] p-0 overflow-hidden max-h-[90vh] overflow-y-auto"
           showCloseButton={false}
         >
           {viewingAccount && (
             <>
               {/* Header with avatar */}
-              <div className="bg-gradient-to-br from-[#2B3A9F] to-[#1e2870] p-6 text-white">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl font-bold border-2 border-white/30">
+              <div className="bg-gradient-to-br from-[#2B3A9F] to-[#1e2870] p-4 sm:p-6 lg:p-8 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 lg:gap-6 min-w-0">
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-xl sm:text-2xl lg:text-3xl font-bold border-2 border-white/30 shrink-0">
                       {getNameInitials(viewingAccount)}
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold">
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold truncate">
                         {getFullName(viewingAccount)}
                       </h2>
-                      <p className="text-white/80 flex items-center gap-2 mt-1">
-                        <Briefcase className="w-4 h-4" />
-                        {viewingAccount.role_name}
+                      <p className="text-white/80 flex items-center gap-2 mt-1 text-sm sm:text-base lg:text-lg">
+                        <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 shrink-0" />
+                        <span className="truncate">
+                          {viewingAccount.role_name}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -554,168 +556,168 @@ export default function UserAccountDialog({
                     variant="ghost"
                     size="icon"
                     onClick={() => setDetailsOpen(false)}
-                    className="text-white/80 hover:text-white hover:bg-white/10"
+                    className="text-white/80 hover:text-white hover:bg-white/10 shrink-0"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 lg:w-6 lg:h-6" />
                   </Button>
                 </div>
               </div>
 
               {/* Details Content */}
-              <div className="p-6 space-y-6">
-                {/* Organizational Information */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <Building className="w-4 h-4 text-[#2B3A9F]" />
+              <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8">
+                {/* Organizational Information - 2 columns on large screens */}
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Building className="w-4 h-4 lg:w-5 lg:h-5 text-[#2B3A9F]" />
                     Organizational Information
                   </h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Briefcase className="w-5 h-5 text-[#2B3A9F]" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
+                    {[
+                      {
+                        icon: Briefcase,
+                        label: "Role",
+                        value: viewingAccount.role_name,
+                      },
+                      {
+                        icon: UserCog,
+                        label: "Designation",
+                        value: viewingAccount.designation_name,
+                      },
+                      {
+                        icon: Building2,
+                        label: "Company",
+                        value: viewingAccount.company_name,
+                      },
+                      {
+                        icon: MapPin,
+                        label: "Branch",
+                        value: viewingAccount.branch_location,
+                      },
+                      {
+                        icon: Building,
+                        label: "Department",
+                        value: viewingAccount.department_name,
+                      },
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg"
+                      >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                          <item.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs lg:text-sm text-slate-500">
+                            {item.label}
+                          </p>
+                          <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg truncate">
+                            {item.value}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Role</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.role_name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <UserCog className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Designation</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.designation_name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Company</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.company_name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Branch</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.branch_location}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Building className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Department</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.department_name}
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Contact Information */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-[#2B3A9F]" />
-                    Contact Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Mail className="w-5 h-5 text-[#2B3A9F]" />
+                {/* Contact & Personal Info - Side by side on large screens */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+                  {/* Contact Information */}
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Mail className="w-4 h-4 lg:w-5 lg:h-5 text-[#2B3A9F]" />
+                      Contact Information
+                    </h3>
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                          <Mail className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs lg:text-sm text-slate-500">
+                            Email
+                          </p>
+                          <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg truncate">
+                            {viewingAccount.email || "Not provided"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Email</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.email || "Not provided"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Phone className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Mobile</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.mobile_number || "Not provided"}
-                        </p>
+                      <div className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                          <Phone className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs lg:text-sm text-slate-500">
+                            Mobile
+                          </p>
+                          <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg truncate">
+                            {viewingAccount.mobile_number || "Not provided"}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#2B3A9F]" />
-                    Personal Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-[#2B3A9F]" />
+                  {/* Personal Information */}
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <User className="w-4 h-4 lg:w-5 lg:h-5 text-[#2B3A9F]" />
+                      Personal Information
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
+                        </div>
+                        <div>
+                          <p className="text-xs lg:text-sm text-slate-500">
+                            Sex
+                          </p>
+                          <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg">
+                            {viewingAccount.sex || "Not provided"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Sex</p>
-                        <p className="font-medium text-slate-900">
-                          {viewingAccount.sex || "Not provided"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-[#2B3A9F]" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Birthday</p>
-                        <p className="font-medium text-slate-900">
-                          {formatDate(viewingAccount.birthday)}
-                        </p>
+                      <div className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                          <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
+                        </div>
+                        <div>
+                          <p className="text-xs lg:text-sm text-slate-500">
+                            Birthday
+                          </p>
+                          <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg">
+                            {formatDate(viewingAccount.birthday)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Address Information */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#2B3A9F]" />
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-[#2B3A9F]" />
                     Address
                   </h3>
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="font-medium text-slate-900">
+                  <div className="p-3 sm:p-4 lg:p-5 bg-slate-50 rounded-lg">
+                    <p className="font-medium text-slate-900 text-sm sm:text-base lg:text-lg break-words">
                       {viewingAccount.address || "Not provided"}
                     </p>
                   </div>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex gap-2 pt-4 border-t border-slate-100">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 pt-4 lg:pt-6 border-t border-slate-100 sticky bottom-0 bg-white pb-2">
                   <Button
                     variant="outline"
                     onClick={() => setDetailsOpen(false)}
-                    className="flex-1 border-slate-200 hover:bg-slate-50"
+                    className="flex-1 border-slate-200 hover:bg-slate-50 h-10 sm:h-11 lg:h-12 text-sm sm:text-base"
                   >
                     Close
                   </Button>
                   <Button
-                    className="flex-1 bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white"
+                    className="flex-1 bg-[#2B3A9F] hover:bg-[#2B3A9F]/90 text-white h-10 sm:h-11 lg:h-12 text-sm sm:text-base"
                     onClick={() => {
                       setDetailsOpen(false);
                       handleOpenForm(viewingAccount);
