@@ -65,6 +65,7 @@ import {
   FlattendUser,
   UserAccountDialogProps,
 } from "@/lib/interfaces";
+import RolePermissionsDialog from "./PermissionsDialog";
 
 export default function UserAccountDialog({
   open,
@@ -88,6 +89,11 @@ export default function UserAccountDialog({
   const [editingAccount, setEditingAccount] = useState<FlattendUser | null>(
     null,
   );
+
+  // Role Permissions Dialog State
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [selectedUserForPermissions, setSelectedUserForPermissions] =
+    useState<FlattendUser | null>(null);
 
   // Form state - using string for all inputs to avoid null issues
   const [formData, setFormData] = useState({
@@ -193,6 +199,11 @@ export default function UserAccountDialog({
   const handleViewDetails = (account: FlattendUser) => {
     setViewingAccount(account);
     setDetailsOpen(true);
+  };
+
+  const handleOpenPermissions = (account: FlattendUser) => {
+    setSelectedUserForPermissions(account);
+    setPermissionsDialogOpen(true);
   };
 
   const handleOpenForm = (account?: FlattendUser) => {
@@ -531,7 +542,10 @@ export default function UserAccountDialog({
                                   <Pencil className="w-4 h-4 mr-2 text-[#2B3A9F]" />
                                   Edit Account
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-slate-700 cursor-pointer hover:bg-[#2B3A9F]/5 hover:text-[#2B3A9F]">
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPermissions(account)}
+                                  className="text-slate-700 cursor-pointer hover:bg-[#2B3A9F]/5 hover:text-[#2B3A9F]"
+                                >
                                   <KeyRound className="w-4 h-4 mr-2 text-[#2B3A9F]" />
                                   Page and Section Access
                                 </DropdownMenuItem>
@@ -1278,6 +1292,26 @@ export default function UserAccountDialog({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Role Permissions Dialog - Integrated Here */}
+      <RolePermissionsDialog
+        open={permissionsDialogOpen}
+        onOpenChange={setPermissionsDialogOpen}
+        userId={selectedUserForPermissions?.user_id || ""}
+        userName={
+          selectedUserForPermissions
+            ? getFullName(selectedUserForPermissions)
+            : ""
+        }
+        onPermissionsChange={(permissions) => {
+          console.log(
+            "Permissions updated for user:",
+            selectedUserForPermissions?.user_id,
+            permissions,
+          );
+          // Here you can save permissions to your backend
+        }}
+      />
     </>
   );
 }

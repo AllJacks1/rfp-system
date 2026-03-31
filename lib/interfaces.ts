@@ -290,6 +290,46 @@ export interface PaymentMethodsDialogProps {
   onPaymentMethodsChange?: (paymentMethods: PaymentMethod[]) => void;
 }
 
+// Permission Types
+export interface PermissionAction {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface PermissionSubsection {
+  id: string;
+  name: string;
+  enabled: boolean;
+  actions?: PermissionAction[];
+  section_id?: string;
+}
+
+export interface PermissionSection {
+  id: string;
+  name: string;
+  enabled: boolean;
+  subsections?: PermissionSubsection[];
+  actions?: PermissionAction[];
+}
+
+export interface PermissionPage {
+  id: string;
+  name: string;
+  icon?: React.ReactNode;
+  enabled: boolean;
+  sections: PermissionSection[];
+}
+
+export interface RolePermissionsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+  userName: string;
+  onPermissionsChange?: (permissions: PermissionPage[]) => void;
+}
+
+
 export interface ServiceItem {
   id: number;
   name: string;

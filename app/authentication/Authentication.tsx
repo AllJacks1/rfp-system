@@ -13,6 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Permission cache interface
+interface UserPermissions {
+  permitted_pages: string[];
+  permitted_sections: string[];
+  permitted_subsections: string[];
+  permitted_actions: string[];
+}
+
 export default function Authentication() {
   const supabase = createClient();
   const router = useRouter();
@@ -54,7 +62,28 @@ export default function Authentication() {
         throw new Error("Internal user record not found");
       }
 
-      // 3️⃣ Store in Supabase session metadata (for server components)
+      // 3️⃣ Fetch user permissions
+      const { data: permissionsData, error: permError } = await supabase
+        .from("user_permissions")
+        .select(
+          "permitted_pages, permitted_sections, permitted_subsections, permitted_actions",
+        )
+        .eq("user_id", userData.user_id)
+        .single();
+
+      // Build permissions object (empty arrays if no permissions found)
+      const userPermissions: UserPermissions = {
+        permitted_pages: permissionsData?.permitted_pages || [],
+        permitted_sections: permissionsData?.permitted_sections || [],
+        permitted_subsections: permissionsData?.permitted_subsections || [],
+        permitted_actions: permissionsData?.permitted_actions || [],
+      };
+
+      if (permError && permError.code !== "PGRST116") {
+        console.warn("Permissions fetch warning:", permError.message);
+      }
+
+      // 4️⃣ Store in Supabase session metadata (for server components)
       await supabase.auth.updateUser({
         data: {
           user_id: userData.user_id,
@@ -62,10 +91,19 @@ export default function Authentication() {
         },
       });
 
-      // 4️⃣ Cache locally for client components
-      localStorage.setItem("userProfile", JSON.stringify(userData));
+      // 5️⃣ Cache locally for client components
+      const cacheData = {
+        profile: userData,
+        permissions: userPermissions,
+      };
 
-      // 5️⃣ Redirect
+      if (rememberMe) {
+        localStorage.setItem("userCache", JSON.stringify(cacheData));
+      } else {
+        sessionStorage.setItem("userCache", JSON.stringify(cacheData));
+      }
+
+      // 6️⃣ Redirect
       router.push("/home");
       router.refresh();
     } catch (err: any) {
