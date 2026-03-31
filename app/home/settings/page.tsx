@@ -1,7 +1,14 @@
 import Settings from "@/app/components/settings/Settings";
-import { Department, FlattendUser, UserAssignmentRow } from "@/lib/interfaces";
+import {
+  CreateUserPayload,
+  Department,
+  FlattendUser,
+  UserAssignmentRow,
+} from "@/lib/interfaces";
+import { getSupabaseAdmin} from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 /* ================================
    USERS
@@ -199,6 +206,7 @@ async function getRoles(supabase: SupabaseClient) {
 ================================ */
 
 async function getDesignations(supabase: SupabaseClient) {
+  "use server";
   const { data, error } = await supabase
     .from("designations")
     .select("designation_id, name, scope")
@@ -210,6 +218,232 @@ async function getDesignations(supabase: SupabaseClient) {
   }
 
   return data || [];
+}
+
+export async function createUserAction(payload: CreateUserPayload) {
+  "use server";
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const {
+    email,
+    password,
+    username,
+    first_name,
+    middle_name,
+    last_name,
+    mobile_number,
+    address,
+    birthday,
+    sex,
+    company_id,
+    branch_id,
+    department_id,
+    designation_id,
+    role_id,
+  } = payload;
+
+  let auth_user_id: string | null = null;
+  let user_id: string | null = null;
+
+  try {
+    /* ================================
+       1. CREATE AUTH USER
+    ================================= */
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+    if (authError) throw new Error(authError.message);
+
+    auth_user_id = authData.user.id;
+
+    /* ================================
+       2. INSERT INTO public.users
+    ================================= */
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from("users")
+      .insert([
+        {
+          username,
+          first_name,
+          middle_name: middle_name || null,
+          last_name,
+          email,
+          mobile_number: mobile_number || null,
+          address: address || null,
+          birthday: birthday || null,
+          sex: sex || null,
+          auth_user_id,
+        },
+      ])
+      .select()
+      .single();
+
+    if (userError) throw new Error(userError.message);
+
+    user_id = userData.user_id;
+
+    /* ================================
+       3. INSERT INTO user_assignments
+    ================================= */
+    const { error: assignError } = await supabaseAdmin
+      .from("user_assignments")
+      .insert([
+        {
+          user_id,
+          company_id,
+          branch_id,
+          department_id,
+          designation_id,
+          role_id,
+        },
+      ]);
+
+    if (assignError) throw new Error(assignError.message);
+
+    /* ================================
+       4. REVALIDATE
+    ================================= */
+    revalidatePath("/settings");
+
+    return userData;
+  } catch (error: unknown) {
+    let errorMessage = "Failed to create user";
+    if (error instanceof Error) {
+      console.error("Create user failed:", error.message);
+      errorMessage = error.message;
+    } else {
+      console.error("Create user failed:", error);
+    }
+
+    /* ================================
+       🔁 ROLLBACK LOGIC
+    ================================= */
+
+    // If assignment failed → delete user + auth
+    if (user_id) {
+      await supabaseAdmin.from("users").delete().eq("user_id", user_id);
+    }
+
+    // If user insert failed → delete auth
+    if (auth_user_id) {
+      await supabaseAdmin.auth.admin.deleteUser(auth_user_id);
+    }
+
+    throw new Error(errorMessage);
+  }
+}
+
+export async function updateUserAction(payload: CreateUserPayload & { user_id: string }) {
+  "use server";
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const {
+    user_id,
+    email,
+    password, // optional
+    username,
+    first_name,
+    middle_name,
+    last_name,
+    mobile_number,
+    address,
+    birthday,
+    sex,
+    company_id,
+    branch_id,
+    department_id,
+    designation_id,
+    role_id,
+  } = payload;
+
+  try {
+    /* ================================
+       1. GET AUTH USER ID
+    ================================= */
+    const { data: existingUser, error: fetchError } = await supabaseAdmin
+      .from("users")
+      .select("auth_user_id")
+      .eq("user_id", user_id)
+      .single();
+
+    if (fetchError) throw new Error(fetchError.message);
+
+    const auth_user_id = existingUser.auth_user_id;
+
+    /* ================================
+       2. UPDATE AUTH (optional)
+    ================================= */
+    if (auth_user_id && (email || password)) {
+      const { error: authError } =
+        await supabaseAdmin.auth.admin.updateUserById(auth_user_id, {
+          email,
+          password: password || undefined,
+        });
+
+      if (authError) throw new Error(authError.message);
+    }
+
+    /* ================================
+       3. UPDATE public.users
+    ================================= */
+    const { data: updatedUser, error: userError } = await supabaseAdmin
+      .from("users")
+      .update({
+        username,
+        first_name,
+        middle_name: middle_name || null,
+        last_name,
+        email,
+        mobile_number: mobile_number || null,
+        address: address || null,
+        birthday: birthday || null,
+        sex: sex || null,
+      })
+      .eq("user_id", user_id)
+      .select()
+      .single();
+
+    if (userError) throw new Error(userError.message);
+
+    /* ================================
+       4. UPDATE user_assignments
+    ================================= */
+    const { error: assignError } = await supabaseAdmin
+      .from("user_assignments")
+      .update({
+        company_id,
+        branch_id,
+        department_id,
+        designation_id,
+        role_id,
+      })
+      .eq("user_id", user_id);
+
+    if (assignError) throw new Error(assignError.message);
+
+    /* ================================
+       5. REVALIDATE
+    ================================= */
+    revalidatePath("/settings");
+
+    return updatedUser;
+  } catch (error: unknown) {
+    let errorMessage = "Failed to update user";
+
+    if (error instanceof Error) {
+      console.error("Update user failed:", error.message);
+      errorMessage = error.message;
+    } else {
+      console.error("Update user failed:", error);
+    }
+
+    throw new Error(errorMessage);
+  }
 }
 
 /* ================================
@@ -238,6 +472,8 @@ export default async function SettingsPage() {
         department={departments}
         roles={roles}
         designations={designations}
+        onCreate={createUserAction}
+        onEdit={updateUserAction}
       />
     </div>
   );

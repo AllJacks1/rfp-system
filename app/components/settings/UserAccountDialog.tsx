@@ -48,6 +48,7 @@ import {
   MapPin,
   User,
   Save,
+  Lock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -74,6 +75,8 @@ export default function UserAccountDialog({
   departments,
   designations,
   roles,
+  onCreate,
+  onEdit,
 }: UserAccountDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [accounts, setAccounts] = useState(users);
@@ -101,7 +104,15 @@ export default function UserAccountDialog({
     department_id: "",
     designation_id: "",
     role_id: "",
+    password: "",
+    new_password: "",
+    confirm_password: "",
   });
+
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Cascading options state
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
@@ -141,13 +152,13 @@ export default function UserAccountDialog({
     if (formData.company_id) {
       const companyId = parseInt(formData.company_id);
       const filteredBranches = branches.filter(
-        (b) => b.company?.company_id === companyId.toString(),
+        (b) => b.company?.company_id.toString() === companyId.toString(),
       );
       setAvailableBranches(filteredBranches);
       // Reset branch and department if company changes
       if (
         !editingAccount ||
-        editingAccount.company_id !== companyId.toString()
+        editingAccount.company_id.toString() !== companyId.toString()
       ) {
         setFormData((prev) => ({ ...prev, branch_id: "", department_id: "" }));
         setAvailableDepartments([]);
@@ -163,11 +174,14 @@ export default function UserAccountDialog({
     if (formData.branch_id) {
       const branchId = parseInt(formData.branch_id);
       const filteredDepartments = departments.filter(
-        (d) => d.branch_id === branchId.toString(),
+        (d) => d.branch_id?.toString() === branchId.toString(),
       );
       setAvailableDepartments(filteredDepartments);
       // Reset department if branch changes (and not editing)
-      if (!editingAccount || editingAccount.branch_id !== branchId.toString()) {
+      if (
+        !editingAccount ||
+        editingAccount.branch_id?.toString() !== branchId.toString()
+      ) {
         setFormData((prev) => ({ ...prev, department_id: "" }));
       }
     } else {
@@ -198,6 +212,9 @@ export default function UserAccountDialog({
         department_id: account.department_id.toString(),
         designation_id: account.designation_id.toString(),
         role_id: account.role_id.toString(),
+        password: "",
+        new_password: "",
+        confirm_password: "",
       });
       // Pre-populate cascading options
       setAvailableBranches(
@@ -222,6 +239,9 @@ export default function UserAccountDialog({
         department_id: "",
         designation_id: "",
         role_id: "",
+        password: "",
+        new_password: "",
+        confirm_password: "",
       });
       setAvailableBranches([]);
       setAvailableDepartments([]);
@@ -246,78 +266,92 @@ export default function UserAccountDialog({
       department_id: "",
       designation_id: "",
       role_id: "",
+      password: "",
+      new_password: "",
+      confirm_password: "",
     });
     setAvailableBranches([]);
     setAvailableDepartments([]);
+    setShowPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const company = companies.find((c) => c.company_id === formData.company_id);
-    const branch = branches.find((b) => b.branch_id === formData.branch_id);
-    const department = departments.find(
-      (d) => d.department_id === formData.department_id,
-    );
-    const designation = designations.find(
-      (d) => d.designation_id === parseInt(formData.designation_id),
-    );
-    const role = roles.find((r) => r.role_id === formData.role_id);
+    try {
+      if (!editingAccount) {
+        // Validate password for new account
+        if (!formData.password) {
+          alert("Password is required");
+          return;
+        }
 
-    if (editingAccount) {
-      setAccounts((prev) =>
-        prev.map((a) =>
-          a.user_id === editingAccount.user_id
-            ? {
-                ...a,
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                middle_name: formData.middle_name || null,
-                email: formData.email,
-                mobile_number: formData.mobile_number || null,
-                address: formData.address || null,
-                birthday: formData.birthday || null,
-                sex: formData.sex || null,
-                company_id: formData.company_id,
-                company_name: company?.name || a.company_name,
-                branch_id: formData.branch_id,
-                branch_location: branch?.location || a.branch_location,
-                department_id: formData.department_id,
-                department_name: department?.name || a.department_name,
-                designation_id: formData.designation_id,
-                designation_name: designation?.name || a.designation_name,
-                role_id: formData.role_id,
-                role_name: role?.name || a.role_name,
-              }
-            : a,
-        ),
-      );
-    } else {
-      const newAccount: FlattendUser = {
-        user_id: "1",
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        middle_name: formData.middle_name || null,
-        email: formData.email,
-        mobile_number: formData.mobile_number || null,
-        address: formData.address || null,
-        birthday: formData.birthday || null,
-        sex: formData.sex || null,
-        company_id: formData.company_id,
-        company_name: company?.name || "",
-        branch_id: formData.branch_id,
-        branch_location: branch?.location || "",
-        department_id: formData.department_id,
-        department_name: department?.name || "",
-        designation_id: formData.designation_id,
-        designation_name: designation?.name || "",
-        role_id: formData.role_id,
-        role_name: role?.name || "",
-      };
-      setAccounts((prev) => [...prev, newAccount]);
+        if (onCreate) {
+          await onCreate({
+            email: formData.email,
+            password: formData.password,
+            username: formData.email,
+            first_name: formData.first_name,
+            middle_name: formData.middle_name,
+            last_name: formData.last_name,
+            mobile_number: formData.mobile_number,
+            address: formData.address,
+            birthday: formData.birthday,
+            sex: formData.sex,
+            company_id: formData.company_id,
+            branch_id: formData.branch_id,
+            department_id: formData.department_id,
+            designation_id: formData.designation_id,
+            role_id: formData.role_id,
+          });
+        }
+
+        // OPTIONAL: refresh page data
+        window.location.reload();
+      } else {
+        if (!onEdit || !editingAccount) return;
+
+        // Validate password if provided
+        if (formData.new_password || formData.confirm_password) {
+          if (formData.new_password !== formData.confirm_password) {
+            alert("New password and confirm password do not match");
+            return;
+          }
+        }
+
+        await onEdit({
+          user_id: editingAccount.user_id,
+
+          email: formData.email,
+          password: formData.new_password || "",
+          username: formData.email,
+
+          first_name: formData.first_name,
+          middle_name: formData.middle_name,
+          last_name: formData.last_name,
+          mobile_number: formData.mobile_number,
+          address: formData.address,
+          birthday: formData.birthday,
+          sex: formData.sex,
+
+          company_id: formData.company_id,
+          branch_id: formData.branch_id,
+          department_id: formData.department_id,
+          designation_id: formData.designation_id,
+          role_id: formData.role_id,
+        });
+
+        // OPTIONAL refresh
+        window.location.reload();
+      }
+
+      handleCloseForm();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create user");
     }
-
-    handleCloseForm();
   };
 
   const handleDeactivate = (user_id: string) => {
@@ -665,7 +699,7 @@ export default function UserAccountDialog({
                     </h3>
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div className="flex items-center gap-3 p-2.5 sm:p-3 lg:p-4 bg-slate-50 rounded-lg">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/10 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-[#2B3A9F]/100 flex items-center justify-center shrink-0">
                           <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[#2B3A9F]" />
                         </div>
                         <div>
@@ -934,6 +968,113 @@ export default function UserAccountDialog({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Password Section - Different for Create vs Edit */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                <Lock className="w-4 h-4 text-[#2B3A9F]" />
+                {editingAccount ? "Change Password (Optional)" : "Set Password"}
+              </h3>
+
+              {!editingAccount ? (
+                // Create Mode: Single required password field
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-slate-700">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                      className="pl-10 pr-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
+                      required={!editingAccount}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Edit Mode: New password and confirm password (optional)
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new_password" className="text-slate-700">
+                      New Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="new_password"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="Leave blank to keep current password"
+                        value={formData.new_password}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            new_password: e.target.value,
+                          }))
+                        }
+                        className="pl-10 pr-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="confirm_password"
+                      className="text-slate-700"
+                    >
+                      Confirm New Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="confirm_password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm new password"
+                        value={formData.confirm_password}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            confirm_password: e.target.value,
+                          }))
+                        }
+                        className="pl-10 pr-10 border-slate-200 focus:border-[#2B3A9F] focus:ring-[#2B3A9F]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Organizational Assignment Section */}

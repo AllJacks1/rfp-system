@@ -40,6 +40,8 @@ const Settings = ({
   department,
   roles,
   designations,
+  onCreate,
+  onEdit,
 }: SettingsPageProps) => {
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
@@ -154,6 +156,8 @@ const Settings = ({
         roles={roles}
         open={accountDialogOpen}
         onOpenChange={setAccountDialogOpen}
+        onCreate={onCreate}
+        onEdit={onEdit}
       />
       <CompanySettingsDialog
         companies={companies}

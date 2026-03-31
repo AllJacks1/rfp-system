@@ -87,6 +87,10 @@ export interface SettingsPageProps {
   department: Department[];
   roles: Role[];
   designations: Designation[];
+  onCreate?: (payload: CreateUserPayload) => Promise<void> | void;
+  onEdit?: (
+    payload: CreateUserPayload & { user_id: string },
+  ) => Promise<void> | void;
 }
 
 export interface CompanySettingsDialogProps {
@@ -171,6 +175,10 @@ export interface UserAccountDialogProps {
   departments: Department[];
   designations: Designation[];
   roles: Role[];
+  onCreate?: (payload: CreateUserPayload) => Promise<void> | void;
+  onEdit?: (
+    payload: CreateUserPayload & { user_id: string },
+  ) => Promise<void> | void;
 }
 
 export interface Account {
@@ -293,13 +301,13 @@ export interface ServiceItem {
 }
 
 export interface CreateServiceRequestFormProps {
-  types: Type[],
-  companies: Company[],
-  departments: Department[],
-  vehicles: Vehicle[],
-  vendors: Vendor[],
-  paymentMethods: PaymentMethod[],
-  units: Unit[],
+  types: Type[];
+  companies: Company[];
+  departments: Department[];
+  vehicles: Vehicle[];
+  vendors: Vendor[];
+  paymentMethods: PaymentMethod[];
+  units: Unit[];
   module: string;
 }
 
@@ -448,7 +456,6 @@ export const colors = {
   },
 };
 
-
 export const statusConfig: Record<
   string,
   {
@@ -509,14 +516,14 @@ export interface ServiceRequestPageProps {
 }
 
 export interface CreatePurchaseRequestFormProps {
-  types: Type[],
-  companies: Company[],
-  departments: Department[],
-  vehicles: Vehicle[],
-  vendors: Vendor[],
-  paymentMethods: PaymentMethod[],
-  units: Unit[],
-  module: string,
+  types: Type[];
+  companies: Company[];
+  departments: Department[];
+  vehicles: Vehicle[];
+  vendors: Vendor[];
+  paymentMethods: PaymentMethod[];
+  units: Unit[];
+  module: string;
 }
 
 export interface PurchaseItem {
@@ -535,7 +542,7 @@ export interface PurchaseRequestPageProps {
 }
 
 export interface RequestForPaymentProps {
-  orders: Order[]
+  orders: Order[];
   rfps: RequestForPaymentInterface[];
   onApprove?: (id: string) => Promise<void> | void;
   onReject?: (id: string) => Promise<void> | void;
@@ -648,3 +655,21 @@ export type LiquidationInterface = {
   approved_date: string | null;
   approved_by: string | null;
 };
+
+export interface CreateUserPayload {
+  email: string;
+  password: string;
+  username: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  mobile_number: string;
+  address: string;
+  birthday: string;
+  sex: string;
+  company_id: string;
+  branch_id: string;
+  department_id: string;
+  designation_id: string;
+  role_id: string;
+}
