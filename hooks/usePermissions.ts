@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 interface UserPermissions {
   permitted_pages: string[];
@@ -28,15 +29,15 @@ interface UsePermissionsReturn {
   hasSectionAccess: (sectionId: string) => boolean;
   hasSubsectionAccess: (subsectionId: string) => boolean;
   hasAction: (actionId: string) => boolean;
-  refreshPermissions: () => void;
+  refreshPermissions: () => Promise<void>;
   clearPermissions: () => void;
 }
 
 export function usePermissions(): UsePermissionsReturn {
-  // Initialize from cache immediately
+  const supabase = createClient();
+
   const [permissions, setPermissions] = useState<UserPermissions | null>(() => {
     if (typeof window === "undefined") return null;
-    
     try {
       const cached = localStorage.getItem("userCache") || sessionStorage.getItem("userCache");
       if (cached) {
@@ -51,68 +52,68 @@ export function usePermissions(): UsePermissionsReturn {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check if running on client
-  const isClient = typeof window !== "undefined";
+  const hasPageAccess = useCallback((id: string) => permissions?.permitted_pages.includes(id) ?? false, [permissions]);
+  const hasSectionAccess = useCallback((id: string) => permissions?.permitted_sections.includes(id) ?? false, [permissions]);
+  const hasSubsectionAccess = useCallback((id: string) => permissions?.permitted_subsections.includes(id) ?? false, [permissions]);
+  const hasAction = useCallback((id: string) => permissions?.permitted_actions.includes(id) ?? false, [permissions]);
 
-  // Permission check functions - memoized with useCallback
-  const hasPageAccess = useCallback((pageId: string): boolean => {
-    if (!permissions) return false;
-    return permissions.permitted_pages.includes(pageId);
-  }, [permissions]);
-
-  const hasSectionAccess = useCallback((sectionId: string): boolean => {
-    if (!permissions) return false;
-    return permissions.permitted_sections.includes(sectionId);
-  }, [permissions]);
-
-  const hasSubsectionAccess = useCallback((subsectionId: string): boolean => {
-    if (!permissions) return false;
-    return permissions.permitted_subsections.includes(subsectionId);
-  }, [permissions]);
-
-  const hasAction = useCallback((actionId: string): boolean => {
-    if (!permissions) return false;
-    return permissions.permitted_actions.includes(actionId);
-  }, [permissions]);
-
-  // Refresh permissions from storage
-  const refreshPermissions = useCallback(() => {
-    if (!isClient) return;
-
+  const refreshPermissions = useCallback(async () => {
+    if (typeof window === "undefined") return;
     setIsLoading(true);
+
     try {
       const cached = localStorage.getItem("userCache") || sessionStorage.getItem("userCache");
-      if (cached) {
-        const parsed: UserCache = JSON.parse(cached);
-        setPermissions(parsed.permissions);
+      if (!cached) return;
+
+      const parsed: UserCache = JSON.parse(cached);
+
+      const { data: permData, error } = await supabase
+        .from("user_permissions")
+        .select("permitted_pages, permitted_sections, permitted_subsections, permitted_actions")
+        .eq("user_id", parsed.profile.user_id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.warn("Error fetching permissions:", error.message);
       }
-    } catch (error) {
-      console.error("Error refreshing permissions:", error);
+
+      const latestPermissions: UserPermissions = {
+        permitted_pages: permData?.permitted_pages || [],
+        permitted_sections: permData?.permitted_sections || [],
+        permitted_subsections: permData?.permitted_subsections || [],
+        permitted_actions: permData?.permitted_actions || [],
+      };
+
+      setPermissions(latestPermissions);
+
+      const updatedCache: UserCache = {
+        ...parsed,
+        permissions: latestPermissions,
+      };
+
+      if (localStorage.getItem("userCache")) {
+        localStorage.setItem("userCache", JSON.stringify(updatedCache));
+      } else {
+        sessionStorage.setItem("userCache", JSON.stringify(updatedCache));
+      }
+    } catch (err) {
+      console.error("Error refreshing permissions:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [isClient]);
+  }, [supabase]);
 
-  // Clear permissions (e.g., on logout)
-  const clearPermissions = useCallback(() => {
-    setPermissions(null);
-  }, []);
+  const clearPermissions = useCallback(() => setPermissions(null), []);
 
-  // Listen for storage changes (multi-tab support)
   useEffect(() => {
-    if (!isClient) return;
-
+    if (typeof window === "undefined") return;
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "userCache" || e.key === "userCache") {
-        refreshPermissions();
-      }
+      if (e.key === "userCache") refreshPermissions();
     };
-
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, [isClient, refreshPermissions]);
+  }, [refreshPermissions]);
 
-  // Single return statement with all functions
   return {
     permissions,
     isLoading,
@@ -125,41 +126,34 @@ export function usePermissions(): UsePermissionsReturn {
   };
 }
 
-// Helper hook to get user profile
+// ---------------------
+// Profile Hook
 export function useUserProfile(): UserProfile | null {
   const [profile, setProfile] = useState<UserProfile | null>(() => {
     if (typeof window === "undefined") return null;
-    
     try {
       const cached = localStorage.getItem("userCache") || sessionStorage.getItem("userCache");
       if (cached) {
         const parsed: UserCache = JSON.parse(cached);
         return parsed.profile;
       }
-    } catch (error) {
-      console.error("Error parsing profile cache:", error);
+    } catch (err) {
+      console.error("Error parsing profile cache:", err);
     }
     return null;
   });
-
   return profile;
 }
 
-// Combined hook for both profile and permissions
-export function useUserCache(): {
-  profile: UserProfile | null;
-  permissions: UserPermissions | null;
-  isLoading: boolean;
-  refresh: () => void;
-  clear: () => void;
-} {
+// ---------------------
+// Combined Hook
+export function useUserCache() {
   const permissionsData = usePermissions();
   const profile = useUserProfile();
 
-  const refresh = useCallback(() => {
-    permissionsData.refreshPermissions();
-    // Profile would refresh here too if needed
-    window.location.reload(); // Simple refresh approach
+  const refresh = useCallback(async () => {
+    await permissionsData.refreshPermissions();
+    // If you need to fetch profile from server, do it here
   }, [permissionsData]);
 
   const clear = useCallback(() => {

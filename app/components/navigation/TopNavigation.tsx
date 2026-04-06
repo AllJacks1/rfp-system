@@ -34,6 +34,7 @@ import Image from "next/image";
 import { TopNavigationProps } from "@/lib/interfaces";
 import Notifications from "./Notifications";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLogout } from "@/hooks/useLogout";
 
 type PermissionType = "page" | "section" | "subsection" | "action";
 
@@ -156,6 +157,7 @@ export default function TopNavigation({
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { logout } = useLogout();
 
   const { hasPageAccess, hasSectionAccess, hasSubsectionAccess, isLoading } =
     usePermissions();
@@ -455,7 +457,10 @@ export default function TopNavigation({
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="text-red-600">
+              <DropdownMenuItem
+                onClick={logout}
+                className="text-red-600 cursor-pointer flex items-center"
+              >
                 <LogOut className="h-4 w-4 mr-2" />
                 Log out
               </DropdownMenuItem>

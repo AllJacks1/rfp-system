@@ -47,6 +47,7 @@ import {
   RequestForPaymentInterface,
   RequestForPaymentProps,
 } from "@/lib/interfaces";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function RequestForPayment({
   rfps,
@@ -69,6 +70,13 @@ export default function RequestForPayment({
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const router = useRouter();
+
+  const { permissions, hasAction } = usePermissions();
+  const canApproveReject = hasAction("approve-reject-rfp-emp");
+
+  console.log("User permissions in RFP component:", JSON.stringify(permissions, null, 2));
+
+  console.log(canApproveReject ? "User can approve/reject RFPs" : "User cannot approve/reject RFPs");
 
   const printContentRef = useRef<HTMLDivElement>(null);
 
@@ -443,28 +451,29 @@ export default function RequestForPayment({
               View
             </Button>
             {/* ✅ Conditional Approve/Reject buttons - exclude liquidated */}
-            {(row.status === "for approval" || row.status === "submitted") && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleActionClick(row, "approved")}
-                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
-                >
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleActionClick(row, "rejected")}
-                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
-                >
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  Reject
-                </Button>
-              </>
-            )}
+            {canApproveReject &&
+              (row.status === "for approval" || row.status === "submitted") && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleActionClick(row, "approved")}
+                    className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
+                  >
+                    <Check className="h-3.5 w-3.5 mr-1.5" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleActionClick(row, "rejected")}
+                    className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Reject
+                  </Button>
+                </>
+              )}
             {/* Optional: Add a liquidation action for approved RFPs */}
             {row.status === "approved" && (
               <Button
@@ -761,7 +770,8 @@ export default function RequestForPayment({
               Print / PDF
             </Button>
             {/* ✅ Also add Approve/Reject in View Dialog footer */}
-            {selectedRfp &&
+            {canApproveReject &&
+              selectedRfp &&
               (selectedRfp.status === "for approval" ||
                 selectedRfp.status === "submitted") && (
                 <>
