@@ -79,6 +79,8 @@ export default function Authentication() {
         permitted_actions: permissionsData?.permitted_actions || [],
       };
 
+      console.log("Fetched permissions:", JSON.stringify(userPermissions, null, 2));
+
       if (permError && permError.code !== "PGRST116") {
         console.warn("Permissions fetch warning:", permError.message);
       }
