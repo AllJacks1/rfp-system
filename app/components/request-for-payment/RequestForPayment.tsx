@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,12 +71,24 @@ export default function RequestForPayment({
   const [isRejecting, setIsRejecting] = useState(false);
   const router = useRouter();
 
-  const { permissions, hasAction } = usePermissions();
-  const canApproveReject = hasAction("approve-reject-rfp-emp");
+  const { hasAction } = usePermissions();
+  const pathname = usePathname();
 
-  console.log("User permissions in RFP component:", JSON.stringify(permissions, null, 2));
+  let currentModule: "employee" | "finance" | null = null;
+  if (pathname.startsWith("/home/employee-portal/requests")) {
+    currentModule = "employee";
+  } else if (pathname.startsWith("/home/finance")) {
+    currentModule = "finance";
+  }
 
-  console.log(canApproveReject ? "User can approve/reject RFPs" : "User cannot approve/reject RFPs");
+  const moduleActions: Record<"employee" | "finance", string[]> = {
+    employee: ["approve-reject-rfp-emp"],
+    finance: ["approve-reject-rfp-fin"],
+  };
+
+  const canApproveReject =
+    currentModule !== null &&
+    moduleActions[currentModule].some((action) => hasAction(action));
 
   const printContentRef = useRef<HTMLDivElement>(null);
 

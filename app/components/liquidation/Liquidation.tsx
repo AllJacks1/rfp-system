@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LiquidationEntry,
@@ -46,12 +46,14 @@ import {
   LiquidationPageProps,
   RequestForPaymentInterface,
 } from "@/lib/interfaces";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Liquidation({
   rfps,
   liquidatedRFPs: initialLiquidations,
   onApprove,
   onReject,
+  module,
 }: LiquidationPageProps) {
   const [liquidations, setLiquidations] =
     useState<LiquidationInterface[]>(initialLiquidations);
@@ -68,6 +70,25 @@ export default function Liquidation({
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const router = useRouter();
+
+  const { hasAction } = usePermissions();
+  const pathname = usePathname();
+
+  let currentModule: "employee" | "finance" | null = null;
+  if (pathname.startsWith("/home/employee-portal/requests")) {
+    currentModule = "employee";
+  } else if (pathname.startsWith("/home/finance")) {
+    currentModule = "finance";
+  }
+
+  const moduleActions: Record<"employee" | "finance", string[]> = {
+    employee: ["approve-reject-liq-emp"],
+    finance: ["approve-reject-liq-fin"],
+  };
+
+  const canApproveReject =
+    currentModule !== null &&
+    moduleActions[currentModule].some((action) => hasAction(action));
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
@@ -443,29 +464,31 @@ export default function Liquidation({
               View
             </Button>
             {/* Conditional Approve/Reject buttons - only for submitted/for_liquidation status */}
-            {(row.status === "submitted" ||
-              row.status === "for_liquidation") && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleActionClick(row, "approved")}
-                  className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
-                >
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleActionClick(row, "rejected")}
-                  className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
-                >
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  Reject
-                </Button>
-              </>
-            )}
+
+            {canApproveReject &&
+              (row.status === "submitted" ||
+                row.status === "for_liquidation") && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleActionClick(row, "approved")}
+                    className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
+                  >
+                    <Check className="h-3.5 w-3.5 mr-1.5" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleActionClick(row, "rejected")}
+                    className="h-8 px-3 text-xs font-medium border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 transition-all"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Reject
+                  </Button>
+                </>
+              )}
           </div>
         )}
       />
@@ -719,7 +742,8 @@ export default function Liquidation({
               Close
             </Button>
             {/* Approve/Reject buttons in View Dialog footer */}
-            {selectedLiquidation &&
+            {canApproveReject &&
+              selectedLiquidation &&
               (selectedLiquidation.status === "submitted" ||
                 selectedLiquidation.status === "for_liquidation") && (
                 <>
