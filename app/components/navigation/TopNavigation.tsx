@@ -423,7 +423,7 @@ export default function TopNavigation({
 
         {/* RIGHT */}
         <div className="flex items-center gap-4">
-          <Notifications initialNotifications={notifications} />
+          {/* <Notifications initialNotifications={notifications} /> */}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
