@@ -31,6 +31,28 @@ async function getServiceOrders(supabase: any): Promise<Order[]> {
 
   const orders = data || [];
 
+  // Collect all order numbers to check for existing RFPs
+  const orderNumbers = orders.map((o: any) => o.order_number).filter(Boolean);
+
+  // Check which orders have RFPs
+  let rfpMap: Record<string, boolean> = {};
+  if (orderNumbers.length > 0) {
+    const { data: rfps, error: rfpError } = await supabase
+      .from("requests_for_payment")
+      .select("order_number")
+      .in("order_number", orderNumbers);
+
+    if (rfpError) {
+      console.error("Error checking RFPs:", rfpError);
+    } else {
+      // Create a map of order_number -> has_rfp
+      rfpMap = (rfps || []).reduce((acc: Record<string, boolean>, rfp: any) => {
+        acc[rfp.order_number] = true;
+        return acc;
+      }, {});
+    }
+  }
+
   // 1️⃣ Collect all file IDs from service_requests
   const allFileIds = orders
     .flatMap((o: any) => o.service_requests?.supporting_documents || [])
@@ -47,62 +69,67 @@ async function getServiceOrders(supabase: any): Promise<Order[]> {
     fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
   }
 
-  // 2️⃣ Flatten results
-  const flattened: Order[] = orders.map((o: any) => {
-    const r = o.service_requests;
+  // 2️⃣ Flatten results and FILTER OUT orders that already have RFPs
+  const flattened: Order[] = orders
+    .filter((o: any) => !rfpMap[o.order_number]) // Exclude orders with existing RFPs
+    .map((o: any) => {
+      const r = o.service_requests;
 
-    return {
-      id: o.id,
-      order_number: o.order_number,
+      return {
+        id: o.id,
+        order_number: o.order_number,
 
-      title: r?.title || "",
-      description: r?.description || "",
+        title: r?.title || "",
+        description: r?.description || "",
 
-      service_category: r?.service_category?.name || "",
-      priority_level: r?.priority_level || "",
+        service_category: r?.service_category?.name || "",
+        priority_level: r?.priority_level || "",
 
-      company: r?.company?.name || "",
-      department: r?.department?.name || "",
+        company: r?.company?.name || "",
+        department: r?.department?.name || "",
 
-      preferred_date: r?.preferred_date || "",
-      expected_completion: r?.expected_completion || "",
+        preferred_date: r?.preferred_date || "",
+        expected_completion: r?.expected_completion || "",
 
-      preferred_vendor: r?.preferred_vendor || "",
-      contact_person: r?.contact_person || "",
+        preferred_vendor: r?.preferred_vendor || "",
+        contact_person: r?.contact_person || "",
 
-      required_by: r?.required_by || "",
+        required_by: r?.required_by || "",
 
-      payment_method: r?.payment_method?.name || "",
+        payment_method: r?.payment_method?.name || "",
 
-      status: o.status,
+        status: o.status,
 
-      vehicle: r?.vehicle || null,
+        vehicle: r?.vehicle || null,
 
-      requested_by: r?.requested_by
-        ? `${r.requested_by.first_name} ${r.requested_by.last_name}`
-        : "",
+        requested_by: r?.requested_by
+          ? `${r.requested_by.first_name} ${r.requested_by.last_name}`
+          : "",
 
-      order_prepared_by: o.order_prepared_by
-        ? `${o.order_prepared_by.first_name} ${o.order_prepared_by.last_name}`
-        : "",
+        order_prepared_by: o.order_prepared_by
+          ? `${o.order_prepared_by.first_name} ${o.order_prepared_by.last_name}`
+          : "",
 
-      // convert file IDs → URLs
-      supporting_documents: (r?.supporting_documents || [])
-        .map((id: number) => fileMap[id]?.url)
-        .filter(Boolean),
+        // Check if RFP exists for this order
+        has_rfp: false, // Always false since we filtered these out
 
-      // normalize items
-      items: (r?.items || []).map((i: any) => ({
-        name: i.name,
-        description: i.description,
-        unit: i.unit,
-        quantity: String(i.quantity),
-        unitPrice: String(i.unitPrice),
-      })),
+        // convert file IDs → URLs
+        supporting_documents: (r?.supporting_documents || [])
+          .map((id: number) => fileMap[id]?.url)
+          .filter(Boolean),
 
-      journal_entries: o.journal_entries || [],
-    };
-  });
+        // normalize items
+        items: (r?.items || []).map((i: any) => ({
+          name: i.name,
+          description: i.description,
+          unit: i.unit,
+          quantity: String(i.quantity),
+          unitPrice: String(i.unitPrice),
+        })),
+
+        journal_entries: o.journal_entries || [],
+      };
+    });
 
   return flattened;
 }
@@ -135,9 +162,31 @@ async function getPurchaseOrders(supabase: any): Promise<Order[]> {
 
   const orders = data || [];
 
-  // 1️⃣ Collect all file IDs from service_requests
+  // Collect all order numbers to check for existing RFPs
+  const orderNumbers = orders.map((o: any) => o.order_number).filter(Boolean);
+
+  // Check which orders have RFPs
+  let rfpMap: Record<string, boolean> = {};
+  if (orderNumbers.length > 0) {
+    const { data: rfps, error: rfpError } = await supabase
+      .from("requests_for_payment")
+      .select("order_number")
+      .in("order_number", orderNumbers);
+
+    if (rfpError) {
+      console.error("Error checking RFPs:", rfpError);
+    } else {
+      // Create a map of order_number -> has_rfp
+      rfpMap = (rfps || []).reduce((acc: Record<string, boolean>, rfp: any) => {
+        acc[rfp.order_number] = true;
+        return acc;
+      }, {});
+    }
+  }
+
+  // 1️⃣ Collect all file IDs from purchase_requests
   const allFileIds = orders
-    .flatMap((o: any) => o.service_requests?.supporting_documents || [])
+    .flatMap((o: any) => o.purchase_requests?.supporting_documents || [])
     .filter(Boolean);
 
   let fileMap: Record<number, any> = {};
@@ -151,62 +200,67 @@ async function getPurchaseOrders(supabase: any): Promise<Order[]> {
     fileMap = Object.fromEntries((files || []).map((f: any) => [f.file_id, f]));
   }
 
-  // 2️⃣ Flatten results
-  const flattened: Order[] = orders.map((o: any) => {
-    const r = o.purchase_requests;
+  // 2️⃣ Flatten results and FILTER OUT orders that already have RFPs
+  const flattened: Order[] = orders
+    .filter((o: any) => !rfpMap[o.order_number]) // Exclude orders with existing RFPs
+    .map((o: any) => {
+      const r = o.purchase_requests;
 
-    return {
-      id: o.id,
-      order_number: o.order_number,
+      return {
+        id: o.id,
+        order_number: o.order_number,
 
-      title: r?.title || "",
-      description: r?.description || "",
+        title: r?.title || "",
+        description: r?.description || "",
 
-      service_category: r?.purchase_category?.name || "",
-      priority_level: r?.priority_level || "",
+        service_category: r?.purchase_category?.name || "",
+        priority_level: r?.priority_level || "",
 
-      company: r?.company?.name || "",
-      department: r?.department?.name || "",
+        company: r?.company?.name || "",
+        department: r?.department?.name || "",
 
-      preferred_date: r?.preferred_date || "",
-      expected_completion: r?.expected_completion || "",
+        preferred_date: r?.preferred_date || "",
+        expected_completion: r?.expected_completion || "",
 
-      preferred_vendor: r?.preferred_vendor || "",
-      contact_person: r?.contact_person || "",
+        preferred_vendor: r?.preferred_vendor || "",
+        contact_person: r?.contact_person || "",
 
-      required_by: r?.required_by || "",
+        required_by: r?.required_by || "",
 
-      payment_method: r?.payment_method?.name || "",
+        payment_method: r?.payment_method?.name || "",
 
-      status: o.status,
+        status: o.status,
 
-      vehicle: r?.vehicle || null,
+        vehicle: r?.vehicle || null,
 
-      requested_by: r?.requested_by
-        ? `${r.requested_by.first_name} ${r.requested_by.last_name}`
-        : "",
+        requested_by: r?.requested_by
+          ? `${r.requested_by.first_name} ${r.requested_by.last_name}`
+          : "",
 
-      order_prepared_by: o.order_prepared_by
-        ? `${o.order_prepared_by.first_name} ${o.order_prepared_by.last_name}`
-        : "",
+        order_prepared_by: o.order_prepared_by
+          ? `${o.order_prepared_by.first_name} ${o.order_prepared_by.last_name}`
+          : "",
 
-      // convert file IDs → URLs
-      supporting_documents: (r?.supporting_documents || [])
-        .map((id: number) => fileMap[id]?.url)
-        .filter(Boolean),
+        // Check if RFP exists for this order
+        has_rfp: false, // Always false since we filtered these out
 
-      // normalize items
-      items: (r?.items || []).map((i: any) => ({
-        name: i.name,
-        description: i.description,
-        unit: i.unit,
-        quantity: String(i.quantity),
-        unitPrice: String(i.unitPrice),
-      })),
+        // convert file IDs → URLs
+        supporting_documents: (r?.supporting_documents || [])
+          .map((id: number) => fileMap[id]?.url)
+          .filter(Boolean),
 
-      journal_entries: o.journal_entries || [],
-    };
-  });
+        // normalize items
+        items: (r?.items || []).map((i: any) => ({
+          name: i.name,
+          description: i.description,
+          unit: i.unit,
+          quantity: String(i.quantity),
+          unitPrice: String(i.unitPrice),
+        })),
+
+        journal_entries: o.journal_entries || [],
+      };
+    });
 
   return flattened;
 }
@@ -242,10 +296,17 @@ async function approveRFP(id: string) {
 
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const approver = user?.user_metadata?.full_name;
+
   const { error } = await supabase
     .from("requests_for_payment")
     .update({
       status: "approved",
+      approved_by: approver,
       approved_date: new Date().toISOString(),
     })
     .eq("id", id);

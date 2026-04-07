@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,12 +44,22 @@ export default function Authentication() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.log("Login error:", error.message);
+        toast.error("Login failed", {
+          description: error.message || "Invalid email or password.",
+        });
+        return;
+      }
 
       const uuid = data.user?.id;
 
       if (!uuid) {
-        throw new Error("User UUID not found");
+        console.log("User UUID not found");
+        toast.error("Login failed", {
+          description: "User identification failed. Please try again.",
+        });
+        return;
       }
 
       // 2️⃣ Fetch internal user
@@ -59,7 +70,11 @@ export default function Authentication() {
         .single();
 
       if (userError || !userData) {
-        throw new Error("Internal user record not found");
+        console.log("Internal user record not found:", userError?.message);
+        toast.error("Login failed", {
+          description: "User record not found. Please contact support.",
+        });
+        return;
       }
 
       // 3️⃣ Fetch user permissions
@@ -79,19 +94,26 @@ export default function Authentication() {
         permitted_actions: permissionsData?.permitted_actions || [],
       };
 
-      console.log("Fetched permissions:", JSON.stringify(userPermissions, null, 2));
+      console.log(
+        "Fetched permissions:",
+        JSON.stringify(userPermissions, null, 2),
+      );
 
       if (permError && permError.code !== "PGRST116") {
         console.warn("Permissions fetch warning:", permError.message);
       }
 
       // 4️⃣ Store in Supabase session metadata (for server components)
-      await supabase.auth.updateUser({
+      const { error: updateError } = await supabase.auth.updateUser({
         data: {
           user_id: userData.user_id,
           full_name: `${userData.first_name} ${userData.last_name}`,
         },
       });
+
+      if (updateError) {
+        console.log("Error updating user metadata:", updateError.message);
+      }
 
       // 5️⃣ Cache locally for client components
       const cacheData = {
@@ -105,12 +127,19 @@ export default function Authentication() {
         sessionStorage.setItem("userCache", JSON.stringify(cacheData));
       }
 
-      // 6️⃣ Redirect
+      // 6️⃣ Show success toast and redirect
+      toast.success("Welcome back!", {
+        description: `Signed in as ${userData.first_name} ${userData.last_name}.`,
+      });
+
+      // 7️⃣ Redirect
       router.push("/home");
       router.refresh();
     } catch (err: any) {
-      console.error("Login error:", err.message);
-      alert(err.message);
+      console.log("Unexpected login error:", err.message);
+      toast.error("Login failed", {
+        description: "An unexpected error occurred. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }

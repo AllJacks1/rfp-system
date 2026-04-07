@@ -734,3 +734,51 @@ export interface CreateUserPayload {
   designation_id: string;
   role_id: string;
 }
+
+export interface ModuleSummary {
+  rfpTotal: number;
+  rfpPending: number;
+  rfpApproved: number;
+  rfpRejected: number;
+
+  liqTotal: number;
+  liqPending: number;
+  liqApproved: number;
+  liqRejected: number;
+
+  SOTotal: number;
+  SOPending: number;
+  SOApproved: number;
+  SORejected: number;
+
+  POTotal: number;
+  POPending: number;
+  POApproved: number;
+  PORejected: number;
+
+  SRTotal: number;
+  SRPending: number;
+  SRApproved: number;
+  SRRejected: number;
+
+  PRTotal: number;
+  PRPending: number;
+  PRApproved: number;
+  PRRejected: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: string;
+  status: string;
+  created_at: string;
+  user: string;
+}
+export interface DashboardProps {
+  moduleSummary: ModuleSummary;
+  recentActivities: RecentActivity[];
+}
+export interface HomePageClientProps {
+  moduleSummary: ModuleSummary;
+  recentActivities: RecentActivity[];
+}

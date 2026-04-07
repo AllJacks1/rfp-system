@@ -248,7 +248,7 @@ export default function Liquidation({
     },
     {
       title: "For Liquidation",
-      value: liquidations.filter((l) => l.status === "for_liquidation").length,
+      value: rfps.length,
       icon: DollarSign,
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
