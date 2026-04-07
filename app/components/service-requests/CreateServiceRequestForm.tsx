@@ -42,9 +42,11 @@ import {
   ArrowLeft,
   ChevronsUpDown,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CreateServiceRequestFormProps, ServiceItem } from "@/lib/interfaces";
 import {
   Popover,
@@ -62,6 +64,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SearchableCombobox } from "../inputs/SearchableCombobox";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function CreateServiceRequestForm({
   types,
@@ -73,6 +76,8 @@ export default function CreateServiceRequestForm({
   units,
   module,
 }: CreateServiceRequestFormProps) {
+  const router = useRouter();
+
   // === FORM STATE ===
   const [title, setTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
@@ -81,6 +86,7 @@ export default function CreateServiceRequestForm({
   const [requiredBy, setRequiredBy] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Selection states
   const [priority, setPriority] = useState<string>("");
@@ -185,7 +191,13 @@ export default function CreateServiceRequestForm({
 
   // === HANDLERS ===
   const handleAddItem = () => {
-    if (!newItem.name || !newItem.unit || newItem.quantity <= 0) return;
+    if (!newItem.name || !newItem.unit || newItem.quantity <= 0) {
+      toast.error("Cannot add item", {
+        description:
+          "Please enter the item name, select a unit, and set a quantity greater than 0.",
+      });
+      return;
+    }
 
     const item: ServiceItem = {
       id: Date.now(),
@@ -205,10 +217,21 @@ export default function CreateServiceRequestForm({
       quantity: 0,
       unitPrice: 0,
     });
+
+    toast.success("Item added", {
+      description: `${item.name} (${item.quantity} ${getUnitName(item.unit)}) added to your request.`,
+    });
   };
 
   const handleRemoveItem = (id: number) => {
+    const itemToRemove = items.find((item) => item.id === id);
     setItems(items.filter((item) => item.id !== id));
+
+    if (itemToRemove) {
+      toast.info("Item removed", {
+        description: `${itemToRemove.name} has been removed from the list.`,
+      });
+    }
   };
 
   const handleClearForm = () => {
@@ -322,10 +345,15 @@ export default function CreateServiceRequestForm({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...selectedFiles]);
-    console.log(
-      "Selected files:",
-      selectedFiles.map((f) => f.name),
-    );
+
+    if (selectedFiles.length > 0) {
+      toast.success(
+        `${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""} selected`,
+        {
+          description: "Files are ready to upload with your request.",
+        },
+      );
+    }
   };
 
   // Handler for click
@@ -338,17 +366,32 @@ export default function CreateServiceRequestForm({
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
     setFiles((prev) => [...prev, ...droppedFiles]);
+
+    if (droppedFiles.length > 0) {
+      toast.success(
+        `${droppedFiles.length} file${droppedFiles.length > 1 ? "s" : ""} added`,
+        {
+          description: "Files dropped successfully.",
+        },
+      );
+    }
   };
 
   // Remove a file
   const removeFile = (index: number) => {
+    const fileToRemove = files[index];
     setFiles((prev) => prev.filter((_, i) => i !== index));
+
+    if (fileToRemove) {
+      toast.info("File removed", {
+        description: `${fileToRemove.name} has been removed.`,
+      });
+    }
   };
 
   // === FILE UPLOAD LOGIC ===
   const uploadFiles = async () => {
     const supabase = createClient();
-
     const fileIds: string[] = [];
 
     for (const file of files) {
@@ -366,6 +409,9 @@ export default function CreateServiceRequestForm({
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
+        toast.error("Upload failed", {
+          description: `Could not upload ${file.name}. Please check your connection and try again.`,
+        });
         throw uploadError;
       }
 
@@ -378,6 +424,9 @@ export default function CreateServiceRequestForm({
 
       if (signedError) {
         console.error("Signed URL error:", signedError);
+        toast.error("File processing failed", {
+          description: "Could not generate secure link for the file.",
+        });
         throw signedError;
       }
 
@@ -397,6 +446,9 @@ export default function CreateServiceRequestForm({
 
       if (insertError) {
         console.error("Insert file error:", insertError);
+        toast.error("File save failed", {
+          description: "Could not save file information to the database.",
+        });
         throw insertError;
       }
 
@@ -407,21 +459,70 @@ export default function CreateServiceRequestForm({
     return fileIds;
   };
 
-  // === CREATE SERVICE REQUEST - Console Test Version ===
+  // === CREATE SERVICE REQUEST ===
   const createServiceRequest = useCallback(async () => {
+    // Validation checks with clear error messages
+    if (!title.trim()) {
+      toast.error("Service title is required", {
+        description:
+          "Please enter a descriptive title for this service request.",
+      });
+      return;
+    }
+    if (!category) {
+      toast.error("Service category is required", {
+        description: "Please select a category from the dropdown.",
+      });
+      return;
+    }
+    if (!priority) {
+      toast.error("Priority level is required", {
+        description: "Please select High, Medium, or Low priority.",
+      });
+      return;
+    }
+    if (!company) {
+      toast.error("Company is required", {
+        description: "Please select the company requesting this service.",
+      });
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("At least one item is required", {
+        description: "Please add materials or labor items to your request.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading("Submitting your service request...", {
+      description: "This may take a moment if files are being uploaded.",
+    });
+
     const supabase = createClient();
 
     const storedUser = localStorage.getItem("userProfile");
     const user = storedUser ? JSON.parse(storedUser) : null;
 
     if (!user?.user_id) {
-      console.error("User not authenticated");
+      toast.error("Authentication required", {
+        description: "Please sign in to submit a service request.",
+        id: toastId,
+      });
+      setIsSubmitting(false);
       return;
     }
 
     try {
       // 1️⃣ Upload files first
-      const fileIds = await uploadFiles();
+      let fileIds: string[] = [];
+      if (files.length > 0) {
+        toast.loading(
+          `Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`,
+          { id: toastId },
+        );
+        fileIds = await uploadFiles();
+      }
 
       // 2️⃣ Build payload
       const payload = {
@@ -449,10 +550,8 @@ export default function CreateServiceRequestForm({
         supporting_documents: fileIds,
       };
 
-      console.log("=== SERVICE REQUEST PAYLOAD ===");
-      console.log(JSON.stringify(payload, null, 2));
-
       // 3️⃣ Insert service request
+      toast.loading("Finalizing your request...", { id: toastId });
       const { data, error } = await supabase
         .from("service_requests")
         .insert([payload])
@@ -461,12 +560,23 @@ export default function CreateServiceRequestForm({
 
       if (error) throw error;
 
-      console.log("Created Service Request:", data);
-
-      alert(`Service Request Created: ${data.request_number}`);
+      toast.success("Service request submitted successfully", {
+        description: `Request #${data.request_number} has been created and sent for approval.`,
+        id: toastId,
+        duration: 6000,
+      });
+      router.push(`/home/${module}/service-requests`);
     } catch (err: any) {
       console.error("Create Service Request Error:", err);
-      alert(err.message || "Something went wrong");
+      toast.error("Failed to submit request", {
+        description:
+          err.message ||
+          "An unexpected error occurred. Please try again or contact support.",
+        id: toastId,
+        duration: 6000,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
     title,
@@ -483,14 +593,20 @@ export default function CreateServiceRequestForm({
     paymentMethod,
     serviceDescription,
     items,
+    files,
   ]);
 
   // === VALIDATION ===
   const isSubmitDisabled = useMemo(() => {
     return (
-      !title.trim() || !category || !priority || !company || items.length === 0
+      !title.trim() ||
+      !category ||
+      !priority ||
+      !company ||
+      items.length === 0 ||
+      isSubmitting
     );
-  }, [title, category, priority, company, items]);
+  }, [title, category, priority, company, items, isSubmitting]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -1275,8 +1391,8 @@ export default function CreateServiceRequestForm({
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono text-slate-600">
-                            `{formatCurrency(item.unitPrice)} /{" "}
-                            {getUnitName(item.unit)}`
+                            {formatCurrency(item.unitPrice)} /{" "}
+                            {getUnitName(item.unit)}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold text-slate-900">
                             {formatCurrency(item.total)}
@@ -1345,8 +1461,17 @@ export default function CreateServiceRequestForm({
               disabled={isSubmitDisabled}
               className="flex-1 sm:flex-none h-11 px-6 bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Submit Request
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Request
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </div>

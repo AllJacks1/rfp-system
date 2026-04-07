@@ -53,6 +53,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Account, ChartOfAccountsDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function ChartOfAccountsDialog({
   open,
@@ -100,11 +101,20 @@ export default function ChartOfAccountsDialog({
 
     if (error) {
       console.error("Error deleting account:", error);
+      toast.error("Failed to delete account", {
+        description:
+          error.message || "An error occurred while deleting the account.",
+      });
       return;
     }
 
     const newAccounts = accounts.filter((a) => a.account_id !== account_id);
     updateAccounts(newAccounts);
+
+    // Show success toast after successful deletion
+    toast.success("Account deleted successfully", {
+      description: `Account has been removed from the chart of accounts.`,
+    });
   };
 
   const handleOpenForm = (account?: Account) => {
@@ -144,11 +154,19 @@ export default function ChartOfAccountsDialog({
 
     if (error) {
       console.error("Error creating account:", error);
+      toast.error("Failed to create account", {
+        description:
+          error.message || "An error occurred while creating the account.",
+      });
       return;
     }
 
     const newAccounts = [...accounts, data];
     updateAccounts(newAccounts);
+
+    toast.success("Account created successfully", {
+      description: `${name} has been added to ${account_type}.`,
+    });
   }
 
   async function editAccount(account_type: string, name: string) {
@@ -166,6 +184,10 @@ export default function ChartOfAccountsDialog({
 
     if (error) {
       console.error("Error updating account:", error);
+      toast.error("Failed to update account", {
+        description:
+          error.message || "An error occurred while updating the account.",
+      });
       return;
     }
 
@@ -174,6 +196,10 @@ export default function ChartOfAccountsDialog({
     );
 
     updateAccounts(newAccounts);
+
+    toast.success("Account updated successfully", {
+      description: `${name} has been updated.`,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

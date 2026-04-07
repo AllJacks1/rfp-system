@@ -49,6 +49,7 @@ import {
 } from "@/lib/interfaces";
 import { PrintServiceOrder } from "../service-orders/PrintServiceOrderPage";
 import { useReactToPrint } from "react-to-print";
+import { toast } from "sonner";
 
 const calculateTotal = (items: Item[]): number => {
   return items.reduce((sum, item) => {
@@ -173,8 +174,26 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
 
       if (error) {
         console.error("Error updating status:", error);
+        toast.error("Failed to update status", {
+          description:
+            error.message || "An error occurred while updating the order.",
+        });
         return;
       }
+
+      // Determine order type label
+      const orderType = isServiceOrder ? "Service Order" : "Purchase Order";
+      const actionLabel = status === "approved" ? "approved" : "rejected";
+
+      // Show success toast with dynamic message
+      toast.success(
+        status === "approved"
+          ? `${orderType} approved successfully`
+          : `${orderType} rejected`,
+        {
+          description: `${orderType} ${order.order_number} has been ${actionLabel}.`,
+        },
+      );
 
       // Update UI
       setOrderList((prev) =>
@@ -182,6 +201,10 @@ export default function ReviewOrder({ orders, units }: ReviewOrderProps) {
       );
     } catch (err) {
       console.error("Unexpected error:", err);
+      toast.error("Unexpected error occurred", {
+        description:
+          "Please try again or contact support if the problem persists.",
+      });
     }
   }
 

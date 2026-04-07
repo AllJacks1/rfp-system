@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Company, CompanySettingsDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function CompanySettingsDialog({
   open,
@@ -83,7 +84,16 @@ export default function CompanySettingsDialog({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      toast.error("Failed to create company", {
+        description: "An error occurred while creating the company.",
+      });
+      console.log("Error creating company:", error.message || error);
+    }
+
+    toast.success("Company created successfully", {
+      description: `${companyName} has been added.`,
+    });
 
     return data;
   }
@@ -91,8 +101,9 @@ export default function CompanySettingsDialog({
   async function updateCompany(
     companyId: string,
     companyName: string,
+    previousName?: string,
   ): Promise<Company> {
-    const supabase = await createClient();
+    const supabase = createClient();
 
     const { data, error } = await supabase
       .from("companies")
@@ -101,13 +112,50 @@ export default function CompanySettingsDialog({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      toast.error("Failed to update company", {
+        description: "An error occurred while updating the company.",
+      });
+      console.log("Failed to update company:", error.message || error);
+    }
+
+    const nameChanged = previousName && previousName !== companyName;
+    toast.success("Company updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${companyName}.`
+        : `${companyName} has been updated.`,
+    });
 
     return data;
   }
 
-  const handleRemove = (id: string) => {
-    setCompanies((prev) => prev.filter((c) => c.company_id !== id));
+  const handleRemove = async (id: string) => {
+    const supabase = createClient();
+
+    // Find company name before deletion for toast message
+    const companyToDelete = companies.find((c) => c.company_id === id);
+    const companyName = companyToDelete?.name || "Company";
+
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("company_id", id);
+
+      if (error)
+        console.log("Failed to delete company:", error.message || error);
+
+      setCompanies((prev) => prev.filter((c) => c.company_id !== id));
+
+      toast.success("Company deleted successfully", {
+        description: `${companyName} has been removed.`,
+      });
+    } catch (error: any) {
+      toast.error("Failed to delete company", {
+        description:
+          error.message || "An error occurred while deleting the company.",
+      });
+    }
   };
 
   const handleOpenForm = (company?: Company) => {

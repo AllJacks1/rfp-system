@@ -49,6 +49,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { SuppliersDialogProps, Vendor } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function SuppliersDialog({
   open,
@@ -89,6 +90,10 @@ export default function SuppliersDialog({
   };
 
   const handleRemove = async (vendor_id: string) => {
+    // Find vendor details before deletion for the toast message
+    const vendorToDelete = vendors.find((v) => v.vendor_id === vendor_id);
+    const vendorName = vendorToDelete?.name || "Vendor";
+
     const { error } = await supabase
       .from("vendors")
       .delete()
@@ -96,11 +101,19 @@ export default function SuppliersDialog({
 
     if (error) {
       console.error("Error deleting vendor:", error);
+      toast.error("Failed to delete vendor", {
+        description:
+          error.message || "An error occurred while deleting the vendor.",
+      });
       return;
     }
 
     const newVendors = vendors.filter((v) => v.vendor_id !== vendor_id);
     updateVendors(newVendors);
+
+    toast.success("Vendor deleted successfully", {
+      description: `${vendorName} has been removed.`,
+    });
   };
 
   const handleOpenForm = (vendor?: Vendor) => {
@@ -141,15 +154,27 @@ export default function SuppliersDialog({
 
     if (error) {
       console.error("Error creating vendor:", error);
+      toast.error("Failed to create vendor", {
+        description:
+          error.message || "An error occurred while creating the vendor.",
+      });
       return;
     }
 
     const newVendors = [...vendors, data];
     updateVendors(newVendors);
+
+    toast.success("Vendor created successfully", {
+      description: `${formData.name} has been added with ${formData.payment_terms} payment terms.`,
+    });
   }
 
   async function updateVendor() {
     if (!editingVendor) return;
+
+    const previousName = editingVendor.name;
+    const previousContact = editingVendor.contact_person;
+    const previousTerms = editingVendor.payment_terms;
 
     const { data, error } = await supabase
       .from("vendors")
@@ -164,6 +189,10 @@ export default function SuppliersDialog({
 
     if (error) {
       console.error("Error updating vendor:", error);
+      toast.error("Failed to update vendor", {
+        description:
+          error.message || "An error occurred while updating the vendor.",
+      });
       return;
     }
 
@@ -172,6 +201,28 @@ export default function SuppliersDialog({
     );
 
     updateVendors(newVendors);
+
+    // Check what changed for detailed message
+    const nameChanged = previousName !== formData.name;
+    const contactChanged = previousContact !== formData.contact_person;
+    const termsChanged = previousTerms !== formData.payment_terms;
+
+    let description: string;
+    if (nameChanged) {
+      description = `${previousName} has been renamed to ${formData.name}.`;
+    } else if (contactChanged && termsChanged) {
+      description = `${formData.name} contact and payment terms have been updated.`;
+    } else if (contactChanged) {
+      description = `${formData.name} contact person has been updated.`;
+    } else if (termsChanged) {
+      description = `${formData.name} payment terms changed to ${formData.payment_terms}.`;
+    } else {
+      description = `${formData.name} has been updated.`;
+    }
+
+    toast.success("Vendor updated successfully", {
+      description,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -308,9 +359,7 @@ export default function SuppliersDialog({
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-slate-400 text-sm">
-                                ─
-                              </span>
+                              <span className="text-slate-400 text-sm">─</span>
                             )}
                           </TableCell>
                           <TableCell>

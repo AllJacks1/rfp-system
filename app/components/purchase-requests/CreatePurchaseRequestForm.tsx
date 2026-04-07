@@ -41,9 +41,11 @@ import {
   ArrowLeft,
   ChevronsUpDown,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CreatePurchaseRequestFormProps, PurchaseItem } from "@/lib/interfaces";
 import {
   Popover,
@@ -61,6 +63,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SearchableCombobox } from "../inputs/SearchableCombobox";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner"; // ← ADD THIS IMPORT
 
 export default function CreatePurchaseRequestForm({
   types,
@@ -72,6 +75,8 @@ export default function CreatePurchaseRequestForm({
   units,
   module,
 }: CreatePurchaseRequestFormProps) {
+  const router = useRouter();
+
   // === FORM STATE ===
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -80,6 +85,7 @@ export default function CreatePurchaseRequestForm({
   const [requiredBy, setRequiredBy] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // ← ADD LOADING STATE
 
   // Selection states
   const [priority, setPriority] = useState<string>("");
@@ -184,7 +190,13 @@ export default function CreatePurchaseRequestForm({
 
   // === HANDLERS ===
   const handleAddItem = () => {
-    if (!newItem.name || !newItem.unit || newItem.quantity <= 0) return;
+    if (!newItem.name || !newItem.unit || newItem.quantity <= 0) {
+      toast.error("Cannot add item", {
+        description:
+          "Please enter the item name, select a unit, and set a quantity greater than 0.",
+      });
+      return;
+    }
 
     const item: PurchaseItem = {
       id: Date.now(),
@@ -204,10 +216,21 @@ export default function CreatePurchaseRequestForm({
       quantity: 0,
       unitPrice: 0,
     });
+
+    toast.success("Item added", {
+      description: `${item.name} (${item.quantity} ${getUnitName(item.unit)}) added to your request.`,
+    });
   };
 
   const handleRemoveItem = (id: number) => {
+    const itemToRemove = items.find((item) => item.id === id);
     setItems(items.filter((item) => item.id !== id));
+
+    if (itemToRemove) {
+      toast.info("Item removed", {
+        description: `${itemToRemove.name} has been removed from the list.`,
+      });
+    }
   };
 
   const handleClearForm = () => {
@@ -321,6 +344,15 @@ export default function CreatePurchaseRequestForm({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...selectedFiles]);
+
+    if (selectedFiles.length > 0) {
+      toast.success(
+        `${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""} selected`,
+        {
+          description: "Files are ready to upload with your request.",
+        },
+      );
+    }
   };
 
   const handleUploadClick = () => {
@@ -331,10 +363,26 @@ export default function CreatePurchaseRequestForm({
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
     setFiles((prev) => [...prev, ...droppedFiles]);
+
+    if (droppedFiles.length > 0) {
+      toast.success(
+        `${droppedFiles.length} file${droppedFiles.length > 1 ? "s" : ""} added`,
+        {
+          description: "Files dropped successfully.",
+        },
+      );
+    }
   };
 
   const removeFile = (index: number) => {
+    const fileToRemove = files[index];
     setFiles((prev) => prev.filter((_, i) => i !== index));
+
+    if (fileToRemove) {
+      toast.info("File removed", {
+        description: `${fileToRemove.name} has been removed.`,
+      });
+    }
   };
 
   // === FILE UPLOAD ===
@@ -353,6 +401,9 @@ export default function CreatePurchaseRequestForm({
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
+        toast.error("Upload failed", {
+          description: `Could not upload ${file.name}. Please check your connection and try again.`,
+        });
         throw uploadError;
       }
 
@@ -363,6 +414,9 @@ export default function CreatePurchaseRequestForm({
 
       if (signedError) {
         console.error("Signed URL error:", signedError);
+        toast.error("File processing failed", {
+          description: "Could not generate secure link for the file.",
+        });
         throw signedError;
       }
 
@@ -374,6 +428,9 @@ export default function CreatePurchaseRequestForm({
 
       if (insertError) {
         console.error("Insert file error:", insertError);
+        toast.error("File save failed", {
+          description: "Could not save file information to the database.",
+        });
         throw insertError;
       }
 
@@ -385,17 +442,67 @@ export default function CreatePurchaseRequestForm({
 
   // === CREATE PURCHASE REQUEST ===
   const createPurchaseRequest = useCallback(async () => {
+    // Validation checks with clear error messages
+    if (!title.trim()) {
+      toast.error("Request title is required", {
+        description:
+          "Please enter a descriptive title for this purchase request.",
+      });
+      return;
+    }
+    if (!category) {
+      toast.error("Purchase category is required", {
+        description: "Please select a category from the dropdown.",
+      });
+      return;
+    }
+    if (!priority) {
+      toast.error("Priority level is required", {
+        description: "Please select High, Medium, or Low priority.",
+      });
+      return;
+    }
+    if (!company) {
+      toast.error("Company is required", {
+        description: "Please select the company requesting this purchase.",
+      });
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("At least one item is required", {
+        description: "Please add items to your purchase request.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading("Submitting your purchase request...", {
+      description: "This may take a moment if files are being uploaded.",
+    });
+
     const supabase = createClient();
     const storedUser = localStorage.getItem("userProfile");
     const user = storedUser ? JSON.parse(storedUser) : null;
 
     if (!user?.user_id) {
-      console.error("User not authenticated");
+      toast.error("Authentication required", {
+        description: "Please sign in to submit a purchase request.",
+        id: toastId,
+      });
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      const fileIds = await uploadFiles();
+      // Upload files first
+      let fileIds: string[] = [];
+      if (files.length > 0) {
+        toast.loading(
+          `Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`,
+          { id: toastId },
+        );
+        fileIds = await uploadFiles();
+      }
 
       const payload = {
         title,
@@ -416,9 +523,7 @@ export default function CreatePurchaseRequestForm({
         supporting_documents: fileIds,
       };
 
-      console.log("=== PURCHASE REQUEST PAYLOAD ===");
-      console.log(JSON.stringify(payload, null, 2));
-
+      toast.loading("Finalizing your request...", { id: toastId });
       const { data, error } = await supabase
         .from("purchase_requests")
         .insert([payload])
@@ -427,11 +532,24 @@ export default function CreatePurchaseRequestForm({
 
       if (error) throw error;
 
-      console.log("Created Purchase Request:", data);
-      alert(`Purchase Request Created: ${data.purchase_number}`);
+      toast.success("Purchase request submitted successfully", {
+        description: `Request #${data.purchase_number} has been created and sent for approval.`,
+        id: toastId,
+        duration: 6000,
+      });
+
+      router.push(`/home/${module}/purchase-requests`);
     } catch (err: any) {
       console.error("Create Purchase Request Error:", err);
-      alert(err.message || "Something went wrong");
+      toast.error("Failed to submit request", {
+        description:
+          err.message ||
+          "An unexpected error occurred. Please try again or contact support.",
+        id: toastId,
+        duration: 6000,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
     title,
@@ -454,9 +572,14 @@ export default function CreatePurchaseRequestForm({
   // === VALIDATION ===
   const isSubmitDisabled = useMemo(() => {
     return (
-      !title.trim() || !category || !priority || !company || items.length === 0
+      !title.trim() ||
+      !category ||
+      !priority ||
+      !company ||
+      items.length === 0 ||
+      isSubmitting
     );
-  }, [title, category, priority, company, items]);
+  }, [title, category, priority, company, items, isSubmitting]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
@@ -1305,8 +1428,17 @@ export default function CreatePurchaseRequestForm({
               disabled={isSubmitDisabled}
               className="flex-1 sm:flex-none h-11 px-6 bg-[#2B3A9F] hover:bg-[#2B3A9F]/80 text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Submit Request
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Request
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </div>

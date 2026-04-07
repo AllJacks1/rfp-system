@@ -47,6 +47,7 @@ import {
   RequestForPaymentInterface,
 } from "@/lib/interfaces";
 import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 
 export default function Liquidation({
   rfps,
@@ -199,8 +200,14 @@ export default function Liquidation({
             l.id === selectedLiquidation.id ? { ...l, status: "approved" } : l,
           ),
         );
+        toast.success("Liquidation approved successfully", {
+          description: `Liquidation ${selectedLiquidation.liquidation_number} has been approved.`,
+        });
       } catch (error) {
         console.error("Failed to approve liquidation:", error);
+        toast.error("Failed to approve liquidation", {
+          description: "An error occurred while approving the liquidation. Please try again.",
+        });
       } finally {
         setIsApproving(false);
       }
@@ -214,8 +221,14 @@ export default function Liquidation({
             l.id === selectedLiquidation.id ? { ...l, status: "rejected" } : l,
           ),
         );
+        toast.success("Liquidation rejected", {
+          description: `Liquidation ${selectedLiquidation.liquidation_number} has been rejected.`,
+        });
       } catch (error) {
         console.error("Failed to reject liquidation:", error);
+        toast.error("Failed to reject liquidation", {
+          description: "An error occurred while rejecting the liquidation. Please try again.",
+        });
       } finally {
         setIsRejecting(false);
       }

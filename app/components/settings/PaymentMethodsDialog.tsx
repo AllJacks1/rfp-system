@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { PaymentMethod, PaymentMethodsDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function PaymentMethodsDialog({
   open,
@@ -86,6 +87,12 @@ export default function PaymentMethodsDialog({
   };
 
   const handleRemove = async (payment_method_id: string) => {
+    // Find payment method details before deletion for the toast message
+    const methodToDelete = paymentMethods.find(
+      (m) => m.payment_method_id === payment_method_id,
+    );
+    const methodName = methodToDelete?.name || "Payment Method";
+
     const { error } = await supabase
       .from("payment_methods")
       .delete()
@@ -93,6 +100,11 @@ export default function PaymentMethodsDialog({
 
     if (error) {
       console.error("Error deleting payment method:", error);
+      toast.error("Failed to delete payment method", {
+        description:
+          error.message ||
+          "An error occurred while deleting the payment method.",
+      });
       return;
     }
 
@@ -101,6 +113,10 @@ export default function PaymentMethodsDialog({
     );
 
     updatePaymentMethods(newMethods);
+
+    toast.success("Payment method deleted successfully", {
+      description: `${methodName} has been removed.`,
+    });
   };
 
   const handleOpenForm = (method?: PaymentMethod) => {
@@ -129,15 +145,26 @@ export default function PaymentMethodsDialog({
 
     if (error) {
       console.error("Error creating payment method:", error);
+      toast.error("Failed to create payment method", {
+        description:
+          error.message ||
+          "An error occurred while creating the payment method.",
+      });
       return;
     }
 
     const newMethods = [...paymentMethods, data];
     updatePaymentMethods(newMethods);
+
+    toast.success("Payment method created successfully", {
+      description: `${name} has been added.`,
+    });
   }
 
   async function updatePaymentMethod(name: string) {
     if (!editingMethod) return;
+
+    const previousName = editingMethod.name;
 
     const { data, error } = await supabase
       .from("payment_methods")
@@ -148,6 +175,11 @@ export default function PaymentMethodsDialog({
 
     if (error) {
       console.error("Error updating payment method:", error);
+      toast.error("Failed to update payment method", {
+        description:
+          error.message ||
+          "An error occurred while updating the payment method.",
+      });
       return;
     }
 
@@ -156,6 +188,14 @@ export default function PaymentMethodsDialog({
     );
 
     updatePaymentMethods(newMethods);
+
+    // Show different message if name was changed
+    const nameChanged = previousName !== name;
+    toast.success("Payment method updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

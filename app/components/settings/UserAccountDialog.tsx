@@ -66,6 +66,7 @@ import {
   UserAccountDialogProps,
 } from "@/lib/interfaces";
 import RolePermissionsDialog from "./PermissionsDialog";
+import { toast } from "sonner";
 
 export default function UserAccountDialog({
   open,
@@ -295,7 +296,9 @@ export default function UserAccountDialog({
       if (!editingAccount) {
         // Validate password for new account
         if (!formData.password) {
-          alert("Password is required");
+          toast.warning("Password required", {
+            description: "Please enter a password to create the account.",
+          });
           return;
         }
 
@@ -317,6 +320,10 @@ export default function UserAccountDialog({
             designation_id: formData.designation_id,
             role_id: formData.role_id,
           });
+
+          toast.success("User created successfully", {
+            description: `${formData.first_name} ${formData.last_name} (${formData.email}) has been added.`,
+          });
         }
 
         // OPTIONAL: refresh page data
@@ -327,7 +334,10 @@ export default function UserAccountDialog({
         // Validate password if provided
         if (formData.new_password || formData.confirm_password) {
           if (formData.new_password !== formData.confirm_password) {
-            alert("New password and confirm password do not match");
+            toast.warning("Passwords do not match", {
+              description:
+                "New password and confirm password must be the same.",
+            });
             return;
           }
         }
@@ -354,6 +364,10 @@ export default function UserAccountDialog({
           role_id: formData.role_id,
         });
 
+        toast.success("User updated successfully", {
+          description: `${formData.first_name} ${formData.last_name}'s information has been updated.`,
+        });
+
         // OPTIONAL refresh
         window.location.reload();
       }
@@ -361,7 +375,10 @@ export default function UserAccountDialog({
       handleCloseForm();
     } catch (err) {
       console.error(err);
-      alert("Failed to create user");
+      toast.error("Failed to save user", {
+        description:
+          "An error occurred while saving the user. Please try again.",
+      });
     }
   };
 

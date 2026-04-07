@@ -49,6 +49,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { SearchableCombobox } from "../inputs/SearchableCombobox";
+import { toast } from "sonner"; // Added Sonner toast
+import { useRouter } from "next/navigation";
 
 function DetailItem({
   label,
@@ -134,8 +136,16 @@ export default function CreateRequestForPayment({
     [lineItems],
   );
 
+  const router = useRouter();
+
   const handleAddLineItem = () => {
-    if (!particulars || !qty || !price) return;
+    if (!particulars || !qty || !price) {
+      toast.error("Missing required fields", {
+        description: "Please fill in particulars, quantity, and price.",
+      });
+      return;
+    }
+
     const total = (parseFloat(qty) || 0) * (parseFloat(price) || 0);
     const newItem: LineItem = {
       id: crypto.randomUUID(),
@@ -146,16 +156,35 @@ export default function CreateRequestForPayment({
       totalAmount: total.toString(),
       chargeTo,
     };
+
     setLineItems([...lineItems, newItem]);
     setInvoiceNumber("");
     setParticulars("");
     setQty("");
     setPrice("");
     setChargeTo("");
+
+    toast.success("Line item added", {
+      description: `${particulars} - ${formatCurrency(total)}`,
+    });
   };
 
   const handleDeleteLineItem = (id: string) => {
+    const item = lineItems.find((i) => i.id === id);
     setLineItems(lineItems.filter((item) => item.id !== id));
+
+    toast.info("Line item removed", {
+      description: item ? `${item.particulars} deleted` : "Item deleted",
+    });
+  };
+
+  const handleClearAllItems = () => {
+    if (lineItems.length === 0) return;
+
+    setLineItems([]);
+    toast.info("All items cleared", {
+      description: `${lineItems.length} line item(s) removed.`,
+    });
   };
 
   // Auto-calculate total when qty or price changes
@@ -184,14 +213,23 @@ export default function CreateRequestForPayment({
     if (!order) return;
 
     if (lineItems.length === 0) {
-      alert("Please add at least one line item");
+      toast.error("No line items", {
+        description: "Please add at least one line item before submitting.",
+      });
       return;
     }
 
     if (!dueDate) {
-      alert("Please select a due date");
+      toast.error("Due date required", {
+        description: "Please select a due date for the payment.",
+      });
       return;
     }
+
+    // Show loading toast
+    const loadingToast = toast.loading("Creating Request for Payment...", {
+      description: "Please wait while we save your request.",
+    });
 
     try {
       // Convert line items to JSON structure
@@ -220,7 +258,12 @@ export default function CreateRequestForPayment({
 
       if (error) throw error;
 
-      alert("Request for Payment created successfully");
+      // Dismiss loading and show success
+      toast.dismiss(loadingToast);
+      toast.success("Request for Payment created successfully!", {
+        description: `RFP for ${order.order_number} has been submitted.`,
+        duration: 5000,
+      });
 
       // Optional reset
       setLineItems([]);
@@ -228,10 +271,18 @@ export default function CreateRequestForPayment({
       setDueDate("");
 
       // Redirect
-      //window.location.href = "/home/finance/request-for-payment";
+      router.push(`/home/${module}/request-for-payment`);
     } catch (err) {
+      // Dismiss loading and show error
+      toast.dismiss(loadingToast);
+      toast.error("Failed to create request for payment", {
+        description:
+          err instanceof Error
+            ? err.message
+            : "An unexpected error occurred. Please try again.",
+        duration: 5000,
+      });
       console.error(err);
-      alert("Failed to create request for payment");
     }
   }
 
@@ -286,7 +337,9 @@ export default function CreateRequestForPayment({
               </h1>
               <p className="text-sm text-[#64748B] mt-1">
                 Viewing{" "}
-                <span className="font-semibold text-[#2B3A9F]">{order.id}</span>
+                <span className="font-semibold text-[#2B3A9F]">
+                  {order.order_number}
+                </span>
               </p>
             </div>
           </div>
@@ -365,7 +418,7 @@ export default function CreateRequestForPayment({
             <Card className="border-[#E2E8F0] shadow-sm">
               <CardHeader className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-[#8B5CF6] text-white">
+                  <div className="p-2 rounded-lg bg-[#2B3A9F] text-white">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
@@ -774,7 +827,7 @@ export default function CreateRequestForPayment({
               <CardContent className="space-y-3">
                 <Button
                   variant="outline"
-                  onClick={() => setLineItems([])}
+                  onClick={handleClearAllItems}
                   className="w-full border-[#E2E8F0] hover:bg-[#FEE2E2] hover:text-[#DC2626] hover:border-[#FCA5A5] transition-all h-11"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />

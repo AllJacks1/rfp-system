@@ -48,6 +48,7 @@ import {
 import React, { useState, useMemo, useCallback } from "react";
 import { Role, RolesSettingsDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const THEME_COLOR = "#2B3A9F";
 
@@ -77,9 +78,43 @@ export default function RolesSettingsDialog({
 
   const activeCount = useMemo(() => roles.length, [roles]);
 
-  const handleRemove = useCallback((id: string) => {
-    setRoles((prev) => prev.filter((r) => r.role_id !== id));
-  }, []);
+  const handleRemove = useCallback(
+    async (id: string) => {
+      const supabase = createClient();
+
+      // Find role details before deletion for toast message
+      const roleToDelete = roles.find((r) => r.role_id === id);
+      const roleName = roleToDelete?.name || "Role";
+
+      try {
+        const { error } = await supabase
+          .from("roles")
+          .delete()
+          .eq("role_id", id);
+
+        if (error) {
+          console.log("Error deleting role:", error);
+          toast.error("Failed to delete role", {
+            description:
+              error.message || "An error occurred while deleting the role.",
+          });
+          return;
+        }
+
+        setRoles((prev) => prev.filter((r) => r.role_id !== id));
+
+        toast.success("Role deleted successfully", {
+          description: `${roleName} has been removed.`,
+        });
+      } catch (err: any) {
+        console.log("Unexpected error deleting role:", err);
+        toast.error("Failed to delete role", {
+          description: err.message || "An unexpected error occurred.",
+        });
+      }
+    },
+    [roles],
+  );
 
   const handleOpenCreate = useCallback(() => {
     setEditingRole(null);
@@ -99,21 +134,36 @@ export default function RolesSettingsDialog({
     setName("");
   }, []);
 
-  async function createRole(name: string) {
+  async function createRole(name: string): Promise<Role | null> {
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from("roles")
       .insert([{ name }])
       .select()
-      .single(); // important: return single object
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error creating role:", error);
+      toast.error("Failed to create role", {
+        description:
+          error.message || "An error occurred while creating the role.",
+      });
+      return null;
+    }
+
+    toast.success("Role created successfully", {
+      description: `${name} has been added.`,
+    });
 
     return data;
   }
 
-  async function updateRole(role_id: string, name: string) {
+  async function updateRole(
+    role_id: string,
+    name: string,
+    previousName?: string,
+  ): Promise<Role | null> {
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -121,9 +171,23 @@ export default function RolesSettingsDialog({
       .update({ name })
       .eq("role_id", role_id)
       .select()
-      .single(); // return updated row
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error updating role:", error);
+      toast.error("Failed to update role", {
+        description:
+          error.message || "An error occurred while updating the role.",
+      });
+      return null;
+    }
+
+    const nameChanged = previousName && previousName !== name;
+    toast.success("Role updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
 
     return data;
   }
@@ -137,13 +201,19 @@ export default function RolesSettingsDialog({
         if (editingRole) {
           const updated = await updateRole(editingRole.role_id, name);
 
-          setRoles((prev) =>
-            prev.map((r) => (r.role_id === editingRole.role_id ? updated : r)),
-          );
+          if (updated) {
+            setRoles((prev) =>
+              prev.map((r) =>
+                r.role_id === editingRole.role_id ? updated : r,
+              ),
+            );
+          }
         } else {
           const created = await createRole(name);
 
-          setRoles((prev) => [...prev, created]);
+          if (created) {
+            setRoles((prev) => [...prev, created]);
+          }
         }
 
         handleCloseForm();

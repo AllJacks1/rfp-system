@@ -48,6 +48,7 @@ import {
   RequestForPaymentProps,
 } from "@/lib/interfaces";
 import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 
 export default function RequestForPayment({
   rfps,
@@ -212,8 +213,14 @@ export default function RequestForPayment({
             r.id === selectedRfp.id ? { ...r, status: "approved" } : r,
           ),
         );
+        toast.success("Request for Payment approved successfully", {
+          description: `Request for Payment ${selectedRfp.rfp_number} has been approved.`,
+        });
       } catch (error) {
         console.error("Failed to approve RFP:", error);
+        toast.error("Failed to approve Request for Payment", {
+          description: `Request for Payment ${selectedRfp.rfp_number} failed to be approved.`,
+        });
       } finally {
         setIsApproving(false);
       }
@@ -222,6 +229,9 @@ export default function RequestForPayment({
         setIsRejecting(true);
         await onReject(selectedRfp.id);
         // Update local state
+        toast.success("Request for Payment rejected", {
+          description: `Request for Payment ${selectedRfp.rfp_number} has been rejected.`,
+        });
         setRfpList((prev) =>
           prev.map((r) =>
             r.id === selectedRfp.id ? { ...r, status: "rejected" } : r,
@@ -229,6 +239,9 @@ export default function RequestForPayment({
         );
       } catch (error) {
         console.error("Failed to reject RFP:", error);
+        toast.error("Failed to reject Request for Payment", {
+          description: `Request for Payment ${selectedRfp.rfp_number} failed to be rejected.`,
+        });
       } finally {
         setIsRejecting(false);
       }
@@ -492,7 +505,7 @@ export default function RequestForPayment({
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  router.push(`/home/finance/liquidation/${row.id}`)
+                  router.push(`/home/${module}/liquidation/liquidate/${row.id}`)
                 }
                 className="h-8 px-3 text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all"
               >

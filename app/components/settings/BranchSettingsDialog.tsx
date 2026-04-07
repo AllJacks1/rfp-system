@@ -55,6 +55,7 @@ import {
 import { useState } from "react";
 import { Branch, Company } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 interface BranchSettingsDialogProps {
   open: boolean;
@@ -88,16 +89,26 @@ export default function BranchSettingsDialog({
   async function createBranch(
     location: string,
     company_id: string,
-  ): Promise<Branch> {
+  ): Promise<Branch | null> {
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from("branches")
       .insert([{ location, company_id }])
       .select()
-      .single(); // important: return single object
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error creating branch:", error);
+      toast.error("Failed to create branch", {
+        description: "An error occurred while creating the branch.",
+      });
+      return null;
+    }
+
+    toast.success("Branch created successfully", {
+      description: `${location} has been added.`,
+    });
 
     return data;
   }
@@ -106,6 +117,7 @@ export default function BranchSettingsDialog({
     branch_id: string,
     location: string,
     company_id: string,
+    previousLocation?: string,
   ): Promise<Branch> {
     const supabase = createClient();
 
@@ -114,9 +126,21 @@ export default function BranchSettingsDialog({
       .update({ location, company_id })
       .eq("branch_id", branch_id)
       .select()
-      .single(); // important: return single object
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error updating branch:", error);
+      toast.error("Failed to update branch", {
+        description: "An error occurred while updating the branch.",
+      });
+    }
+
+    const locationChanged = previousLocation && previousLocation !== location;
+    toast.success("Branch updated successfully", {
+      description: locationChanged
+        ? `${previousLocation} has been renamed to ${location}.`
+        : `${location} has been updated.`,
+    });
 
     return data;
   }
@@ -126,8 +150,38 @@ export default function BranchSettingsDialog({
     return companies?.name || "Unknown";
   };
 
-  const handleRemove = (id: string) => {
-    setBranches((prev) => prev.filter((b) => b.branch_id !== id));
+  const handleRemove = async (id: string) => {
+    const supabase = createClient();
+
+    // Find branch details before deletion for toast message
+    const branchToDelete = branches.find((b) => b.branch_id === id);
+    const branchLocation = branchToDelete?.location || "Branch";
+
+    try {
+      const { error } = await supabase
+        .from("branches")
+        .delete()
+        .eq("branch_id", id);
+
+      if (error) {
+        console.log("Error deleting branch:", error);
+        toast.error("Failed to delete branch", {
+          description: "An error occurred while deleting the branch.",
+        });
+        return;
+      }
+
+      setBranches((prev) => prev.filter((b) => b.branch_id !== id));
+
+      toast.success("Branch deleted successfully", {
+        description: `${branchLocation} has been removed.`,
+      });
+    } catch (err: any) {
+      console.log("Unexpected error deleting branch:", err);
+      toast.error("Failed to delete branch", {
+        description: "An unexpected error occurred.",
+      });
+    }
   };
 
   const handleOpenForm = (branch?: Branch) => {
@@ -171,7 +225,9 @@ export default function BranchSettingsDialog({
           ),
         );
       } else {
-        updatedBranch = await createBranch(location, selectedCompanyId);
+        const newBranch = await createBranch(location, selectedCompanyId);
+        if (!newBranch) return;
+        updatedBranch = newBranch;
         setBranches((prev) => [...prev, updatedBranch]);
       }
 

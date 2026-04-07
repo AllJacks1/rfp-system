@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -34,12 +27,18 @@ import {
   CreditCard,
   Hash,
   User,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CreateLiquidationPageProps } from "@/lib/interfaces";
 import { SearchableCombobox } from "../inputs/SearchableCombobox";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner"; // Added Sonner toast
+import { useRouter } from "next/navigation";
+
 interface LiquidationEntry {
   id: string;
   date: string;
@@ -49,17 +48,6 @@ interface LiquidationEntry {
   glAccount: string;
   amount: number;
 }
-
-// Mock dropdown data
-const plateNumbers = ["ABC-123", "XYZ-789", "DEF-456", "GHI-321"];
-const suppliers = ["Shell Station", "Petron", "Caltex", "Total", "Smart Fuel"];
-const glAccounts = [
-  "Fuel Expense",
-  "Transportation Expense",
-  "Maintenance Expense",
-  "Toll Fees",
-  "Parking Fees",
-];
 
 // ✅ Safe number parsing for string amounts from database
 const parseAmount = (value: string | number | null | undefined): number => {
@@ -107,11 +95,33 @@ export default function CreateLiquidation({
   const [glAccount, setGlAccount] = useState("");
   const [amount, setAmount] = useState("");
 
+  const router = useRouter();
+
   // Entries state
   const [entries, setEntries] = useState<LiquidationEntry[]>([]);
 
   const handleAddEntry = () => {
-    if (!date || !amount || !supplier || !glAccount) return;
+    if (!date || !amount || !supplier || !glAccount) {
+      toast.error("Missing required fields", {
+        description: "Please fill in date, supplier, GL account, and amount.",
+      });
+      return;
+    }
+
+    const amountValue = parseFloat(amount);
+    if (amountValue <= 0) {
+      toast.error("Invalid amount", {
+        description: "Amount must be greater than zero.",
+      });
+      return;
+    }
+
+    // Check if amount exceeds remaining balance (warning only)
+    const currentRemaining =
+      parseAmount(rfp?.total_payable) -
+      entries.reduce((sum, e) => sum + e.amount, 0);
+
+    const newRemaining = currentRemaining - amountValue;
 
     const newEntry: LiquidationEntry = {
       id: `ENTRY-${Date.now()}`,
@@ -120,7 +130,7 @@ export default function CreateLiquidation({
       supplier,
       description: description || "-",
       glAccount,
-      amount: parseFloat(amount),
+      amount: amountValue,
     };
 
     setEntries([...entries, newEntry]);
@@ -132,10 +142,49 @@ export default function CreateLiquidation({
     setDescription("");
     setGlAccount("");
     setAmount("");
+
+    // Show appropriate toast based on liquidation status
+    if (newRemaining < 0) {
+      // Over-liquidation
+      const overAmount = Math.abs(newRemaining);
+      toast.warning("Entry added with over-liquidation", {
+        description: `${supplier} - ${formatCurrency(amountValue)}. Exceeds by ${formatCurrency(overAmount)}.`,
+        icon: <AlertTriangle className="h-4 w-4" />,
+      });
+    } else if (newRemaining === 0) {
+      // Fully liquidated
+      toast.success("Entry added - Fully Liquidated", {
+        description: `${supplier} - ${formatCurrency(amountValue)}. Balance is now zero.`,
+        icon: <CheckCircle2 className="h-4 w-4" />,
+      });
+    } else {
+      // Under-liquidated (normal)
+      toast.success("Entry added", {
+        description: `${supplier} - ${formatCurrency(amountValue)}. Remaining: ${formatCurrency(newRemaining)}.`,
+      });
+    }
   };
 
   const handleDeleteEntry = (id: string) => {
+    const entry = entries.find((e) => e.id === id);
     setEntries(entries.filter((e) => e.id !== id));
+
+    if (entry) {
+      toast.info("Entry removed", {
+        description: `${entry.supplier} - ${formatCurrency(entry.amount)} deleted`,
+      });
+    }
+  };
+
+  const handleClearAllEntries = () => {
+    if (entries.length === 0) return;
+
+    const count = entries.length;
+    setEntries([]);
+
+    toast.info("All entries cleared", {
+      description: `${count} liquidation entry(ies) removed.`,
+    });
   };
 
   const selectedPlateNumber = vehicles?.find(
@@ -149,8 +198,19 @@ export default function CreateLiquidation({
   const isOverLiquidated = remainingBalance < 0;
 
   const handleLiquidate = async () => {
+    if (entries.length === 0) {
+      toast.error("No entries to submit", {
+        description: "Please add at least one liquidation entry.",
+      });
+      return;
+    }
+
     const supabase = createClient();
-    if (entries.length === 0) return;
+
+    // Show loading toast
+    const loadingToast = toast.loading("Submitting liquidation...", {
+      description: "Please wait while we process your request.",
+    });
 
     try {
       // Convert entries into JSON snapshot
@@ -201,8 +261,40 @@ export default function CreateLiquidation({
 
       if (rfpError) throw rfpError;
 
-      //router.push("/home/finance/liquidation");
+      // Dismiss loading and show success
+      toast.dismiss(loadingToast);
+
+      if (isOverLiquidated) {
+        toast.success("Liquidation submitted (Over-liquidated)", {
+          description: `${rfp.rfp_number} liquidated with ${formatCurrency(totalLiquidated)}. Exceeds original by ${formatCurrency(Math.abs(remainingBalance))}.`,
+          duration: 6000,
+        });
+      } else if (isBalanced) {
+        toast.success("Liquidation submitted successfully!", {
+          description: `${rfp.rfp_number} fully liquidated with ${formatCurrency(totalLiquidated)}.`,
+          duration: 5000,
+        });
+      } else {
+        toast.success("Liquidation submitted (Partial)", {
+          description: `${rfp.rfp_number} liquidated with ${formatCurrency(totalLiquidated)}. Remaining: ${formatCurrency(remainingBalance)}.`,
+          duration: 5000,
+        });
+      }
+
+      // Optional: Reset form after successful submission
+      setEntries([]);
+
+      router.push(`/home/${module}/liquidation`);
     } catch (error) {
+      // Dismiss loading and show error
+      toast.dismiss(loadingToast);
+      toast.error("Failed to submit liquidation", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+        duration: 5000,
+      });
       console.error("Liquidation failed:", error);
     }
   };
@@ -386,21 +478,30 @@ export default function CreateLiquidation({
               }`}
             >
               <div className="flex items-center justify-between">
-                <span
-                  className={`text-sm font-semibold ${
-                    isBalanced
-                      ? "text-emerald-700"
+                <div className="flex items-center gap-2">
+                  {isBalanced ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  ) : isOverLiquidated ? (
+                    <XCircle className="h-4 w-4 text-rose-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                  )}
+                  <span
+                    className={`text-sm font-semibold ${
+                      isBalanced
+                        ? "text-emerald-700"
+                        : isOverLiquidated
+                          ? "text-rose-700"
+                          : "text-amber-700"
+                    }`}
+                  >
+                    {isBalanced
+                      ? "Fully Liquidated"
                       : isOverLiquidated
-                        ? "text-rose-700"
-                        : "text-amber-700"
-                  }`}
-                >
-                  {isBalanced
-                    ? "✓ Fully Liquidated"
-                    : isOverLiquidated
-                      ? "⚠ Over Liquidated"
-                      : "⏳ Remaining to Liquidate"}
-                </span>
+                        ? "Over Liquidated"
+                        : "Remaining to Liquidate"}
+                  </span>
+                </div>
                 <span
                   className={`font-mono font-bold ${
                     isBalanced
@@ -515,7 +616,6 @@ export default function CreateLiquidation({
                     placeholder="0.00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    max={remainingBalance > 0 ? remainingBalance : undefined}
                     className="bg-white border-slate-300 focus:border-[#2B3A9F] focus:ring-2 focus:ring-[#2B3A9F]/20"
                   />
                 </div>
@@ -587,9 +687,7 @@ export default function CreateLiquidation({
                   !supplier ||
                   !glAccount ||
                   !amount ||
-                  parseFloat(amount) <= 0 ||
-                  (remainingBalance > 0 &&
-                    parseFloat(amount) > remainingBalance)
+                  parseFloat(amount) <= 0
                 }
                 className="bg-[#2B3A9F] hover:bg-[#1e2a7a] text-white shadow-md shadow-[#2B3A9F]/20 transition-all"
               >
@@ -783,7 +881,7 @@ export default function CreateLiquidation({
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
                 variant="outline"
-                onClick={() => setEntries([])}
+                onClick={handleClearAllEntries}
                 disabled={entries.length === 0}
                 className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
               >
@@ -791,7 +889,7 @@ export default function CreateLiquidation({
               </Button>
               <Button
                 onClick={handleLiquidate}
-                disabled={entries.length === 0 || !isBalanced}
+                disabled={entries.length === 0}
                 className="bg-[#2B3A9F] hover:bg-[#1e2a7a] text-white shadow-md shadow-[#2B3A9F]/20 transition-all disabled:opacity-50"
               >
                 <Save className="h-4 w-4 mr-2" />

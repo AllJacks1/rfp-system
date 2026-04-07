@@ -46,6 +46,7 @@ import {
   Request,
   ReviewRequestProps,
 } from "@/lib/interfaces";
+import { toast } from "sonner";
 
 // Helper to calculate total from items
 const calculateTotal = (items: Item[]): number => {
@@ -152,8 +153,29 @@ export default function ReviewRequest({ requests }: ReviewRequestProps) {
 
       if (error) {
         console.error("Error updating status:", error);
+        // Add error toast here for better UX
+        toast.error("Failed to update status", {
+          description:
+            error.message || "An error occurred while updating the request.",
+        });
         return;
       }
+
+      // Determine request type label
+      const requestType = isServiceRequest
+        ? "Service Request"
+        : "Purchase Request";
+      const actionLabel = status === "approved" ? "approved" : "rejected";
+
+      // Single toast call with dynamic values
+      toast.success(
+        status === "approved"
+          ? `${requestType} approved successfully`
+          : `${requestType} rejected`,
+        {
+          description: `${requestType} ${request.request_number} has been ${actionLabel}.`,
+        },
+      );
 
       // Update UI
       setRequestList((prev) =>
@@ -161,6 +183,11 @@ export default function ReviewRequest({ requests }: ReviewRequestProps) {
       );
     } catch (err) {
       console.error("Unexpected error:", err);
+      // Add error toast for unexpected errors
+      toast.error("Unexpected error occurred", {
+        description:
+          "Please try again or contact support if the problem persists.",
+      });
     }
   }
 

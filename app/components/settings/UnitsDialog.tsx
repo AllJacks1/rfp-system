@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Unit, UnitsDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function UnitsDialog({
   open,
@@ -78,6 +79,10 @@ export default function UnitsDialog({
   };
 
   const handleRemove = async (unit_id: string) => {
+    // Find unit details before deletion for the toast message
+    const unitToDelete = units.find((u) => u.unit_id === unit_id);
+    const unitName = unitToDelete?.name || "Unit";
+
     const { error } = await supabase
       .from("units")
       .delete()
@@ -85,11 +90,19 @@ export default function UnitsDialog({
 
     if (error) {
       console.error("Error deleting unit:", error);
+      toast.error("Failed to delete unit", {
+        description:
+          error.message || "An error occurred while deleting the unit.",
+      });
       return;
     }
 
     const newUnits = units.filter((u) => u.unit_id !== unit_id);
     updateUnits(newUnits);
+
+    toast.success("Unit deleted successfully", {
+      description: `${unitName} has been removed.`,
+    });
   };
 
   const handleOpenForm = (unit?: Unit) => {
@@ -120,15 +133,25 @@ export default function UnitsDialog({
 
     if (error) {
       console.error("Error creating unit:", error);
+      toast.error("Failed to create unit", {
+        description:
+          error.message || "An error occurred while creating the unit.",
+      });
       return;
     }
 
     const newUnits = [...units, data];
     updateUnits(newUnits);
+
+    toast.success("Unit created successfully", {
+      description: `${name} has been added.`,
+    });
   }
 
   async function updateUnit(name: string) {
     if (!editingUnit) return;
+
+    const previousName = editingUnit.name;
 
     const { data, error } = await supabase
       .from("units")
@@ -139,6 +162,10 @@ export default function UnitsDialog({
 
     if (error) {
       console.error("Error updating unit:", error);
+      toast.error("Failed to update unit", {
+        description:
+          error.message || "An error occurred while updating the unit.",
+      });
       return;
     }
 
@@ -147,8 +174,15 @@ export default function UnitsDialog({
     );
 
     updateUnits(newUnits);
-  }
 
+    // Show different message if name was changed
+    const nameChanged = previousName !== name;
+    toast.success("Unit updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 

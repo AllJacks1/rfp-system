@@ -1,3 +1,4 @@
+"use server";
 import Settings from "@/app/components/settings/Settings";
 import {
   CreateUserPayload,
@@ -5,7 +6,7 @@ import {
   FlattendUser,
   UserAssignmentRow,
 } from "@/lib/interfaces";
-import { getSupabaseAdmin} from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
@@ -206,7 +207,6 @@ async function getRoles(supabase: SupabaseClient) {
 ================================ */
 
 async function getDesignations(supabase: SupabaseClient) {
-  "use server";
   const { data, error } = await supabase
     .from("designations")
     .select("designation_id, name, scope")
@@ -221,7 +221,6 @@ async function getDesignations(supabase: SupabaseClient) {
 }
 
 export async function createUserAction(payload: CreateUserPayload) {
-  "use server";
   const supabaseAdmin = getSupabaseAdmin();
 
   const {
@@ -337,9 +336,9 @@ export async function createUserAction(payload: CreateUserPayload) {
   }
 }
 
-export async function updateUserAction(payload: CreateUserPayload & { user_id: string }) {
-  "use server";
-
+export async function updateUserAction(
+  payload: CreateUserPayload & { user_id: string },
+) {
   const supabaseAdmin = getSupabaseAdmin();
 
   const {

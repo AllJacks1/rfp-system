@@ -113,43 +113,17 @@ const createDefaultPermissions = (): PermissionPage[] => [
               },
             ],
           },
-          {
-            id: "request-for-payment",
-            name: "Request for Payment",
-            enabled: true,
-            actions: [
-              {
-                id: "approve-reject-rfp",
-                name: "Approve/Reject Requests",
-                enabled: false,
-              },
-            ],
-          },
         ],
       },
       {
         id: "rfp-emp",
         name: "Request for Payment",
         enabled: true,
-        actions: [
-          {
-            id: "approve-reject-rfp-emp",
-            name: "Approve/Reject Requests",
-            enabled: false,
-          },
-        ],
       },
       {
         id: "liquidation-emp",
         name: "Liquidation",
         enabled: true,
-        actions: [
-          {
-            id: "approve-reject-liq-emp",
-            name: "Approve/Reject Requests",
-            enabled: false,
-          },
-        ],
       },
     ],
   },

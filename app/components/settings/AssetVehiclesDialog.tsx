@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { AssetVehiclesDialogProps, Vehicle } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function AssetVehiclesDialog({
   open,
@@ -87,6 +88,11 @@ export default function AssetVehiclesDialog({
   };
 
   const handleRemove = async (vehicle_id: string) => {
+    // Find vehicle details before deletion for the toast message
+    const vehicleToDelete = vehicles.find((v) => v.vehicle_id === vehicle_id);
+    const vehicleIdentifier =
+      vehicleToDelete?.plate_number || vehicleToDelete?.car_type || "Vehicle";
+
     const { error } = await supabase
       .from("vehicles")
       .delete()
@@ -94,11 +100,19 @@ export default function AssetVehiclesDialog({
 
     if (error) {
       console.error("Error deleting vehicle:", error);
+      toast.error("Failed to delete vehicle", {
+        description:
+          error.message || "An error occurred while deleting the vehicle.",
+      });
       return;
     }
 
     const newVehicles = vehicles.filter((v) => v.vehicle_id !== vehicle_id);
     updateVehicles(newVehicles);
+
+    toast.success("Vehicle deleted successfully", {
+      description: `${vehicleIdentifier} has been removed.`,
+    });
   };
 
   const handleOpenForm = (vehicle?: Vehicle) => {
@@ -147,11 +161,19 @@ export default function AssetVehiclesDialog({
 
     if (error) {
       console.error("Error creating vehicle:", error);
+      toast.error("Failed to create vehicle", {
+        description:
+          error.message || "An error occurred while creating the vehicle.",
+      });
       return;
     }
 
     const newVehicles = [...vehicles, data];
     updateVehicles(newVehicles);
+
+    toast.success("Vehicle created successfully", {
+      description: `${plate_number} (${car_type}) has been added for ${owners_first_name} ${owners_last_name}.`,
+    });
   }
 
   async function updateAssetVehicle({
@@ -161,6 +183,9 @@ export default function AssetVehiclesDialog({
     owners_last_name,
   }: Vehicle) {
     if (!editingVehicle) return;
+
+    const previousPlate = editingVehicle.plate_number;
+    const previousType = editingVehicle.car_type;
 
     const { data, error } = await supabase
       .from("vehicles")
@@ -176,6 +201,10 @@ export default function AssetVehiclesDialog({
 
     if (error) {
       console.error("Error updating vehicle:", error);
+      toast.error("Failed to update vehicle", {
+        description:
+          error.message || "An error occurred while updating the vehicle.",
+      });
       return;
     }
 
@@ -184,6 +213,25 @@ export default function AssetVehiclesDialog({
     );
 
     updateVehicles(newVehicles);
+
+    // Check what changed for detailed message
+    const plateChanged = previousPlate !== plate_number;
+    const typeChanged = previousType !== car_type;
+
+    let description: string;
+    if (plateChanged && typeChanged) {
+      description = `${previousPlate} (${previousType}) has been updated to ${plate_number} (${car_type}).`;
+    } else if (plateChanged) {
+      description = `Plate number changed from ${previousPlate} to ${plate_number}.`;
+    } else if (typeChanged) {
+      description = `Vehicle type changed from ${previousType} to ${car_type}.`;
+    } else {
+      description = `${plate_number} (${car_type}) has been updated.`;
+    }
+
+    toast.success("Vehicle updated successfully", {
+      description,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

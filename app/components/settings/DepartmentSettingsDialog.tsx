@@ -62,6 +62,7 @@ import {
   Company,
 } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const THEME_COLOR = "#2B3A9F";
 
@@ -129,9 +130,46 @@ export default function DepartmentSettingsDialog({
 
   const activeCount = useMemo(() => departments.length, [departments]);
 
-  const handleRemove = useCallback((id: string) => {
-    setDepartments((prev) => prev.filter((d) => d.department_id !== id));
-  }, []);
+  const handleRemove = useCallback(
+    async (id: string) => {
+      const supabase = createClient();
+
+      // Find department details before deletion for toast message
+      const departmentToDelete = departments.find(
+        (d) => d.department_id === id,
+      );
+      const departmentName = departmentToDelete?.name || "Department";
+
+      try {
+        const { error } = await supabase
+          .from("departments")
+          .delete()
+          .eq("department_id", id);
+
+        if (error) {
+          console.log("Error deleting department:", error);
+          toast.error("Failed to delete department", {
+            description:
+              error.message ||
+              "An error occurred while deleting the department.",
+          });
+          return;
+        }
+
+        setDepartments((prev) => prev.filter((d) => d.department_id !== id));
+
+        toast.success("Department deleted successfully", {
+          description: `${departmentName} has been removed.`,
+        });
+      } catch (err: any) {
+        console.log("Unexpected error deleting department:", err);
+        toast.error("Failed to delete department", {
+          description: err.message || "An unexpected error occurred.",
+        });
+      }
+    },
+    [departments],
+  );
 
   const resetForm = useCallback(() => {
     setName("");
@@ -166,16 +204,30 @@ export default function DepartmentSettingsDialog({
     setSelectedBranchId(""); // Reset branch when company changes
   }, []);
 
-  async function createDepartment(name: string, branch_id: string) {
+  async function createDepartment(
+    name: string,
+    branch_id: string,
+  ): Promise<Department | null> {
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from("departments")
       .insert([{ name, branch_id }])
       .select()
-      .single(); // important: return single object
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error creating department:", error);
+      toast.error("Failed to create department", {
+        description:
+          error.message || "An error occurred while creating the department.",
+      });
+      return null;
+    }
+
+    toast.success("Department created successfully", {
+      description: `${name} has been added.`,
+    });
 
     return data;
   }
@@ -184,7 +236,8 @@ export default function DepartmentSettingsDialog({
     department_id: string,
     name: string,
     branch_id: string,
-  ) {
+    previousName?: string,
+  ): Promise<Department | null> {
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -194,7 +247,21 @@ export default function DepartmentSettingsDialog({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.log("Error updating department:", error);
+      toast.error("Failed to update department", {
+        description:
+          error.message || "An error occurred while updating the department.",
+      });
+      return null;
+    }
+
+    const nameChanged = previousName && previousName !== name;
+    toast.success("Department updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
 
     return data;
   }
@@ -240,8 +307,16 @@ export default function DepartmentSettingsDialog({
           // ── CREATE NEW ────────────────────────────────────────────
           const created = await createDepartment(name.trim(), selectedBranchId);
 
+          if (!created || !created.department_id) {
+            throw new Error(
+              "Failed to create department: missing department_id",
+            );
+          }
+
           const newDepartment: Department = {
             ...created, // use real DB data
+            department_id: created.department_id,
+            name: created.name || name.trim(),
             branch_location: selectedBranch?.location,
             company_id: selectedCompanyId,
             company_name: selectedCompany?.name || "",

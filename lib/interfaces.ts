@@ -513,6 +513,27 @@ export const statusConfig: Record<
     icon: AlertCircle,
     label: "Submitted",
   },
+  for_review: { // ← ADD THIS (snake_case version)
+    color: "text-[#8B5CF6]", // Purple for "needs attention"
+    bgColor: "bg-[#EDE9FE]",
+    borderColor: "border-[#C4B5FD]",
+    icon: AlertCircle,
+    label: "For Review",
+  },
+  "for review": { // ← ADD THIS (space version, if your data has it this way)
+    color: "text-[#8B5CF6]",
+    bgColor: "bg-[#EDE9FE]",
+    borderColor: "border-[#C4B5FD]",
+    icon: AlertCircle,
+    label: "For Review",
+  },
+  forReview: { // ← ADD THIS (camelCase version, just in case)
+    color: "text-[#8B5CF6]",
+    bgColor: "bg-[#EDE9FE]",
+    borderColor: "border-[#C4B5FD]",
+    icon: AlertCircle,
+    label: "For Review",
+  },
   approved: {
     color: "text-[#059669]",
     bgColor: "bg-[#D1FAE5]",

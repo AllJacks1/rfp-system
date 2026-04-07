@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Bank, BanksDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function BanksDialog({
   open,
@@ -78,6 +79,10 @@ export default function BanksDialog({
   };
 
   const handleRemove = async (bank_id: string) => {
+    // Find bank details before deletion for the toast message
+    const bankToDelete = banks.find((b) => b.bank_id === bank_id);
+    const bankName = bankToDelete?.name || "Bank";
+
     const { error } = await supabase
       .from("banks")
       .delete()
@@ -85,11 +90,19 @@ export default function BanksDialog({
 
     if (error) {
       console.error("Error deleting bank:", error);
+      toast.error("Failed to delete bank", {
+        description:
+          error.message || "An error occurred while deleting the bank.",
+      });
       return;
     }
 
     const newBanks = banks.filter((b) => b.bank_id !== bank_id);
     updateBanks(newBanks);
+
+    toast.success("Bank deleted successfully", {
+      description: `${bankName} has been removed.`,
+    });
   };
 
   const handleOpenForm = (bank?: Bank) => {
@@ -118,15 +131,25 @@ export default function BanksDialog({
 
     if (error) {
       console.error("Error creating bank:", error);
+      toast.error("Failed to create bank", {
+        description:
+          error.message || "An error occurred while creating the bank.",
+      });
       return;
     }
 
     const newBanks = [...banks, data];
     updateBanks(newBanks);
+
+    toast.success("Bank created successfully", {
+      description: `${name} has been added.`,
+    });
   }
 
   async function updateBank(name: string) {
     if (!editingBank) return;
+
+    const previousName = editingBank.name;
 
     const { data, error } = await supabase
       .from("banks")
@@ -137,6 +160,10 @@ export default function BanksDialog({
 
     if (error) {
       console.error("Error updating bank:", error);
+      toast.error("Failed to update bank", {
+        description:
+          error.message || "An error occurred while updating the bank.",
+      });
       return;
     }
 
@@ -145,6 +172,14 @@ export default function BanksDialog({
     );
 
     updateBanks(newBanks);
+
+    // Show different message if name was changed
+    const nameChanged = previousName !== name;
+    toast.success("Bank updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

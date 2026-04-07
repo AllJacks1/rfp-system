@@ -47,6 +47,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Type, TypesDialogProps } from "@/lib/interfaces";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function TypesDialog({
   open,
@@ -78,6 +79,10 @@ export default function TypesDialog({
   };
 
   const handleRemove = async (type_id: string) => {
+    // Find type details before deletion for the toast message
+    const typeToDelete = types.find((t) => t.type_id === type_id);
+    const typeName = typeToDelete?.name || "Type";
+
     const { error } = await supabase
       .from("types")
       .delete()
@@ -85,11 +90,19 @@ export default function TypesDialog({
 
     if (error) {
       console.error("Error deleting type:", error);
+      toast.error("Failed to delete type", {
+        description:
+          error.message || "An error occurred while deleting the type.",
+      });
       return;
     }
 
     const newTypes = types.filter((t) => t.type_id !== type_id);
     updateTypes(newTypes);
+
+    toast.success("Type deleted successfully", {
+      description: `${typeName} has been removed.`,
+    });
   };
 
   const handleOpenForm = (type?: Type) => {
@@ -120,15 +133,25 @@ export default function TypesDialog({
 
     if (error) {
       console.error("Error creating type:", error);
+      toast.error("Failed to create type", {
+        description:
+          error.message || "An error occurred while creating the type.",
+      });
       return;
     }
 
     const newTypes = [...types, data];
     updateTypes(newTypes);
+
+    toast.success("Type created successfully", {
+      description: `${name} has been added.`,
+    });
   }
 
   async function editType(name: string) {
     if (!editingType) return;
+
+    const previousName = editingType.name;
 
     const { data, error } = await supabase
       .from("types")
@@ -139,6 +162,10 @@ export default function TypesDialog({
 
     if (error) {
       console.error("Error updating type:", error);
+      toast.error("Failed to update type", {
+        description:
+          error.message || "An error occurred while updating the type.",
+      });
       return;
     }
 
@@ -147,6 +174,14 @@ export default function TypesDialog({
     );
 
     updateTypes(newTypes);
+
+    // Show different message if name was changed
+    const nameChanged = previousName !== name;
+    toast.success("Type updated successfully", {
+      description: nameChanged
+        ? `${previousName} has been renamed to ${name}.`
+        : `${name} has been updated.`,
+    });
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
