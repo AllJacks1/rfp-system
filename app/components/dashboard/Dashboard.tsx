@@ -483,12 +483,12 @@ export default function Dashboard({
                 <ActivityRow key={idx} activity={activity} />
               ))}
             </div>
-            <Button
+            {/* <Button
               variant="ghost"
               className="w-full mt-4 text-[#2B3A9F] hover:bg-[#2B3A9F]/5 font-medium"
             >
               View All Activity
-            </Button>
+            </Button> */}
           </CardContent>
         </Card>
       </div>
