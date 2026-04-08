@@ -35,6 +35,8 @@ import { TopNavigationProps } from "@/lib/interfaces";
 import Notifications from "./Notifications";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLogout } from "@/hooks/useLogout";
+import { useFullName } from "@/hooks/useFullname";
+import { useEmail } from "@/hooks/useEmail";
 
 type PermissionType = "page" | "section" | "subsection" | "action";
 
@@ -358,6 +360,17 @@ export default function TopNavigation({
     }
   }, [pathname, navItems]);
 
+  function getInitials() {
+  const name = useFullName().fullName;
+  const parts = name?.split(" ") || [];
+  
+  const initials = parts.length > 0
+    ? parts.slice(0, 2).map(p => p[0].toUpperCase()).join("")
+    : "JD";
+    
+  return { initials, name: name || null };
+}
+
   if (isLoading) {
     return (
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
@@ -430,7 +443,7 @@ export default function TopNavigation({
               <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
                 <Avatar className="h-9 w-9 border-2 border-slate-200">
                   <AvatarImage src="/avatar.png" />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarFallback>{getInitials().initials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -438,8 +451,8 @@ export default function TopNavigation({
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-semibold">John Doe</p>
-                  <p className="text-xs text-slate-500">john.doe@astra.com</p>
+                  <p className="text-sm font-semibold">{getInitials().name}</p>
+                  <p className="text-xs text-slate-500">{useEmail().email}</p>
                 </div>
               </DropdownMenuLabel>
 

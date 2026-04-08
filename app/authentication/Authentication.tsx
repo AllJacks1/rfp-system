@@ -236,7 +236,7 @@ export default function Authentication() {
             </div>
 
             {/* REMEMBER */}
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <Checkbox
                 id="remember"
                 checked={rememberMe}
@@ -250,7 +250,7 @@ export default function Authentication() {
               >
                 Remember me for 30 days
               </Label>
-            </div>
+            </div> */}
 
             {/* BUTTON */}
             <Button
